@@ -1,194 +1,17 @@
-"use client";
+import Link from "next/link";
+import { degreeCatalog, liveDegrees } from "./program-registry";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  assessments,
-  cadence,
-  courses,
-  disclaimer,
-  labRoutes,
-  modules,
-  provenanceSources,
-  programs,
-  resources,
-  schools,
-  semesters,
-  tracks,
-  disciplines,
-  type Course,
-  type TrackId,
-} from "./data";
-
-const navItems = [
-  ["Home", "top"],
-  ["Catalog", "catalog"],
+const homeNav = [
+  ["Degrees", "degrees"],
+  ["How it works", "model"],
   ["Schools", "schools"],
-  ["Programs", "programs"],
-  ["Planner", "roadmap"],
-  ["Library", "library"],
+  ["About", "about"],
 ] as const;
-
-const courseKinds = [
-  ["all", "All courses"],
-  ["theory", "Theory"],
-  ["lab", "Lab"],
-  ["studio", "Studio"],
-  ["humanities", "Humanities"],
-  ["capstone", "Capstone"],
-] as const;
-
-const trackSlots: Record<string, number> = {
-  TRK401: 0,
-  TRK402: 1,
-  TRK403: 2,
-};
-
-function courseSlug(code: string) {
-  return `course-${code.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-}
-
-function compactCourseTitle(course: Course, selectedTrack: TrackId) {
-  const slot = trackSlots[course.code];
-  if (slot === undefined) return course.title;
-  return tracks.find((track) => track.id === selectedTrack)?.courseNames[slot] ?? course.title;
-}
-
-function ArrowIcon() {
-  return <span aria-hidden="true">↗</span>;
-}
 
 export default function Home() {
-  const [selectedTrack, setSelectedTrack] = useState<TrackId>("chips");
-  const [completed, setCompleted] = useState<string[]>([]);
-  const [semesterFilter, setSemesterFilter] = useState<number | "all">("all");
-  const [courseQuery, setCourseQuery] = useState("");
-  const [courseKind, setCourseKind] = useState<(typeof courseKinds)[number][0]>("all");
-  const [resourceQuery, setResourceQuery] = useState("");
-  const [resourceArea, setResourceArea] = useState("All");
-  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
-  const [activeLab, setActiveLab] = useState(0);
-  const [copied, setCopied] = useState(false);
-
-  const activeTrack = tracks.find((track) => track.id === selectedTrack) ?? tracks[0];
-  const completion = Math.round((completed.length / courses.length) * 100);
-
-  useEffect(() => {
-    const hydrationFrame = window.requestAnimationFrame(() => {
-      const savedTrack = window.localStorage.getItem("course-atlas-track") as TrackId | null;
-      if (savedTrack && tracks.some((track) => track.id === savedTrack)) {
-        setSelectedTrack(savedTrack);
-      }
-
-      try {
-        const savedProgress = JSON.parse(
-          window.localStorage.getItem("course-atlas-ee-progress") ?? "[]",
-        );
-        if (Array.isArray(savedProgress)) {
-          setCompleted(savedProgress.filter((code) => typeof code === "string"));
-        }
-      } catch {
-        setCompleted([]);
-      }
-    });
-
-    const openFromHash = () => {
-      const hash = window.location.hash.slice(1);
-      const linkedCourse = courses.find((course) => courseSlug(course.code) === hash);
-      if (linkedCourse) setActiveCourse(linkedCourse);
-    };
-    openFromHash();
-    window.addEventListener("hashchange", openFromHash);
-    return () => {
-      window.cancelAnimationFrame(hydrationFrame);
-      window.removeEventListener("hashchange", openFromHash);
-    };
-  }, []);
-
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveCourse(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
-
-  const chooseTrack = (id: TrackId) => {
-    setSelectedTrack(id);
-    window.localStorage.setItem("course-atlas-track", id);
-  };
-
-  const toggleCourse = (code: string) => {
-    setCompleted((current) => {
-      const next = current.includes(code)
-        ? current.filter((item) => item !== code)
-        : [...current, code];
-      window.localStorage.setItem("course-atlas-ee-progress", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const showCourse = (course: Course) => {
-    setActiveCourse(course);
-    setCopied(false);
-    window.history.replaceState(null, "", `#${courseSlug(course.code)}`);
-  };
-
-  const closeCourse = () => {
-    setActiveCourse(null);
-    window.history.replaceState(null, "", "#courses");
-  };
-
-  const copyCourseLink = async () => {
-    if (!activeCourse) return;
-    await navigator.clipboard.writeText(
-      `${window.location.origin}${window.location.pathname}#${courseSlug(activeCourse.code)}`,
-    );
-    setCopied(true);
-  };
-
-  const visibleSemesters = semesterFilter === "all"
-    ? semesters
-    : semesters.filter((semester) => semester.number === semesterFilter);
-
-  const filteredCourses = useMemo(() => {
-    const normalized = courseQuery.trim().toLowerCase();
-    return courses.filter((course) => {
-      const matchesSemester =
-        semesterFilter === "all" || course.semester === semesterFilter;
-      const matchesKind = courseKind === "all" || course.kind === courseKind;
-      const displayTitle = compactCourseTitle(course, selectedTrack);
-      const matchesQuery =
-        !normalized ||
-        `${course.code} ${course.title} ${displayTitle} ${course.summary}`
-          .toLowerCase()
-          .includes(normalized);
-      return matchesSemester && matchesKind && matchesQuery;
-    });
-  }, [courseKind, courseQuery, selectedTrack, semesterFilter]);
-
-  const resourceAreas = useMemo(
-    () => ["All", ...Array.from(new Set(resources.map((resource) => resource.area)))],
-    [],
-  );
-
-  const filteredResources = useMemo(() => {
-    const normalized = resourceQuery.trim().toLowerCase();
-    return resources.filter((resource) => {
-      const matchesArea = resourceArea === "All" || resource.area === resourceArea;
-      const matchesQuery =
-        !normalized ||
-        `${resource.title} ${resource.provider} ${resource.note} ${resource.area}`
-          .toLowerCase()
-          .includes(normalized);
-      return matchesArea && matchesQuery;
-    });
-  }, [resourceArea, resourceQuery]);
-
   return (
-    <div className="site-shell">
-      <a className="skip-link" href="#main-content">Skip to content</a>
-
-      <header className="topbar">
+    <div className="catalog-home">
+      <header className="topbar catalog-topbar">
         <a className="brand" href="#top" aria-label="Course Atlas home">
           <span className="brand-mark" aria-hidden="true">
             <i />
@@ -197,417 +20,115 @@ export default function Home() {
           </span>
           <span>
             <strong>Course Atlas</strong>
-            <small>every subject · one path</small>
+            <small>complete degrees · free routes</small>
           </span>
         </a>
 
-        <nav className="desktop-nav" aria-label="Primary navigation">
-          {navItems.map(([label, id]) => (
+        <nav className="desktop-nav" aria-label="Homepage navigation">
+          {homeNav.map(([label, id]) => (
             <a key={id} href={`#${id}`}>{label}</a>
           ))}
         </nav>
 
-        <a className="header-cta" href="#programs">
-          Launch program <span aria-hidden="true">↓</span>
+        <a className="header-cta" href="#degrees">
+          Browse degrees <span aria-hidden="true">↓</span>
         </a>
 
         <details className="mobile-nav">
           <summary aria-label="Open navigation">Menu</summary>
           <nav aria-label="Mobile navigation">
-            {navItems.map(([label, id]) => (
+            {homeNav.map(([label, id]) => (
               <a key={id} href={`#${id}`}>{label}</a>
             ))}
           </nav>
         </details>
       </header>
 
-      <main id="main-content">
-        <section className="hero" id="top">
-          <div className="hero-grid" aria-hidden="true" />
-          <div className="hero-copy">
+      <main id="top">
+        <section className="catalog-hero">
+          <div className="catalog-hero-grid" aria-hidden="true" />
+          <div className="catalog-hero-copy">
             <p className="eyebrow">
               <span className="status-dot" />
-              A navigable education · Launch catalog
+              The university layer for the open web
             </p>
-            <h1>Every subject. One navigable education.</h1>
-            <p className="hero-lede">
-              Course Atlas is a growing map from schools to disciplines, programs,
-              courses, modules, and the best free resources on the open web. Start
-              with our first complete program: Electrical Engineering.
+            <h1>Pick a degree.<br />Get the whole path.</h1>
+            <p>
+              Course Atlas turns the best free courses on the internet into complete,
+              semester-by-semester programs. No link pile. No guessing what comes next.
             </p>
             <div className="hero-actions">
-              <a className="button button-primary" href="#programs">
-                Explore Electrical Engineering <span aria-hidden="true">→</span>
+              <Link className="button button-primary" href="/degrees/electrical-engineering">
+                Open Electrical Engineering <span aria-hidden="true">→</span>
+              </Link>
+              <a className="button button-quiet" href="#model">
+                See the degree model
               </a>
-              <a className="button button-quiet" href="#catalog">
-                See how the atlas works
-              </a>
-            </div>
-            <div className="hero-note">
-              <span aria-hidden="true">✦</span>
-              <p>
-                <strong>One program is complete today.</strong> The architecture is
-                designed to grow across every field without pretending unfinished
-                schools already exist.
-              </p>
             </div>
           </div>
 
-          <aside className="program-card" aria-label="Launch catalog at a glance">
-            <div className="program-card-head">
-              <span>Launch catalog</span>
-              <span className="issue-tag">CA–01</span>
-            </div>
-            <div className="program-stats">
-              <div>
-                <strong>{schools.length}</strong>
-                <span>school live</span>
-              </div>
-              <div>
-                <strong>{programs.length}</strong>
-                <span>program live</span>
-              </div>
-              <div>
-                <strong>{courses.length}</strong>
-                <span>mapped courses</span>
-              </div>
-              <div>
-                <strong>{modules.length}</strong>
-                <span>learning modules</span>
-              </div>
-            </div>
-            <div className="route-slip">
-              <span className="route-label">First complete route</span>
-              <span className="track-swatch" />
-              <div>
-                <strong>Electrical Engineering</strong>
-                <small>School of Engineering · 4 years</small>
-              </div>
-              <a href="#programs" aria-label="Open Electrical Engineering program">Open</a>
-            </div>
-            <div className="progress-block">
-              <div className="progress-label">
-                <span>Your EE progress</span>
-                <strong>{completed.length}/{courses.length}</strong>
-              </div>
-              <div
-                className="progress-rail"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={courses.length}
-                aria-valuenow={completed.length}
-                aria-label={`${completion}% of courses marked complete`}
-              >
-                <span style={{ width: `${completion}%` }} />
-              </div>
-              <small>Stored only in this browser. No account required.</small>
-            </div>
-            <div className="program-stamp" aria-hidden="true">
-              <span>LAUNCH</span>
-              <b>CATALOG</b>
+          <aside className="catalog-manifesto">
+            <span>Course Atlas / Manifesto 01</span>
+            <blockquote>
+              A degree is not a building. It is a sequenced body of work, feedback,
+              evidence, and standards.
+            </blockquote>
+            <div>
+              <span><strong>{liveDegrees.length}</strong> complete degree live</span>
+              <span><strong>{degreeCatalog.length}</strong> programs in the registry</span>
+              <span><strong>∞</strong> programs the system can hold</span>
             </div>
           </aside>
         </section>
 
-        <section className="notice-strip" aria-label="Important program status">
-          <span className="notice-icon" aria-hidden="true">!</span>
-          <p>{disclaimer}</p>
-          <a href="#provenance">Read provenance</a>
+        <section className="catalog-trust-strip" aria-label="Course Atlas promise">
+          <span>One homepage</span>
+          <i aria-hidden="true">→</i>
+          <span>Many independent degree pages</span>
+          <i aria-hidden="true">→</i>
+          <span>Every degree owns its semesters, courses, weeks, and resources</span>
         </section>
 
-        <section className="section platform-section" id="catalog">
-          <div className="section-intro">
-            <p className="section-index">01 / The atlas</p>
-            <h2>Education needs a map,<br />not another pile of links.</h2>
+        <section className="catalog-section degree-directory" id="degrees">
+          <div className="catalog-section-heading">
+            <div>
+              <p className="section-index">01 / Degree directory</p>
+              <h2>Choose the program.<br />Enter its university.</h2>
+            </div>
             <p>
-              Course Atlas organizes learning at every scale. Find the field, see
-              the complete route, open a course, work through its modules, and use
-              resources chosen for that exact point in the journey.
+              Each degree is a separate destination with its own roadmap, classrooms,
+              assessments, labs, resources, progress, and specialization choices.
             </p>
           </div>
 
-          <div className="atlas-chain" aria-label="Course Atlas content hierarchy">
-            {[
-              ["01", "Schools", "Broad homes for related disciplines"],
-              ["02", "Disciplines", "Fields of study and practice"],
-              ["03", "Programs", "Complete, sequenced learning paths"],
-              ["04", "Courses", "Focused bodies of knowledge"],
-              ["05", "Modules", "Four-week learning blocks"],
-              ["06", "Resources", "Open courses, texts, tools, and references"],
-            ].map(([number, label, note], index) => (
-              <div key={label}>
-                <span>{number}</span>
-                <strong>{label}</strong>
-                <small>{note}</small>
-                {index < 5 && <i aria-hidden="true">→</i>}
-              </div>
-            ))}
-          </div>
-
-          <div className="catalog-status-grid">
-            <article className="launch-school" id="schools">
-              <div className="launch-school-head">
-                <span>Live now · School 01</span>
-                <b>Fully mapped</b>
-              </div>
-              <p>School</p>
-              <h3>{schools[0].name}</h3>
-              <small>{schools[0].kicker}</small>
-              <div className="catalog-drilldown">
-                <span><i>Discipline</i>{disciplines[0].name}</span>
-                <span><i>Program</i>{programs[0].name}</span>
-                <span><i>Depth</i>{semesters.length} semesters · {courses.length} courses · {modules.length} modules</span>
-              </div>
-              <a className="button button-primary" href="#programs">
-                Open launch program <span aria-hidden="true">→</span>
-              </a>
-            </article>
-
-            <aside className="upcoming-schools" aria-label="Schools planned for future releases">
-              <div>
-                <span>Growing next</span>
-                <p>These are roadmap directions, not published programs or inflated catalog counts.</p>
-              </div>
-              {[
-                ["School of Computing", "Computer science, software, data, and AI"],
-                ["School of Natural Sciences", "Mathematics, physics, chemistry, and life sciences"],
-                ["School of Humanities & Society", "History, philosophy, economics, and public life"],
-                ["School of Design & Built Environment", "Design, architecture, and sustainable places"],
-              ].map(([name, description]) => (
-                <article key={name}>
-                  <span>Framework planned</span>
-                  <h3>{name}</h3>
-                  <p>{description}</p>
-                </article>
-              ))}
-            </aside>
-          </div>
-
-          <div className="atlas-principles">
-            <article>
-              <span>01</span>
-              <h3>Whole paths, not isolated classes</h3>
-              <p>Prerequisites, load, assessments, labs, and outcomes stay visible from the first click.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Depth before catalog size</h3>
-              <p>A school appears only when at least one complete program is genuinely usable.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Free access, labeled honestly</h3>
-              <p>Openly licensed material, free tools, and free courses are distinguished instead of blurred together.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="section overview-section" id="programs">
-          <div className="program-breadcrumb" aria-label="Program location">
-            <span>Catalog</span><b>→</b>
-            <span>School of Engineering</span><b>→</b>
-            <span>Electrical Engineering</span>
-          </div>
-          <div className="program-title-lockup">
-            <div>
-              <p className="section-index">02 / Launch program</p>
-              <h2>Electrical Engineering</h2>
-            </div>
-            <div>
-              <span>Program status</span>
-              <strong>Complete first edition</strong>
-              <small>39 courses · 128 credits · 8 semesters</small>
-            </div>
-          </div>
-          <nav className="program-nav" aria-label="Electrical Engineering program navigation">
-            <span>EE program</span>
-            <a href="#programs">Overview</a>
-            <a href="#roadmap">Roadmap</a>
-            <a href="#courses">Courses</a>
-            <a href="#assessments">Assessments</a>
-            <a href="#labs">Labs</a>
-            <a href="#tracks">Tracks</a>
-            <a href="#library">Library</a>
-          </nav>
-          <div className="section-intro">
-            <h2>Designed like a real program.<br />Owned entirely by you.</h2>
-            <p>
-              The common core builds mathematical and physical intuition before
-              specialization. Every semester pairs theory with evidence: code,
-              measurements, design reviews, and artifacts you can show.
-            </p>
-          </div>
-
-          <div className="principles-grid">
-            <article className="principle-card principle-wide">
-              <span className="card-number">01</span>
-              <div className="mini-circuit" aria-hidden="true">
-                <i /><i /><i /><i />
-              </div>
-              <h3>Learn → model → build → defend</h3>
-              <p>
-                Concepts become simulations, simulations become experiments, and
-                experiments become decisions you can explain under questioning.
-              </p>
-              <div className="sequence" aria-label="Learning sequence">
-                <span>First principles</span><b>→</b>
-                <span>Prediction</span><b>→</b>
-                <span>Test evidence</span><b>→</b>
-                <span>Oral defense</span>
-              </div>
-            </article>
-
-            <article className="principle-card">
-              <span className="card-number">02</span>
-              <h3>One foundation, four directions</h3>
-              <p>
-                Sixty-four common credits establish breadth. Choose a 24-credit
-                specialization after Semester 4 without closing off adjacent fields.
-              </p>
-              <a className="text-link" href="#tracks">Compare tracks <ArrowIcon /></a>
-            </article>
-
-            <article className="principle-card paper-card">
-              <span className="card-number">03</span>
-              <h3>Portfolio is the transcript</h3>
-              <p>
-                Graduate with at least six substantial artifacts, lab notebooks,
-                verified source histories, and a two-semester capstone.
-              </p>
-              <div className="artifact-list" aria-label="Portfolio artifacts">
-                <span>schematics</span>
-                <span>firmware</span>
-                <span>datasets</span>
-                <span>test reports</span>
-              </div>
-            </article>
-
-            <article className="principle-card accent-card">
-              <span className="card-number">04</span>
-              <p className="big-quote">
-                “Free” means no required proprietary software, paid course, or
-                expensive instrument blocks a learning outcome.
-              </p>
-              <a className="text-link" href="#labs">See the three lab routes <ArrowIcon /></a>
-            </article>
-          </div>
-
-          <div className="outcomes-band">
-            <div>
-              <p className="eyebrow">On completion, you can</p>
-              <h3>Reason across the whole electrical system.</h3>
-            </div>
-            <ol>
-              <li><span>01</span>Model circuits, signals, fields, feedback, and energy systems.</li>
-              <li><span>02</span>Program computers and embedded processors in Python and C.</li>
-              <li><span>03</span>Design experiments and distinguish a model from measured reality.</li>
-              <li><span>04</span>Build within safety, ethics, accessibility, and environmental constraints.</li>
-            </ol>
-          </div>
-        </section>
-
-        <section className="section roadmap-section" id="roadmap">
-          <div className="section-heading-row">
-            <div className="section-intro compact">
-            <p className="section-index">03 / EE roadmap</p>
-              <h2>Eight semesters. One connected arc.</h2>
-              <p>
-                Each term carries 16 credits and roughly 45 hours of work per week.
-                Check off courses as you go; progress stays on this device.
-              </p>
-            </div>
-            <button className="print-button" type="button" onClick={() => window.print()}>
-              <span aria-hidden="true">⇩</span> Print study plan
-            </button>
-          </div>
-
-          <div className="semester-tabs" role="group" aria-label="Filter by semester">
-            <button
-              type="button"
-              className={semesterFilter === "all" ? "is-active" : ""}
-              onClick={() => setSemesterFilter("all")}
-              aria-pressed={semesterFilter === "all"}
-            >
-              Full path
-            </button>
-            {semesters.map((semester) => (
-              <button
-                type="button"
-                key={semester.number}
-                className={semesterFilter === semester.number ? "is-active" : ""}
-                onClick={() => setSemesterFilter(semester.number)}
-                aria-pressed={semesterFilter === semester.number}
-              >
-                S{semester.number}
-              </button>
-            ))}
-          </div>
-
-          <div className="roadmap-grid">
-            {visibleSemesters.map((semester) => {
-              const termCourses = semester.courseCodes
-                .map((code) => courses.find((course) => course.code === code))
-                .filter((course): course is Course => Boolean(course));
-              const termCompleted = termCourses.filter((course) =>
-                completed.includes(course.code),
-              ).length;
+          <div className="degree-card-grid">
+            {degreeCatalog.map((degree, index) => {
+              const isLive = degree.status === "live";
               return (
                 <article
-                  className="semester-card"
-                  id={`semester-${semester.number}`}
-                  key={semester.number}
+                  className={`degree-directory-card degree-${degree.color} ${isLive ? "is-live" : ""}`}
+                  key={degree.slug}
                 >
-                  <div className="semester-top">
-                    <div>
-                      <span>Year {semester.year}</span>
-                      <h3>Semester {semester.number}</h3>
-                    </div>
-                    <div className="semester-credit">
-                      <strong>{semester.credits}</strong>
-                      <small>credits</small>
-                    </div>
+                  <div className="degree-card-top">
+                    <span>{String(index + 1).padStart(2, "0")} · {degree.school}</span>
+                    <b>{isLive ? "Open now" : degree.status === "building" ? "Building" : "Planned"}</b>
                   </div>
-                  <p className="semester-theme">{semester.theme}</p>
-                  <div className="term-load">
-                    <span>{semester.hours} h / week</span>
-                    <span>{termCompleted}/{termCourses.length} complete</span>
+                  <div className="degree-card-title">
+                    <span>{degree.credential}</span>
+                    <h3>{degree.name}</h3>
+                    <p>{degree.description}</p>
                   </div>
-                  <div className="course-list">
-                    {termCourses.map((course) => (
-                      <div
-                        className={`roadmap-course ${completed.includes(course.code) ? "is-complete" : ""}`}
-                        key={course.code}
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={completed.includes(course.code)}
-                            onChange={() => toggleCourse(course.code)}
-                          />
-                          <span className="custom-check" aria-hidden="true">✓</span>
-                          <span className="course-code">{course.code}</span>
-                        </label>
-                        <button type="button" onClick={() => showCourse(course)}>
-                          <span>{compactCourseTitle(course, selectedTrack)}</span>
-                          {trackSlots[course.code] !== undefined && (
-                            <small>Selected track course</small>
-                          )}
-                        </button>
-                        <span className="course-credits">{course.credits} cr</span>
-                      </div>
-                    ))}
+                  <div className="degree-card-facts">
+                    {degree.facts.map((fact) => <span key={fact}>{fact}</span>)}
                   </div>
-                  {semester.number === 4 && (
-                    <a className="decision-marker" href="#tracks">
-                      <span>Track decision</span>
-                      Choose your specialization <span aria-hidden="true">→</span>
-                    </a>
-                  )}
-                  {semester.number === 8 && (
-                    <div className="finish-marker">
-                      <span aria-hidden="true">✦</span>
-                      Capstone defense + portfolio review
-                    </div>
+                  {isLive ? (
+                    <Link href={`/degrees/${degree.slug}`}>
+                      Enter degree <span aria-hidden="true">→</span>
+                    </Link>
+                  ) : (
+                    <span className="degree-card-locked">
+                      Not published yet—no fake empty page
+                    </span>
                   )}
                 </article>
               );
@@ -615,561 +136,107 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section courses-section" id="courses">
-          <div className="section-intro compact">
-            <p className="section-index">04 / EE course catalog</p>
-            <h2>Every course has a job to do.</h2>
-            <p>
-              Search the complete catalog. Open a course to see prerequisites,
-              workload, intended outcomes, and how it fits the sequence.
-            </p>
-          </div>
-
-          <div className="catalog-toolbar">
-            <label className="search-field">
-              <span aria-hidden="true">⌕</span>
-              <span className="sr-only">Search courses</span>
-              <input
-                type="search"
-                value={courseQuery}
-                onChange={(event) => setCourseQuery(event.target.value)}
-                placeholder="Search signals, Python, ethics…"
-              />
-              {courseQuery && (
-                <button
-                  type="button"
-                  onClick={() => setCourseQuery("")}
-                  aria-label="Clear course search"
-                >
-                  ×
-                </button>
-              )}
-            </label>
-            <label className="select-field">
-              <span className="sr-only">Filter course semester</span>
-              <select
-                value={semesterFilter}
-                onChange={(event) =>
-                  setSemesterFilter(
-                    event.target.value === "all" ? "all" : Number(event.target.value),
-                  )
-                }
-              >
-                <option value="all">All semesters</option>
-                {semesters.map((semester) => (
-                  <option value={semester.number} key={semester.number}>
-                    Semester {semester.number}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="filter-row" role="group" aria-label="Filter by course format">
-            {courseKinds.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={courseKind === value ? "is-active" : ""}
-                aria-pressed={courseKind === value}
-                onClick={() => setCourseKind(value)}
-              >
-                {label}
-              </button>
-            ))}
-            <span>{filteredCourses.length} shown</span>
-          </div>
-
-          <div className="catalog-list">
-            {filteredCourses.map((course) => (
-              <article className="catalog-row" key={course.code}>
-                <div className={`kind-marker kind-${course.kind}`} aria-hidden="true" />
-                <div className="catalog-code">
-                  <strong>{course.code}</strong>
-                  <span>Semester {course.semester}</span>
-                </div>
-                <div className="catalog-main">
-                  <h3>{compactCourseTitle(course, selectedTrack)}</h3>
-                  <p>{course.summary}</p>
-                  <div>
-                    <span>{course.kind}</span>
-                    <span>{course.hours} h/week</span>
-                    <span>{course.credits} credits</span>
-                  </div>
-                </div>
-                <button
-                  className="course-open"
-                  type="button"
-                  onClick={() => showCourse(course)}
-                  aria-label={`View ${compactCourseTitle(course, selectedTrack)} details`}
-                >
-                  <span aria-hidden="true">→</span>
-                </button>
-              </article>
-            ))}
-            {filteredCourses.length === 0 && (
-              <div className="empty-state">
-                <span aria-hidden="true">∿</span>
-                <h3>No courses match that circuit.</h3>
-                <p>Try a broader term or clear one of the filters.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCourseQuery("");
-                    setCourseKind("all");
-                    setSemesterFilter("all");
-                  }}
-                >
-                  Clear filters
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="section assessments-section" id="assessments">
-          <div className="section-intro">
-            <p className="section-index">05 / EE assessments</p>
-            <h2>A predictable academic rhythm.</h2>
-            <p>
-              Every 16-week semester uses the same major checkpoints. Individual
-              courses vary the evidence, but never spring the calendar on you.
-            </p>
-          </div>
-
-          <div className="cadence-key" aria-label="Major semester checkpoints">
-            <span><i className="key-teal" /> Learn &amp; practice</span>
-            <span><i className="key-amber" /> Review &amp; test</span>
-            <span><i className="key-coral" /> Demonstrate &amp; defend</span>
-          </div>
-
-          <div className="cadence-grid">
-            {cadence.map((item) => (
-              <article
-                className={`week-card ${item.tone ? `week-${item.tone}` : ""}`}
-                key={item.week}
-              >
-                <span className="week-number">W{String(item.week).padStart(2, "0")}</span>
-                <h3>{item.label}</h3>
-                <p>{item.focus}</p>
-                <small>{item.checkpoint}</small>
-              </article>
-            ))}
-          </div>
-
-          <div className="major-checkpoints">
-            <div><span>W6</span><strong>Midterm I</strong><small>15–20%</small></div>
-            <i aria-hidden="true" />
-            <div><span>W11</span><strong>Midterm II / practical</strong><small>10–15%</small></div>
-            <i aria-hidden="true" />
-            <div><span>W15</span><strong>Demo &amp; expo</strong><small>project evidence</small></div>
-            <i aria-hidden="true" />
-            <div><span>W16</span><strong>Cumulative final</strong><small>one per day max</small></div>
-          </div>
-
-          <div className="assessment-grid">
-            {assessments.map((assessment) => (
-              <article className="assessment-card" key={assessment.name}>
-                <span className="assessment-audience">{assessment.audience}</span>
-                <h3>{assessment.name}</h3>
-                <div className="weight-list">
-                  {assessment.parts.map((part) => (
-                    <div className="weight-row" key={part.label}>
-                      <div>
-                        <span>{part.label}</span>
-                        <strong>{part.weight}%</strong>
-                      </div>
-                      <span className="weight-rail">
-                        <i style={{ width: `${part.weight}%` }} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="section labs-section" id="labs">
-          <div className="section-heading-row">
-            <div className="section-intro compact">
-              <p className="section-index">06 / EE laboratories</p>
-              <h2>The instrument is a route,<br />not a gate.</h2>
-              <p>
-                Every practical course offers three equivalent ways to produce
-                evidence. Choose by access—not prestige.
-              </p>
-            </div>
-            <div className="lab-promise">
-              <span aria-hidden="true">◎</span>
-              <p><strong>Same outcome.</strong><br />Different bench.</p>
-            </div>
-          </div>
-
-          <div className="lab-layout">
-            <div className="lab-route-tabs" role="tablist" aria-label="Laboratory routes">
-              {labRoutes.map((route, index) => (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeLab === index}
-                  aria-controls={`lab-route-${index}`}
-                  id={`lab-tab-${index}`}
-                  className={activeLab === index ? "is-active" : ""}
-                  key={route.name}
-                  onClick={() => setActiveLab(index)}
-                >
-                  <span>Route {String.fromCharCode(65 + index)}</span>
-                  <strong>{route.name}</strong>
-                  <small>{route.label}</small>
-                </button>
-              ))}
-            </div>
-
-            <article
-              className="lab-route-panel"
-              id={`lab-route-${activeLab}`}
-              role="tabpanel"
-              aria-labelledby={`lab-tab-${activeLab}`}
-            >
-              <div className="bench-illustration" aria-hidden="true">
-                <span className="bench-screen">
-                  <i /><i /><i /><i /><i />
-                </span>
-                <span className="bench-node node-one" />
-                <span className="bench-node node-two" />
-                <span className="bench-wire wire-one" />
-                <span className="bench-wire wire-two" />
-              </div>
-              <div>
-                <p className="eyebrow">Route {String.fromCharCode(65 + activeLab)}</p>
-                <h3>{labRoutes[activeLab].name}</h3>
-                <p>{labRoutes[activeLab].description}</p>
-                <ul>
-                  {labRoutes[activeLab].tools.map((tool) => (
-                    <li key={tool}><span aria-hidden="true">✓</span>{tool}</li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          </div>
-
-          <div className="evidence-strip">
-            <span>Every lab record includes</span>
-            <ul>
-              <li>prediction</li>
-              <li>raw data</li>
-              <li>uncertainty</li>
-              <li>model comparison</li>
-              <li>failure analysis</li>
-              <li>reproduction notes</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="section tracks-section" id="tracks">
-          <div className="section-intro">
-            <p className="section-index">07 / EE specialization tracks</p>
-            <h2>Choose depth without losing breadth.</h2>
-            <p>
-              Your selected route gives direction to three specialization studios
-              in Semesters 7–8. The full 26-credit depth phase also includes an
-              open elective and the 14-credit capstone. Change the route any time;
-              your choice is saved on this device.
-            </p>
-          </div>
-
-          <div className="track-selector" role="radiogroup" aria-label="Select specialization">
-            {tracks.map((track, index) => (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={selectedTrack === track.id}
-                className={`track-choice track-${track.id} ${selectedTrack === track.id ? "is-selected" : ""}`}
-                key={track.id}
-                onClick={() => chooseTrack(track.id)}
-              >
-                <span className="track-choice-top">
-                  <i>{String(index + 1).padStart(2, "0")}</i>
-                  <b>{selectedTrack === track.id ? "Selected" : "Choose track"}</b>
-                </span>
-                <strong>{track.name}</strong>
-                <small>{track.kicker}</small>
-              </button>
-            ))}
-          </div>
-
-          <article className={`track-detail track-${activeTrack.id}`}>
-            <div className="track-detail-intro">
-              <p className="eyebrow">Your current route</p>
-              <h3>{activeTrack.name}</h3>
-              <p>{activeTrack.description}</p>
-              <div className="track-meta">
-                <span><strong>26</strong> depth credits</span>
-                <span><strong>3</strong> studios</span>
-                <span><strong>S7–S8</strong> depth phase</span>
-              </div>
-            </div>
-            <div className="track-course-map">
-              <p className="track-map-label">Subject menu · three studios follow one coherent route</p>
-              {activeTrack.courseNames.map((name, index) => (
-                <div key={name}>
-                  <span>{index < 3 ? "Default" : "Option"}</span>
-                  <i aria-hidden="true">{index + 1}</i>
-                  <strong>{name}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="capstone-ideas">
-              <span>Capstone directions</span>
-              {activeTrack.capstoneIdeas.map((idea) => (
-                <p key={idea}><i aria-hidden="true">↳</i>{idea}</p>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="section library-section" id="library">
-          <div className="section-heading-row">
-            <div className="section-intro compact">
-              <p className="section-index">08 / Open resource library</p>
-              <h2>Your shelf of free, serious resources.</h2>
-              <p>
-                Direct links to open courses, textbooks, references, and engineering
-                tools. Each access label describes what is free—not merely auditable.
-              </p>
-            </div>
-            <span className="resource-count">
-              <strong>{resources.length}</strong> verified starting points
-            </span>
-          </div>
-
-          <div className="library-toolbar">
-            <label className="search-field library-search">
-              <span aria-hidden="true">⌕</span>
-              <span className="sr-only">Search library</span>
-              <input
-                type="search"
-                value={resourceQuery}
-                onChange={(event) => setResourceQuery(event.target.value)}
-                placeholder="Search provider, subject, or tool…"
-              />
-              {resourceQuery && (
-                <button
-                  type="button"
-                  onClick={() => setResourceQuery("")}
-                  aria-label="Clear resource search"
-                >
-                  ×
-                </button>
-              )}
-            </label>
-            <div className="area-filters" role="group" aria-label="Filter resources by area">
-              {resourceAreas.map((area) => (
-                <button
-                  type="button"
-                  key={area}
-                  className={resourceArea === area ? "is-active" : ""}
-                  aria-pressed={resourceArea === area}
-                  onClick={() => setResourceArea(area)}
-                >
-                  {area}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="resource-table" role="list">
-            <div className="resource-table-head" aria-hidden="true">
-              <span>Resource</span>
-              <span>Area</span>
-              <span>Access</span>
-              <span />
-            </div>
-            {filteredResources.map((resource) => (
-              <a
-                className="resource-row"
-                href={resource.url}
-                target="_blank"
-                rel="noreferrer"
-                key={`${resource.provider}-${resource.title}`}
-                role="listitem"
-              >
-                <span className="resource-title">
-                  <strong>{resource.title}</strong>
-                  <small>{resource.provider} · {resource.note}</small>
-                </span>
-                <span className="resource-area">{resource.area}</span>
-                <span className={`access-label access-${resource.access.toLowerCase().replace(/\s/g, "-")}`}>
-                  {resource.access}
-                </span>
-                <span className="resource-arrow" aria-hidden="true">↗</span>
-              </a>
-            ))}
-            {filteredResources.length === 0 && (
-              <div className="empty-state">
-                <span aria-hidden="true">⌕</span>
-                <h3>No resource found.</h3>
-                <p>Try a wider subject or show all resource areas.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResourceQuery("");
-                    setResourceArea("All");
-                  }}
-                >
-                  Reset library
-                </button>
-              </div>
-            )}
-          </div>
-          <p className="verification-note">
-            <span aria-hidden="true">✓</span>
-            URLs were checked against primary publishers while this curriculum was
-            assembled. Availability can change; report broken links in your own study log.
-          </p>
-        </section>
-
-        <section className="capstone-section" aria-labelledby="capstone-title">
-          <div className="capstone-grid" aria-hidden="true" />
-          <div>
-            <p className="section-index">The finish line</p>
-            <h2 id="capstone-title">One system.<br />Two semesters.<br />No hand-waving.</h2>
-          </div>
-          <div className="capstone-path">
-            <article>
-              <span>S7 · CAP 401</span>
-              <h3>Define &amp; prototype</h3>
-              <p>Stakeholder need, requirements, hazards, architecture, test plan, budget, and proof of concept.</p>
-            </article>
-            <i aria-hidden="true">→</i>
-            <article>
-              <span>S8 · CAP 402</span>
-              <h3>Build, verify &amp; defend</h3>
-              <p>Integrated artifact, test evidence, design history, public demonstration, report, and individual viva.</p>
-            </article>
-          </div>
-          <div className="capstone-output">
-            <span>Required release package</span>
+        <section className="catalog-section degree-model" id="model">
+          <div className="catalog-section-heading">
             <div>
-              <b>01</b><p>Working artifact</p>
-              <b>02</b><p>Test evidence</p>
-              <b>03</b><p>Safety case</p>
-              <b>04</b><p>Public portfolio</p>
+              <p className="section-index">02 / The degree model</p>
+              <h2>Same structure.<br />Any field.</h2>
             </div>
+            <p>
+              The platform separates reusable university infrastructure from each
+              program&apos;s academic content, so adding a degree does not make the
+              homepage or another degree more complicated.
+            </p>
           </div>
+
+          <div className="degree-stack" aria-label="Scalable degree content model">
+            {[
+              ["01", "Degree registry", "Title, school, credential, status, and route"],
+              ["02", "Semester map", "Five or six coordinated courses per term"],
+              ["03", "Course classrooms", "Setup, prerequisites, outcomes, and assessments"],
+              ["04", "Executable weeks", "What, where, work, evidence, and time"],
+              ["05", "Resource graph", "Primary free course, backups, tools, and access labels"],
+              ["06", "Local progress", "Continue exactly where you stopped"],
+            ].map(([number, title, note]) => (
+              <article key={number}>
+                <span>{number}</span>
+                <h3>{title}</h3>
+                <p>{note}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="catalog-section school-index" id="schools">
+          <div className="catalog-section-heading">
+            <div>
+              <p className="section-index">03 / Schools</p>
+              <h2>A catalog built<br />to keep expanding.</h2>
+            </div>
+            <p>
+              Schools organize related degrees. A new program joins the registry and
+              receives its own route; it never gets squeezed into the Electrical
+              Engineering page.
+            </p>
+          </div>
+
+          <div className="school-home-grid">
+            {Array.from(new Set(degreeCatalog.map((degree) => degree.school))).map(
+              (school, index) => {
+                const schoolDegrees = degreeCatalog.filter(
+                  (degree) => degree.school === school,
+                );
+                return (
+                  <article key={school}>
+                    <span>School {String(index + 1).padStart(2, "0")}</span>
+                    <h3>{school}</h3>
+                    <p>{schoolDegrees.map((degree) => degree.name).join(" · ")}</p>
+                    <small>
+                      {schoolDegrees.filter((degree) => degree.status === "live").length} live ·{" "}
+                      {schoolDegrees.length} registered
+                    </small>
+                  </article>
+                );
+              },
+            )}
+          </div>
+        </section>
+
+        <section className="catalog-about" id="about">
+          <p className="section-index">04 / Honest scope</p>
+          <h2>The learning can be rebuilt.<br />The credential cannot be faked.</h2>
+          <p>
+            Course Atlas reproduces curriculum structure, free learning routes,
+            assessments, laboratory evidence, and portfolio work. It is independent
+            self-study—not enrollment, accreditation, transferable credit, or a
+            university-issued degree.
+          </p>
+          <Link href="/degrees/electrical-engineering">
+            Explore the first complete degree <span aria-hidden="true">→</span>
+          </Link>
         </section>
       </main>
 
-      <footer id="provenance">
+      <footer id="catalog-footer">
         <div className="footer-brand">
           <a className="brand" href="#top">
             <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-            <span><strong>Course Atlas</strong><small>every subject · one path</small></span>
+            <span><strong>Course Atlas</strong><small>complete degrees · free routes</small></span>
           </a>
-          <p>{disclaimer}</p>
+          <p>One degree registry. Independent program pages. A platform designed to hold every serious field without becoming one endless document.</p>
         </div>
         <div className="provenance">
-          <span>Curricular provenance</span>
-          <p>
-            The launch program is an original synthesis informed by the published
-            structures of leading EE programs—not a reproduction of any one degree.
-          </p>
+          <span>Live now</span>
+          <p>Electrical Engineering is the first complete program. Other cards are clearly labeled as building or planned until their full academic routes exist.</p>
           <div>
-            {provenanceSources.map((source) => (
-              <a href={source.url} target="_blank" rel="noreferrer" key={source.name}>
-                {source.name} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
+            <Link href="/degrees/electrical-engineering">Electrical Engineering <span aria-hidden="true">→</span></Link>
           </div>
         </div>
         <div className="footer-meta">
-          <span>Launch catalog · July 2026</span>
+          <span>Course Atlas · Degree catalog</span>
           <span>Every subject. One navigable education.</span>
         </div>
       </footer>
-
-      {activeCourse && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={closeCourse}>
-          <article
-            className="course-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="course-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal-close"
-              onClick={closeCourse}
-              aria-label="Close course details"
-              autoFocus
-            >
-              ×
-            </button>
-            <div className={`modal-band kind-${activeCourse.kind}`} />
-            <div className="modal-header">
-              <span>{activeCourse.code} · Semester {activeCourse.semester}</span>
-              <h2 id="course-modal-title">
-                {compactCourseTitle(activeCourse, selectedTrack)}
-              </h2>
-              {trackSlots[activeCourse.code] !== undefined && (
-                <p className="track-context">Track slot · {activeTrack.name}</p>
-              )}
-            </div>
-            <div className="modal-facts">
-              <span><strong>{activeCourse.credits}</strong> credits</span>
-              <span><strong>{activeCourse.hours}</strong> hours / week</span>
-              <span><strong>16</strong> weeks</span>
-            </div>
-            <div className="modal-body">
-              <div>
-                <span className="modal-label">What you&apos;ll study</span>
-                <p>{activeCourse.summary}</p>
-              </div>
-              <div>
-                <span className="modal-label">Signature outcome</span>
-                <p>{activeCourse.outcome}</p>
-              </div>
-              <div>
-                <span className="modal-label">Prerequisites</span>
-                <p>
-                  {activeCourse.prerequisites.length
-                    ? activeCourse.prerequisites.join(" · ")
-                    : "No formal prerequisites"}
-                </p>
-              </div>
-              <div>
-                <span className="modal-label">Course modules</span>
-                <ol className="modal-modules">
-                  {modules
-                    .filter((module) => module.courseCode === activeCourse.code)
-                    .map((module) => (
-                      <li key={module.id}>
-                        <span>{String(module.order).padStart(2, "0")}</span>
-                        <strong>{module.title}</strong>
-                        <small>Weeks {module.weeks[0]}–{module.weeks[1]}</small>
-                      </li>
-                    ))}
-                </ol>
-              </div>
-            </div>
-            <div className="modal-actions">
-              <button
-                type="button"
-                className={completed.includes(activeCourse.code) ? "is-complete" : ""}
-                onClick={() => toggleCourse(activeCourse.code)}
-              >
-                <span aria-hidden="true">✓</span>
-                {completed.includes(activeCourse.code) ? "Marked complete" : "Mark complete"}
-              </button>
-              <button type="button" onClick={copyCourseLink}>
-                <span aria-hidden="true">⌁</span> {copied ? "Link copied" : "Copy course link"}
-              </button>
-            </div>
-          </article>
-        </div>
-      )}
     </div>
   );
 }

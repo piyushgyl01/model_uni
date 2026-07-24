@@ -24,9 +24,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase,
-    title: "Course Atlas — Every subject. One navigable education.",
+    title: "Course Atlas — Complete degrees built from free courses",
     description:
-      "A growing map of complete learning programs, courses, modules, and carefully labeled free resources. Begin with the full Electrical Engineering program.",
+      "A scalable catalog of complete degree-shaped self-study programs, each with semesters, courses, executable weeks, assessments, and carefully labeled free resources.",
     applicationName: "Course Atlas",
     keywords: [
       "open curriculum",
@@ -37,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
     ],
     openGraph: {
       title: "Course Atlas",
-      description: "Every subject. One navigable education.",
+      description: "Pick a degree. Get the whole path—built from the best free courses on the open web.",
       type: "website",
       siteName: "Course Atlas",
       images: [
@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "Course Atlas",
-      description: "Every subject. One navigable education.",
+      description: "Complete degree-shaped self-study routes built from free courses.",
       images: ["/og.png"],
     },
     icons: {
