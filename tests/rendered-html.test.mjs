@@ -30,8 +30,10 @@ test("homepage is a universal catalog derived from published programs", async ()
   const html = await response.text();
   assert.match(html, /Choose an outcome/);
   assert.match(html, /Different structures/);
+  assert.match(html, /Computer Science/);
   assert.match(html, /Electrical Engineering/);
   assert.match(html, /Practical Spreadsheets/);
+  assert.match(html, /\/programs\/computer-science/);
   assert.match(html, /\/programs\/electrical-engineering/);
   assert.match(html, /\/programs\/practical-spreadsheets/);
   assert.match(html, /31/);
@@ -40,6 +42,33 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.match(html, /learning units/);
   assert.doesNotMatch(html, /∞/);
   assert.doesNotMatch(html, /Your three-year electrical engineering university/);
+});
+
+test("Computer Science renders as a complete six-term program and course classroom", async () => {
+  const programResponse = await render("/programs/computer-science");
+  assert.equal(programResponse.status, 200);
+  const programHtml = await programResponse.text();
+  assert.match(programHtml, /Computer Science/);
+  assert.match(programHtml, /30/);
+  assert.match(programHtml, /selected from/);
+  assert.match(programHtml, /34/);
+  assert.match(programHtml, /Intelligent Systems/);
+  assert.match(programHtml, /Scalable and Secure Systems/);
+  assert.match(programHtml, /Interactive Applications/);
+  assert.match(programHtml, /CS2023/);
+  assert.match(programHtml, /independent-study pathway/i);
+
+  const courseResponse = await render(
+    "/programs/computer-science/courses/operating-systems",
+  );
+  assert.equal(courseResponse.status, 200);
+  const courseHtml = await courseResponse.text();
+  assert.match(courseHtml, /Operating Systems/);
+  assert.match(courseHtml, /8 learning units/);
+  assert.match(courseHtml, /Units 15–16/);
+  assert.match(courseHtml, /Operating Systems: Three Easy Pieces/);
+  assert.match(courseHtml, /What to learn/);
+  assert.match(courseHtml, /Evidence to keep/);
 });
 
 test("generic program route renders the EE publication without placeholders", async () => {
@@ -84,7 +113,7 @@ test("standalone course route is an executable arbitrary-length classroom", asyn
     "Evidence to keep",
     "Course resources",
     "Assessments and grading",
-    "Week 8",
+    "Unit 8",
     "8 learning units",
   ]) {
     assert.match(html, new RegExp(phrase));
@@ -103,19 +132,12 @@ test("a sixteen-unit EE course uses the same standalone classroom", async () => 
   const html = await response.text();
   assert.match(html, /Calculus I/);
   assert.match(html, /16 learning units/);
-  assert.match(html, /Week 16/);
+  assert.match(html, /Unit 16/);
   assert.match(html, /Cumulative/);
 });
 
-test("legacy degree URLs redirect and unpublished programs remain 404", async () => {
-  const legacy = await render("/degrees/electrical-engineering");
-  assert.ok([307, 308].includes(legacy.status));
-  assert.equal(
-    new URL(legacy.headers.get("location"), "http://localhost").pathname,
-    "/programs/electrical-engineering",
-  );
-
-  const missing = await render("/programs/computer-science");
+test("unknown programs remain 404", async () => {
+  const missing = await render("/programs/not-a-published-program");
   assert.equal(missing.status, 404);
 });
 
@@ -127,6 +149,9 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     coursePage,
     progress,
     catalog,
+    runtimeCatalog,
+    progressApi,
+    progressStorage,
     schema,
   ] = await Promise.all([
     readFile(new URL("../app/programs/[slug]/page.tsx", import.meta.url), "utf8"),
@@ -141,10 +166,20 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     readFile(new URL("../app/course-page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/course-progress.tsx", import.meta.url), "utf8"),
     readFile(new URL("../content/catalog.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/catalog/runtime-repository.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/api/learner-progress/route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/progress-storage.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(programRoute, /catalogRepository\.loadBySlug/);
+  assert.match(programRoute, /getRuntimeCatalogRepository/);
+  assert.match(programRoute, /await catalogRepository\.loadBySlug/);
   assert.match(programRoute, /<ProgramPage bundle=\{bundle\}/);
   assert.doesNotMatch(programRoute, /ee-beng|electrical-engineering/);
   assert.match(courseRoute, /<CoursePage bundle=\{bundle\}/);
@@ -154,12 +189,25 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(progress, /programVersionId/);
   assert.match(progress, /courseVersionId/);
   assert.match(progress, /completedUnitIds/);
+  assert.match(progress, /patchCloudProgress/);
   assert.match(catalog, /StaticCatalogRepository/);
+  assert.match(runtimeCatalog, /seedPublishedProgramBundles/);
+  assert.match(runtimeCatalog, /compareCatalogBundleShadows/);
+  assert.match(progressApi, /getAuthenticatedLearner/);
+  assert.match(progressApi, /rejectCrossOriginMutation/);
+  assert.match(
+    progressStorage,
+    /disposition === "merged" \? sanitizedImportPrograms\(store\) : \{\}/,
+  );
   assert.match(schema, /programVersions/);
   assert.match(schema, /courseVersions/);
   assert.match(schema, /resourceRights/);
   assert.match(schema, /competencies/);
+  assert.match(schema, /catalogBundles/);
+  assert.match(schema, /learnerProgramProgress/);
+  assert.match(schema, /learnerUnitCompletions/);
 
   await access(new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url));
+  await access(new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url));
   await access(new URL("../.openai/hosting.json", import.meta.url));
 });

@@ -1,15 +1,15 @@
 # Course Atlas: Universal Catalog Architecture
 
-Status: implemented content-domain foundation, July 2026
+Status: D1-backed catalog and learner-progress foundation, July 2026
 
 The current release implements the universal publication contract, validation,
-repository boundary, stable seed identities, immutable EE and spreadsheet
-program bundles, generic program/course renderers, version-aware local progress,
-and the first D1 schema/migration. Checked-in publications remain the active
-read adapter while database seeding, editorial authoring, shadow comparison,
-and cutover are built. The later ingestion, account, credential, and search
-sections below remain the target architecture, not claims about the live
-product.
+repository boundary, stable seed identities, immutable EE, Computer Science,
+and spreadsheet publications, generic program/course renderers, D1-backed
+catalog reads, and authenticated version-aware progress. Checked-in
+publications are the reviewed seed inputs; D1 stores the immutable runtime
+snapshots and every startup shadow-compares their canonical content. The later
+editorial authoring, connector ingestion, credential, and search sections below
+remain target architecture, not claims about the live product.
 
 ## 1. Product boundary
 
@@ -50,8 +50,9 @@ Terminology has deliberate legal meaning:
 
 ## 2. Architecture rules
 
-1. D1 is the intended system of record for structured data after the verified
-   cutover; checked-in immutable publications are the current release source.
+1. D1 is the runtime system of record for published catalog snapshots and
+   authenticated learner progress; checked-in immutable publications are the
+   reviewed, idempotent seed inputs until editorial authoring exists.
 2. Object storage is the system of record for permitted binary assets and raw
    ingestion evidence.
 3. Search indexes and caches are derived and disposable.
@@ -435,17 +436,21 @@ reversible:
    - `LabRoute` → reusable lab learning-object collections and tool
      requirements.
    - `ProvenanceSource` → provider/source/evidence records.
-3. **Introduce D1 — schema complete, seed/cutover pending.** Portable Drizzle
-   tables and an executable migration now cover versioned programs, courses,
+3. **Introduce D1 — complete for immutable runtime publications.** Portable
+   Drizzle tables and migrations cover versioned programs, courses,
    requirements, content, competencies, resources, access, rights, provenance,
-   aliases, audit events, and the outbox. The next slice is an idempotent seed
-   plus row-count, graph, hours, URL, and content-hash verification.
-4. **Add a repository boundary — interface and static adapter complete.** All
-   routes use `CatalogRepository`; no renderer imports program data. Add a D1
-   adapter, shadow-compare its output with the checked-in publications, then
-   switch reads by one feature flag. Do not dual-write.
-5. **Move user state.** Add authenticated plans/progress and the consent-based
-   import of `course-atlas-track` and `course-atlas-ee-progress`.
+   aliases, immutable bundle chunks, learner state, audit events, and outbox.
+   Seeds are canonicalized, SHA-256 checked, idempotent, and immutable.
+4. **Add a repository boundary — complete.** All routes use the asynchronous
+   runtime repository; no renderer imports program data. D1 publications are
+   reconstructed, validated, and field-level shadow-compared with checked-in
+   sources. Static fallback occurs only when the D1 binding is absent, never
+   when D1 data is corrupt or divergent.
+5. **Move user state — complete for progress.** ChatGPT-authenticated learners
+   receive D1-backed, version-pinned progress. Existing
+   `course-atlas-progress-v2` data is imported only after an explicit merge or
+   cloud-only choice; the import receipt and payload hash make retries
+   idempotent. Device data remains the anonymous/offline cache.
 6. **Add object storage.** Store raw imports, rights evidence, generated
    thumbnails, submissions, and only legally mirrorable resources. Backfill
    checksums before switching reads.
@@ -463,7 +468,7 @@ That keeps the PostgreSQL migration mechanical.
 
 ### Phase 0 — universal static shell (complete)
 
-- Use generic product concepts and prove them with two structurally different
+- Use generic product concepts and prove them with three structurally different
   programs.
 - Add the ID manifest, immutable version contract, and publication validators.
 - Put all catalog access behind repository interfaces and use generic routes.
@@ -529,18 +534,21 @@ service objectives.
 
 ## 17. Current implementation slice
 
-The first release now contains stable programs/program versions,
+The release now contains stable programs/program versions,
 courses/course versions, requirement groups/options, arbitrary content units,
 competencies and mappings, assessments, resources/resource versions,
 licenses/access offers, provenance, slug aliases, audit/outbox events, and the
-EE seed manifest. The checked-in repository also proves the contract with a
-non-degree, non-semester spreadsheet program.
+EE seed manifest. Computer Science proves a second complete six-term
+degree-equivalent structure, while the non-degree spreadsheet sprint proves
+that the model is not coupled to degrees or semesters.
 
-The next database release should add an idempotent importer and D1 repository,
-expose a read-only catalog API, and shadow-compare every publication against the
-current repository before switching the active read path. That cutover should
-happen before account-backed progress or editorial writes.
+The active runtime path now idempotently seeds checked-in publications into
+D1, reads them through the D1 repository, verifies every publication against
+the source shadow, and stores authenticated learner progress under immutable
+version IDs. The next persistence slice is editorial authoring/import workflow,
+not another read-path rewrite.
 
 This slice proves universal identity, reuse, provenance, versioning,
-requirements, arbitrary course shape, and publication rules—the decisions that
-are expensive to retrofit after thousands of courses have been ingested.
+requirements, arbitrary course shape, immutable persistence, cross-device
+progress, and publication rules—the decisions that are expensive to retrofit
+after thousands of courses have been ingested.

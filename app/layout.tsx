@@ -31,6 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: [
       "open curriculum",
       "self-directed learning",
+      "computer science",
       "electrical engineering",
       "spreadsheet course",
       "free courses",

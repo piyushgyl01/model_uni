@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import {
   type AnySQLiteColumn,
   check,
+  foreignKey,
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -555,6 +557,39 @@ export const resourceRights = sqliteTable(
     ),
   ],
 );
+ 
+export const resourceFreshness = sqliteTable(
+  "resource_freshness",
+  {
+    id: text("id").primaryKey(),
+    resourceVersionId: text("resource_version_id")
+      .notNull()
+      .references(() => resourceVersions.id, { onDelete: "cascade" }),
+    status: text("status", {
+      enum: [
+        "healthy",
+        "redirected",
+        "temporarily_unavailable",
+        "broken",
+        "unchecked",
+      ],
+    })
+      .notNull()
+      .default("unchecked"),
+    checkedAt: text("checked_at"),
+    httpStatus: integer("http_status"),
+    resolvedUrl: text("resolved_url"),
+    contentFingerprint: text("content_fingerprint"),
+    note: text("note").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("resource_freshness_resource_version_unique").on(
+      table.resourceVersionId,
+    ),
+    index("resource_freshness_status_idx").on(table.status, table.checkedAt),
+  ],
+);
 
 export const contentUnitResources = sqliteTable(
   "content_unit_resources",
@@ -705,6 +740,252 @@ export const slugAliases = sqliteTable(
         OR (${table.namespace} = 'competency' AND ${table.competencyId} IS NOT NULL)
         OR (${table.namespace} = 'provider' AND ${table.providerId} IS NOT NULL)
         OR (${table.namespace} = 'resource' AND ${table.resourceId} IS NOT NULL)`,
+    ),
+  ],
+);
+
+/**
+ * The normalized catalog tables above support relational authoring and
+ * discovery. This publication table is the immutable, canonical snapshot used
+ * at runtime. Keeping the validated bundle JSON intact guarantees that a D1
+ * read reconstructs every optional field and ordered array without guessing.
+ */
+export const catalogBundles = sqliteTable(
+  "catalog_bundles",
+  {
+    id: text("id").primaryKey(),
+    schemaVersion: integer("schema_version").notNull(),
+    programId: text("program_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    canonicalSlug: text("canonical_slug").notNull(),
+    semanticVersion: text("semantic_version").notNull(),
+    publishedAt: text("published_at").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    summaryJson: text("summary_json", { mode: "json" }).$type<unknown>().notNull(),
+    seededAt: text("seeded_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("catalog_bundles_program_version_id_unique").on(
+      table.programVersionId,
+    ),
+    uniqueIndex("catalog_bundles_program_semver_unique").on(
+      table.programId,
+      table.semanticVersion,
+    ),
+    uniqueIndex("catalog_bundles_id_program_version_unique").on(
+      table.id,
+      table.programVersionId,
+    ),
+    index("catalog_bundles_slug_idx").on(
+      table.canonicalSlug,
+      table.semanticVersion,
+    ),
+    check(
+      "catalog_bundles_schema_version_check",
+      sql`${table.schemaVersion} > 0`,
+    ),
+    check(
+      "catalog_bundles_payload_hash_check",
+      sql`length(${table.payloadHash}) = 64`,
+    ),
+  ],
+);
+
+/**
+ * Chunks keep even unusually large degree publications comfortably below D1's
+ * per-row limit while preserving one byte-for-byte canonical JSON document.
+ */
+export const catalogBundlePayloadChunks = sqliteTable(
+  "catalog_bundle_payload_chunks",
+  {
+    bundleId: text("bundle_id")
+      .notNull()
+      .references(() => catalogBundles.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    payloadChunk: text("payload_chunk").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "catalog_bundle_payload_chunks_pk",
+      columns: [table.bundleId, table.chunkIndex],
+    }),
+    check(
+      "catalog_bundle_payload_chunks_index_check",
+      sql`${table.chunkIndex} >= 0`,
+    ),
+    check(
+      "catalog_bundle_payload_chunks_size_check",
+      sql`length(CAST(${table.payloadChunk} AS BLOB)) <= 250000`,
+    ),
+  ],
+);
+
+export const learners = sqliteTable("learners", {
+  id: text("id").primaryKey(),
+  displayName: text("display_name"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+/**
+ * Accounts separate a platform identity from the learner record so another
+ * authentication provider can be linked later without moving progress.
+ */
+export const learnerAccounts = sqliteTable(
+  "learner_accounts",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learners.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerSubject: text("provider_subject").notNull(),
+    email: text("email"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    lastSeenAt: text("last_seen_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("learner_accounts_provider_subject_unique").on(
+      table.provider,
+      table.providerSubject,
+    ),
+    index("learner_accounts_learner_idx").on(table.learnerId),
+    check(
+      "learner_accounts_provider_check",
+      sql`length(trim(${table.provider})) > 0`,
+    ),
+    check(
+      "learner_accounts_subject_check",
+      sql`length(trim(${table.providerSubject})) > 0`,
+    ),
+  ],
+);
+
+/**
+ * Progress is pinned to one immutable publication. The composite foreign key
+ * prevents a bundle ID from being paired with a different program version.
+ */
+export const learnerProgramProgress = sqliteTable(
+  "learner_program_progress",
+  {
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learners.id, { onDelete: "cascade" }),
+    programVersionId: text("program_version_id").notNull(),
+    bundleId: text("bundle_id").notNull(),
+    selectedConcentrationId: text("selected_concentration_id"),
+    startedAt: text("started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_program_progress_pk",
+      columns: [table.learnerId, table.programVersionId],
+    }),
+    foreignKey({
+      name: "learner_program_progress_bundle_version_fk",
+      columns: [table.bundleId, table.programVersionId],
+      foreignColumns: [catalogBundles.id, catalogBundles.programVersionId],
+    })
+      .onUpdate("cascade")
+      .onDelete("restrict"),
+    index("learner_program_progress_bundle_idx").on(table.bundleId),
+    index("learner_program_progress_updated_idx").on(table.updatedAt),
+  ],
+);
+
+/**
+ * Course completion is derived from completed units; no mutable percentage is
+ * stored. Membership in the exact bundle is checked by the write repository
+ * before these IDs are inserted.
+ */
+export const learnerUnitCompletions = sqliteTable(
+  "learner_unit_completions",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    learningUnitId: text("learning_unit_id").notNull(),
+    completedAt: text("completed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_unit_completions_pk",
+      columns: [
+        table.learnerId,
+        table.programVersionId,
+        table.courseVersionId,
+        table.learningUnitId,
+      ],
+    }),
+    foreignKey({
+      name: "learner_unit_completions_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_unit_completions_program_idx").on(
+      table.learnerId,
+      table.programVersionId,
+    ),
+    index("learner_unit_completions_course_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+  ],
+);
+
+/**
+ * A client-generated import ID makes the one-time localStorage consent flow
+ * durable across retries. payloadHash detects accidental ID reuse with
+ * different content; disposition "cloud" records a deliberate no-import
+ * choice without copying any client completions.
+ */
+export const learnerProgressImports = sqliteTable(
+  "learner_progress_imports",
+  {
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learners.id, { onDelete: "cascade" }),
+    clientImportId: text("client_import_id").notNull(),
+    storageNamespace: text("storage_namespace").notNull(),
+    disposition: text("disposition", { enum: ["merged", "cloud"] }).notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    importedUnitCount: integer("imported_unit_count").notNull().default(0),
+    confirmedAt: text("confirmed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_progress_imports_pk",
+      columns: [table.learnerId, table.clientImportId],
+    }),
+    index("learner_progress_imports_confirmed_idx").on(
+      table.learnerId,
+      table.confirmedAt,
+    ),
+    check(
+      "learner_progress_imports_namespace_check",
+      sql`length(trim(${table.storageNamespace})) > 0`,
+    ),
+    check(
+      "learner_progress_imports_hash_check",
+      sql`length(${table.payloadHash}) = 64`,
+    ),
+    check(
+      "learner_progress_imports_count_check",
+      sql`${table.importedUnitCount} >= 0`,
     ),
   ],
 );

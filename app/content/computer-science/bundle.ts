@@ -1,0 +1,819 @@
+import type {
+  AccessOfferId,
+  Assessment,
+  AssessmentId,
+  AssessmentKind,
+  AssessmentVersionId,
+  BundleId,
+  CalendarMilestoneId,
+  CalendarPeriodId,
+  Competency,
+  CompetencyId,
+  CompetencyMapping,
+  CompetencyMappingId,
+  Concentration,
+  ConcentrationId,
+  Course,
+  CourseId,
+  CourseVersionId,
+  FreshnessRecordId,
+  LearningUnit,
+  LearningUnitId,
+  ProgramId,
+  ProgramVersionId,
+  ProvenanceEvidence,
+  ProvenanceEvidenceId,
+  PublishedAssessmentVersion,
+  PublishedCourseVersion,
+  PublishedProgramBundle,
+  PublishedResourceVersion,
+  RequirementGroup,
+  RequirementGroupId,
+  RequirementOptionId,
+  Resource,
+  ResourceFreshness,
+  ResourceId,
+  ResourceRights,
+  ResourceVersionId,
+  RightsRecordId,
+  SchedulePlacement,
+  SchedulePlacementId,
+} from "../../domain/catalog";
+import {
+  computerScienceCourseSpecs,
+  type ComputerScienceCourseSpec,
+} from "./course-specs";
+
+const PUBLISHED_AT = "2026-07-29T00:00:00Z" as const;
+const CHECKED_AT = "2026-07-29T00:00:00Z" as const;
+const VERSION = "1.0.0" as const;
+const CREDIT_SYSTEM = "Course Atlas credits";
+
+const PROGRAM_ID: ProgramId = "prg_computer_science";
+const PROGRAM_VERSION_ID: ProgramVersionId = "prv_computer_science_1";
+const BUNDLE_ID: BundleId = "bnd_computer_science_1";
+const CALENDAR_ID = "cal_computer_science_three_year" as const;
+const SCHEDULE_ID = "sch_computer_science_default" as const;
+const PROGRAM_EVIDENCE_ID: ProvenanceEvidenceId =
+  "prvdc_computer_science_cs2023";
+
+const courseSpecs: readonly ComputerScienceCourseSpec[] =
+  computerScienceCourseSpecs;
+
+const courseId = (key: string): CourseId => `crs_cs_${key}`;
+const courseVersionId = (key: string): CourseVersionId => `crv_cs_${key}_1`;
+const unitId = (key: string, index: number): LearningUnitId =>
+  `unt_cs_${key}_${index + 1}`;
+const assessmentId = (
+  key: string,
+  position: "applied" | "final",
+): AssessmentId => `asm_cs_${key}_${position}`;
+const assessmentVersionId = (
+  key: string,
+  position: "applied" | "final",
+): AssessmentVersionId => `asv_cs_${key}_${position}_1`;
+const resourceId = (key: string): ResourceId => `res_cs_${key}`;
+const resourceVersionId = (key: string): ResourceVersionId =>
+  `rsv_cs_${key}_1`;
+const accessOfferId = (key: string): AccessOfferId => `acc_cs_${key}_free`;
+const rightsRecordId = (key: string): RightsRecordId =>
+  `rgt_cs_${key}_link`;
+const freshnessRecordId = (key: string): FreshnessRecordId =>
+  `frs_cs_${key}_20260729`;
+const resourceEvidenceId = (key: string): ProvenanceEvidenceId =>
+  `prvdc_cs_${key}_source`;
+const periodId = (term: number): CalendarPeriodId => `per_cs_term_${term}`;
+const placementId = (key: string): SchedulePlacementId => `plc_cs_${key}`;
+
+type CompetencySpec = {
+  readonly key: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly description: string;
+  readonly domain: string;
+};
+
+const competencySpecs: readonly CompetencySpec[] = [
+  {
+    key: "programming",
+    slug: "program-construction",
+    title: "Program construction",
+    description:
+      "Design, implement, test, debug, document, and maintain programs using appropriate languages and abstractions.",
+    domain: "Software Development Fundamentals",
+  },
+  {
+    key: "algorithms",
+    slug: "algorithmic-reasoning",
+    title: "Algorithmic reasoning",
+    description:
+      "Design and analyze algorithms using correctness arguments, complexity bounds, and empirical evidence.",
+    domain: "Algorithmic Foundations",
+  },
+  {
+    key: "mathematics",
+    slug: "mathematical-statistical-reasoning",
+    title: "Mathematical and statistical reasoning",
+    description:
+      "Use proof, discrete structures, calculus, linear algebra, probability, and statistics in computing problems.",
+    domain: "Mathematical and Statistical Foundations",
+  },
+  {
+    key: "systems",
+    slug: "computer-systems",
+    title: "Computer systems",
+    description:
+      "Reason across hardware and software layers, including architecture, operating systems, concurrency, and performance.",
+    domain: "Systems Fundamentals",
+  },
+  {
+    key: "data",
+    slug: "data-management",
+    title: "Data management",
+    description:
+      "Model, store, query, protect, and evaluate data using appropriate database and information-system techniques.",
+    domain: "Data Management",
+  },
+  {
+    key: "networks",
+    slug: "networks-distributed-systems",
+    title: "Networks and distributed systems",
+    description:
+      "Build and analyze communicating services under latency, concurrency, scaling, and partial failure.",
+    domain: "Networking and Parallel and Distributed Computing",
+  },
+  {
+    key: "software",
+    slug: "software-engineering",
+    title: "Software engineering",
+    description:
+      "Develop sustainable software through requirements, architecture, collaboration, testing, review, and operations.",
+    domain: "Software Engineering",
+  },
+  {
+    key: "security",
+    slug: "security-privacy",
+    title: "Security and privacy",
+    description:
+      "Apply threat modeling, secure design, testing, cryptographic judgment, and responsible vulnerability handling.",
+    domain: "Security",
+  },
+  {
+    key: "ai-data",
+    slug: "artificial-intelligence-data-science",
+    title: "Artificial intelligence and data science",
+    description:
+      "Build and evaluate statistical and intelligent systems with reproducible data, metrics, and limitations.",
+    domain: "Artificial Intelligence",
+  },
+  {
+    key: "human-centered",
+    slug: "human-centered-computing",
+    title: "Human-centered computing",
+    description:
+      "Research, design, prototype, and assess accessible interactive systems around real human needs.",
+    domain: "Human–Computer Interaction",
+  },
+  {
+    key: "ethics",
+    slug: "computing-ethics",
+    title: "Computing ethics",
+    description:
+      "Analyze benefits, harms, rights, fairness, accountability, and professional duties in sociotechnical systems.",
+    domain: "Society, Ethics, and the Profession",
+  },
+  {
+    key: "professional",
+    slug: "professional-communication",
+    title: "Professional communication and collaboration",
+    description:
+      "Communicate technical decisions clearly, collaborate responsibly, and produce checkable documentation.",
+    domain: "Society, Ethics, and the Profession",
+  },
+  {
+    key: "research",
+    slug: "computer-science-research",
+    title: "Computer science research",
+    description:
+      "Formulate questions, assess literature, select methods, evaluate evidence, and report limitations reproducibly.",
+    domain: "Research Practice",
+  },
+  {
+    key: "capstone",
+    slug: "integrated-computing-practice",
+    title: "Integrated computing practice",
+    description:
+      "Integrate technical, human, ethical, and professional judgment in a substantial defended computing project.",
+    domain: "Capstone",
+  },
+  {
+    key: "theory",
+    slug: "foundations-programming-languages",
+    title: "Theory and programming-language foundations",
+    description:
+      "Reason about formal languages, computability, complexity, semantics, interpreters, and compilers.",
+    domain: "Foundations of Programming Languages",
+  },
+  {
+    key: "graphics",
+    slug: "graphics-visual-computing",
+    title: "Graphics and visual computing",
+    description:
+      "Represent, generate, transform, and analyze visual data using geometric and computational methods.",
+    domain: "Graphics and Interactive Techniques",
+  },
+];
+
+const competencyId = (key: string): CompetencyId => `cmp_cs_${key}`;
+
+const competencies: readonly Competency[] = competencySpecs.map((spec) => ({
+  id: competencyId(spec.key),
+  canonicalSlug: spec.slug,
+  title: spec.title,
+  description: spec.description,
+  domain: spec.domain,
+}));
+
+const courses: readonly Course[] = courseSpecs.map((spec) => ({
+  id: courseId(spec.key),
+  canonicalSlug: spec.slug,
+  codes: [{ namespace: "Course Atlas", value: spec.code }],
+  discipline: "Computer Science",
+  lifecycle: "active",
+}));
+
+function resolvedAssessmentKinds(
+  spec: ComputerScienceCourseSpec,
+): readonly [AssessmentKind, AssessmentKind] {
+  return spec.assessmentKinds ?? ["project", "exam"];
+}
+
+const assessments: readonly Assessment[] = courseSpecs.flatMap((spec) => {
+  const [appliedKind, finalKind] = resolvedAssessmentKinds(spec);
+  return [
+    {
+      id: assessmentId(spec.key, "applied"),
+      courseId: courseId(spec.key),
+      canonicalSlug: `${spec.slug}-applied-portfolio`,
+      kind: appliedKind,
+      lifecycle: "active",
+    },
+    {
+      id: assessmentId(spec.key, "final"),
+      courseId: courseId(spec.key),
+      canonicalSlug: `${spec.slug}-final-demonstration`,
+      kind: finalKind,
+      lifecycle: "active",
+    },
+  ];
+});
+
+function assessmentInstructions(
+  spec: ComputerScienceCourseSpec,
+  position: "applied" | "final",
+  kind: AssessmentKind,
+) {
+  if (position === "applied") {
+    return `Complete a course-specific ${kind} that applies ${spec.topics
+      .slice(0, 6)
+      .join(
+        ", ",
+      )}. Submit source work, tests or calculations, a short decision record, and corrections after self-review.`;
+  }
+  if (kind === "exam") {
+    return `Sit a cumulative, closed-notes practice exam covering all eight ${spec.title} units. Grade it against explicit objectives, correct every missed item, and add a one-page transfer note.`;
+  }
+  if (kind === "oral" || kind === "presentation") {
+    return `Demonstrate and defend cumulative mastery of ${spec.title}. Explain the artifact or analysis, answer challenge questions, disclose limitations, and submit the recording or presentation notes with supporting evidence.`;
+  }
+  return `Produce a cumulative ${kind} for ${spec.title}. Integrate all eight units, include reproducible evidence, document limitations, and complete a structured self-critique.`;
+}
+
+const assessmentVersions: readonly PublishedAssessmentVersion[] =
+  courseSpecs.flatMap((spec) => {
+    const [appliedKind, finalKind] = resolvedAssessmentKinds(spec);
+    const evidenceId = resourceEvidenceId(spec.key);
+    const competencyIds = spec.competencyKeys.map(competencyId);
+    const primaryResourceVersionId = resourceVersionId(spec.key);
+    return [
+      {
+        id: assessmentVersionId(spec.key, "applied"),
+        assessmentId: assessmentId(spec.key, "applied"),
+        courseVersionId: courseVersionId(spec.key),
+        unitId: unitId(spec.key, 3),
+        version: VERSION,
+        status: "published",
+        publishedAt: PUBLISHED_AT,
+        title: `${spec.title}: Applied portfolio`,
+        instructions: assessmentInstructions(spec, "applied", appliedKind),
+        submissionEvidence: [
+          "Source files, calculations, or design artifacts",
+          "Automated tests or explicit checking procedure",
+          "Decision record with assumptions and tradeoffs",
+          "Self-assessment and corrected weaknesses",
+        ],
+        estimatedHours: 24,
+        maximumScore: 100,
+        resourceVersionIds: [primaryResourceVersionId],
+        competencyIds,
+        provenanceEvidenceIds: [evidenceId],
+      },
+      {
+        id: assessmentVersionId(spec.key, "final"),
+        assessmentId: assessmentId(spec.key, "final"),
+        courseVersionId: courseVersionId(spec.key),
+        unitId: unitId(spec.key, 7),
+        version: VERSION,
+        status: "published",
+        publishedAt: PUBLISHED_AT,
+        title: `${spec.title}: Final demonstration`,
+        instructions: assessmentInstructions(spec, "final", finalKind),
+        submissionEvidence: [
+          "Cumulative solution, artifact, or performance",
+          "Objective-aligned score sheet or rubric",
+          "Corrections, limitations, and transfer reflection",
+        ],
+        estimatedHours: 20,
+        maximumScore: 100,
+        resourceVersionIds: [primaryResourceVersionId],
+        competencyIds,
+        provenanceEvidenceIds: [evidenceId],
+      },
+    ];
+  });
+
+const learningUnits: readonly LearningUnit[] = courseSpecs.flatMap((spec) => {
+  const [appliedKind, finalKind] = resolvedAssessmentKinds(spec);
+  const competencyIds = spec.competencyKeys.map(competencyId);
+  return spec.topics.map((topic, index) => ({
+    id: unitId(spec.key, index),
+    courseVersionId: courseVersionId(spec.key),
+    kind: index === 3 ? "project" : index === 7 ? "review" : "module",
+    order: index + 1,
+    label: `Weeks ${index * 2 + 1}–${index * 2 + 2}`,
+    title: topic.charAt(0).toUpperCase() + topic.slice(1),
+    topic,
+    resourceLocator: `Use the sections, lectures, or exercises in “${spec.resource.title}” that cover ${topic}.`,
+    activity: `Study ${topic} in the primary resource. Reproduce one worked example, complete provider exercises where available, then implement, calculate, or critique one new example without copying a solution.`,
+    evidence: `Submit a checked ${topic} artifact, an error log, and a short explanation of what the evidence establishes and what it does not.`,
+    nominalHours: 20,
+    resourceVersionIds: [resourceVersionId(spec.key)],
+    competencyIds,
+    assessmentKind: index === 3 ? appliedKind : index === 7 ? finalKind : undefined,
+  }));
+});
+
+const courseVersions: readonly PublishedCourseVersion[] = courseSpecs.map(
+  (spec) => ({
+    id: courseVersionId(spec.key),
+    courseId: courseId(spec.key),
+    version: VERSION,
+    status: "published",
+    publishedAt: PUBLISHED_AT,
+    baseLocale: "en",
+    title: spec.title,
+    summary: spec.summary,
+    outcomes: [
+      spec.primaryOutcome,
+      "Produce independently checkable evidence of practice and correct weaknesses after assessment.",
+      "State assumptions, tradeoffs, safety or ethical limits, and unanswered questions.",
+    ],
+    format: spec.format,
+    nominalHours: 160,
+    setup: [
+      `Open “${spec.resource.title}” and confirm that its lessons, readings, or exercises are accessible in your region.`,
+      "Create a version-controlled course workspace with folders for notes, exercises, assessments, corrections, and the final portfolio.",
+      "Write a one-page integrity agreement: attempt work independently, cite help and reused code, and never publish provider solutions.",
+    ],
+    firstAction: `Study the primary resource material for ${spec.topics[0]}, complete one diagnostic exercise, and record what you need to review.`,
+    safetyNote:
+      spec.key === "computer-security" || spec.key === "applied-cryptography"
+        ? "Perform security work only on systems you own or have explicit permission to test. Use the provider's legal training environments; never target third parties."
+        : undefined,
+    prerequisites: spec.prerequisiteKeys.map((key) => {
+      const prerequisiteSpec = courseSpecs.find(
+        (candidate) => candidate.key === key,
+      );
+      const isSameTerm = prerequisiteSpec?.term === spec.term;
+      return {
+        courseVersionId: courseVersionId(key),
+        kind: "required",
+        concurrentEnrollmentAllowed: isSameTerm || undefined,
+        note: isSameTerm
+          ? `Concurrent enrollment is allowed in Term ${spec.term}; complete the prerequisite course's relevant units before depending on them in ${spec.title}.`
+          : undefined,
+      };
+    }),
+    resourceReferences: [
+      {
+        resourceVersionId: resourceVersionId(spec.key),
+        role: "primary",
+        note: "Official or author-maintained source checked for free public access on 2026-07-29.",
+      },
+    ],
+    rootUnitIds: spec.topics.map((_, index) => unitId(spec.key, index)),
+    gradingPolicy: {
+      passingPercentage: 70,
+      contributions: [
+        {
+          assessmentVersionId: assessmentVersionId(spec.key, "applied"),
+          weight: 60,
+          requiredToPass: true,
+        },
+        {
+          assessmentVersionId: assessmentVersionId(spec.key, "final"),
+          weight: 40,
+          requiredToPass: true,
+        },
+      ],
+    },
+    competencyIds: spec.competencyKeys.map(competencyId),
+    provenanceEvidenceIds: [resourceEvidenceId(spec.key)],
+  }),
+);
+
+const resources: readonly Resource[] = courseSpecs.map((spec) => ({
+  id: resourceId(spec.key),
+  canonicalSlug: spec.resource.slug,
+  provider: spec.resource.provider,
+  kind: spec.resource.kind,
+  lifecycle: "active",
+}));
+
+const resourceVersions: readonly PublishedResourceVersion[] = courseSpecs.map(
+  (spec) => ({
+    id: resourceVersionId(spec.key),
+    resourceId: resourceId(spec.key),
+    version: VERSION,
+    status: "published",
+    publishedAt: PUBLISHED_AT,
+    title: spec.resource.title,
+    canonicalUrl: spec.resource.url,
+    language: "en",
+    mediaType: "text/html",
+    authors: spec.resource.authors,
+    provenanceEvidenceIds: [resourceEvidenceId(spec.key)],
+  }),
+);
+
+const accessOffers = courseSpecs.map((spec) => ({
+  id: accessOfferId(spec.key),
+  resourceVersionId: resourceVersionId(spec.key),
+  type: "free" as const,
+  region: "Worldwide where the provider site is available",
+  loginRequired: false,
+  checkedAt: CHECKED_AT,
+  note: "The linked primary material was readable without payment during editorial verification. Optional certificates, books, submissions, or hosted tooling may cost money or require an account.",
+}));
+
+const rights: readonly ResourceRights[] = courseSpecs.map((spec) => ({
+  id: rightsRecordId(spec.key),
+  resourceVersionId: resourceVersionId(spec.key),
+  status: "link only",
+  mayMirror: false,
+  mayAdapt: false,
+  verifiedAt: CHECKED_AT,
+  evidenceIds: [resourceEvidenceId(spec.key)],
+  note: "Course Atlas links to the official source and does not republish it. This conservative record makes no claim that free access permits copying or adaptation; follow the provider's current terms.",
+}));
+
+const freshness: readonly ResourceFreshness[] = courseSpecs.map((spec) => ({
+  id: freshnessRecordId(spec.key),
+  resourceVersionId: resourceVersionId(spec.key),
+  status: "healthy",
+  checkedAt: CHECKED_AT,
+  httpStatus: 200,
+  resolvedUrl: spec.resource.url,
+  note: "Verified through an editorial web check on 2026-07-29.",
+}));
+
+const resourceProvenance: readonly ProvenanceEvidence[] = courseSpecs.map(
+  (spec) => ({
+    id: resourceEvidenceId(spec.key),
+    kind: "access check",
+    sourceTitle: spec.resource.title,
+    sourceUrl: spec.resource.url,
+    retrievedAt: CHECKED_AT,
+    subjects: [
+      { kind: "courseVersion", id: courseVersionId(spec.key) },
+      {
+        kind: "assessmentVersion",
+        id: assessmentVersionId(spec.key, "applied"),
+      },
+      {
+        kind: "assessmentVersion",
+        id: assessmentVersionId(spec.key, "final"),
+      },
+      { kind: "resourceVersion", id: resourceVersionId(spec.key) },
+      { kind: "resourceAccess", id: accessOfferId(spec.key) },
+      { kind: "resourceRights", id: rightsRecordId(spec.key) },
+    ],
+    note: "The official or author-maintained page was checked for title, provider, topical coverage, and free public access. Course Atlas authored the independent study units and assessments; the source provider does not award credit for this pathway or endorse it.",
+  }),
+);
+
+const concentrations: readonly Concentration[] = [
+  {
+    id: "con_cs_intelligent_systems",
+    canonicalSlug: "intelligent-systems",
+    title: "Intelligent Systems",
+    description:
+      "Deepen machine learning through vision and language, with reproducible evaluation and responsible model documentation.",
+    courseVersionIds: [
+      courseVersionId("computer-vision"),
+      courseVersionId("natural-language-processing"),
+    ],
+    capstoneIdeas: [
+      "Accessible document-understanding assistant with error and bias analysis",
+      "Visual inspection system with dataset and model cards",
+    ],
+  },
+  {
+    id: "con_cs_scalable_secure_systems",
+    canonicalSlug: "scalable-secure-systems",
+    title: "Scalable and Secure Systems",
+    description:
+      "Deepen systems practice through parallel performance engineering and applied cryptographic reasoning.",
+    courseVersionIds: [
+      courseVersionId("parallel-computing"),
+      courseVersionId("applied-cryptography"),
+    ],
+    capstoneIdeas: [
+      "Measured parallel data-processing service with threat model",
+      "Secure collaboration prototype using standard cryptographic libraries",
+    ],
+  },
+  {
+    id: "con_cs_interactive_applications",
+    canonicalSlug: "interactive-applications",
+    title: "Interactive Applications",
+    description:
+      "Deepen visual and product engineering through computer graphics and native Android development.",
+    courseVersionIds: [
+      courseVersionId("computer-graphics"),
+      courseVersionId("android-development"),
+    ],
+    capstoneIdeas: [
+      "Accessible scientific visualization application",
+      "Offline-first mobile field tool with custom visual interaction",
+    ],
+  },
+];
+
+const concentrationIdByKey: Readonly<
+  Record<NonNullable<ComputerScienceCourseSpec["concentrationKey"]>, ConcentrationId>
+> = {
+  "intelligent-systems": "con_cs_intelligent_systems",
+  "scalable-secure-systems": "con_cs_scalable_secure_systems",
+  "interactive-applications": "con_cs_interactive_applications",
+};
+
+function requirementGroup(
+  id: RequirementGroupId,
+  title: string,
+  description: string,
+  order: number,
+  specs: readonly ComputerScienceCourseSpec[],
+): RequirementGroup {
+  return {
+    id,
+    title,
+    description,
+    order,
+    rule: {
+      minSelections: specs.length,
+      maxSelections: specs.length,
+      minCredits: {
+        value: specs.reduce((sum, spec) => sum + spec.credits, 0),
+        system: CREDIT_SYSTEM,
+      },
+    },
+    options: specs.map((spec) => ({
+      id: `opt_cs_${spec.key}` as RequirementOptionId,
+      courseVersionId: courseVersionId(spec.key),
+      credits: { value: spec.credits, system: CREDIT_SYSTEM },
+      recommendedPeriodId: periodId(spec.term),
+    })),
+  };
+}
+
+const fixedSpecs = courseSpecs.filter((spec) => !spec.concentrationKey);
+const concentrationSpecs = courseSpecs.filter(
+  (spec): spec is ComputerScienceCourseSpec &
+    Required<Pick<ComputerScienceCourseSpec, "concentrationKey">> =>
+    Boolean(spec.concentrationKey),
+);
+
+const fixedRequirementGroups = [1, 2, 3, 4, 5, 6].map((term) => {
+  const specs = fixedSpecs.filter((spec) => spec.term === term);
+  return requirementGroup(
+    `req_cs_term_${term}` as RequirementGroupId,
+    `Term ${term} core`,
+    `Complete all ${specs.length} fixed courses in the recommended Term ${term} sequence.`,
+    term,
+    specs,
+  );
+});
+
+const concentrationRequirement: RequirementGroup = {
+  id: "req_cs_concentration",
+  title: "Coherent concentration",
+  description:
+    "Complete both courses in one concentration: Intelligent Systems, Scalable and Secure Systems, or Interactive Applications.",
+  order: 7,
+  rule: {
+    minSelections: 2,
+    maxSelections: 2,
+    minCredits: { value: 8, system: CREDIT_SYSTEM },
+    selectionConstraint: "same concentration",
+  },
+  options: concentrationSpecs.map((spec) => ({
+    id: `opt_cs_${spec.key}` as RequirementOptionId,
+    courseVersionId: courseVersionId(spec.key),
+    credits: { value: spec.credits, system: CREDIT_SYSTEM },
+    concentrationId: concentrationIdByKey[spec.concentrationKey],
+    recommendedPeriodId: periodId(6),
+  })),
+};
+
+const requirements: readonly RequirementGroup[] = [
+  ...fixedRequirementGroups,
+  concentrationRequirement,
+];
+
+const programEvidence: ProvenanceEvidence = {
+  id: PROGRAM_EVIDENCE_ID,
+  kind: "official catalog",
+  sourceTitle: "CS2023 – ACM/IEEE-CS/AAAI Computer Science Curricula",
+  sourceUrl: "https://csed.acm.org/final-report/",
+  retrievedAt: CHECKED_AT,
+  subjects: [
+    { kind: "programVersion", id: PROGRAM_VERSION_ID },
+    ...competencies.map((competency) => ({
+      kind: "competency" as const,
+      id: competency.id,
+    })),
+  ],
+  note: "CS2023 informed breadth, competency language, mathematics, ethics, and professional-practice coverage. Course Atlas independently selected and sequenced the free resources. This is not an ACM, IEEE-CS, AAAI, or university-accredited program.",
+};
+
+const competencyMappings: readonly CompetencyMapping[] = [
+  ...competencies.map((competency) => ({
+    id: `cpm_cs_program_${competency.id.slice("cmp_cs_".length)}` as CompetencyMappingId,
+    competencyId: competency.id,
+    subject: { kind: "programVersion" as const, id: PROGRAM_VERSION_ID },
+    relationship: "develops" as const,
+    targetLevel: "advanced" as const,
+    evidenceNote:
+      "The program requires multiple courses plus a defended capstone; completion still does not constitute an accredited degree.",
+  })),
+  ...courseSpecs.flatMap((spec) =>
+    spec.competencyKeys.map((key) => ({
+      id: `cpm_cs_${spec.key}_${key}` as CompetencyMappingId,
+      competencyId: competencyId(key),
+      subject: {
+        kind: "courseVersion" as const,
+        id: courseVersionId(spec.key),
+      },
+      relationship: "develops" as const,
+      targetLevel:
+        spec.term <= 2
+          ? ("foundational" as const)
+          : spec.term <= 4
+            ? ("applied" as const)
+            : ("advanced" as const),
+      evidenceNote: `Mapped to the stated outcomes and assessed work in ${spec.title}.`,
+    })),
+  ),
+  ...courseSpecs.map((spec) => ({
+    id: `cpm_cs_${spec.key}_final` as CompetencyMappingId,
+    competencyId: competencyId(spec.competencyKeys[0]),
+    subject: {
+      kind: "assessmentVersion" as const,
+      id: assessmentVersionId(spec.key, "final"),
+    },
+    relationship: "assesses" as const,
+    targetLevel:
+      spec.term <= 2
+        ? ("foundational" as const)
+        : spec.term <= 4
+          ? ("applied" as const)
+          : ("advanced" as const),
+    evidenceNote:
+      "The final demonstration requires cumulative evidence, corrections, and a limitations statement.",
+  })),
+];
+
+const periods = [1, 2, 3, 4, 5, 6].map((term) => ({
+  id: periodId(term),
+  order: term,
+  label: `Term ${term}`,
+}));
+
+const milestones = [1, 2, 3, 4, 5, 6].flatMap((term) => [
+  {
+    id: `mil_cs_term_${term}_midpoint` as CalendarMilestoneId,
+    label: `Term ${term} midpoint assessments`,
+    periodId: periodId(term),
+    kind: "checkpoint" as const,
+  },
+  {
+    id: `mil_cs_term_${term}_finals` as CalendarMilestoneId,
+    label: `Term ${term} final demonstrations and corrections`,
+    periodId: periodId(term),
+    kind: term === 6 ? ("project" as const) : ("exam" as const),
+  },
+]);
+
+const placements: readonly SchedulePlacement[] = courseSpecs.map(
+  (spec, index) => ({
+    id: placementId(spec.key),
+    subject: { kind: "courseVersion", id: courseVersionId(spec.key) },
+    order: index + 1,
+    periodId: periodId(spec.term),
+    note: spec.concentrationKey
+      ? `Take only if completing the ${concentrationIdByKey[
+          spec.concentrationKey
+        ].replace("con_cs_", "").replaceAll("_", " ")} concentration.`
+      : `Recommended in Term ${spec.term}.`,
+  }),
+);
+
+export const computerScienceBundle = {
+  schemaVersion: 1,
+  id: BUNDLE_ID,
+  publishedAt: PUBLISHED_AT,
+  program: {
+    id: PROGRAM_ID,
+    canonicalSlug: "computer-science",
+    title: "Computer Science",
+    shortTitle: "CS",
+    school: "School of Computing",
+    discipline: "Computer Science",
+    kind: "degree-equivalent pathway",
+    lifecycle: "active",
+  },
+  programVersion: {
+    id: PROGRAM_VERSION_ID,
+    programId: PROGRAM_ID,
+    version: VERSION,
+    status: "published",
+    publishedAt: PUBLISHED_AT,
+    baseLocale: "en",
+    title: "Computer Science",
+    summary:
+      "A rigorous three-year independent-study pathway spanning mathematical foundations, programming, algorithms, systems, data, networks, software engineering, security, AI, human-centered computing, ethics, research, a coherent concentration, and a two-stage defended capstone.",
+    credentialLabel: "Bachelor-level independent study pathway",
+    nominalDuration: "3 years · 6 terms",
+    recognitionNotice:
+      "Course Atlas is not a university or accreditor. It awards no degree, diploma, academic credit, transfer credit, professional license, or guaranteed provider certificate. Completion evidence is a self-directed portfolio that another person may evaluate independently.",
+    outcomes: [
+      "Build reliable software from requirements through design, implementation, testing, review, deployment, and maintenance.",
+      "Apply mathematical, algorithmic, statistical, and theoretical reasoning to computing problems.",
+      "Explain and evaluate computer architecture, operating systems, networks, databases, distributed systems, and security.",
+      "Develop data-driven and intelligent systems with reproducible evaluation and explicit limitations.",
+      "Research human needs, design accessible interactions, and analyze computing's ethical and social consequences.",
+      "Plan, build, evaluate, document, and publicly defend a substantial capstone artifact.",
+    ],
+    workloadPolicy:
+      "Every course carries 4 Course Atlas credits and 160 nominal hours: eight two-week units of about 20 hours each. The completion contract is 30 courses and 120 Course Atlas credits, approximately 4,800 hours. A standard term is 20 weeks with five concurrent courses at roughly 40 hours per week; learners may slow the calendar without changing requirements.",
+    defaultScheduleId: SCHEDULE_ID,
+    requirements,
+    concentrationIds: concentrations.map((concentration) => concentration.id),
+    competencyIds: competencies.map((competency) => competency.id),
+    provenanceEvidenceIds: [PROGRAM_EVIDENCE_ID],
+    changelog: "Initial independently authored Course Atlas publication.",
+  },
+  courses,
+  courseVersions,
+  learningUnits,
+  assessments,
+  assessmentVersions,
+  competencies,
+  competencyMappings,
+  concentrations,
+  resources,
+  resourceVersions,
+  accessOffers,
+  rights,
+  freshness,
+  provenance: [programEvidence, ...resourceProvenance],
+  calendars: [
+    {
+      id: CALENDAR_ID,
+      title: "Computer Science three-year recommended calendar",
+      structure: "terms",
+      periods,
+      milestones,
+    },
+  ],
+  schedules: [
+    {
+      id: SCHEDULE_ID,
+      programVersionId: PROGRAM_VERSION_ID,
+      calendarId: CALENDAR_ID,
+      title: "Six-term recommended sequence",
+      placements,
+    },
+  ],
+} as const satisfies PublishedProgramBundle;

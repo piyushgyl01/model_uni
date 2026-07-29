@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { catalogRepository, plannedDirections } from "../content/catalog";
+import { getRuntimeCatalogRepository } from "./catalog/cloudflare-catalog";
+import { futureDirections } from "../content/catalog";
+
+export const dynamic = "force-dynamic";
 
 const homeNav = [
   ["Programs", "programs"],
@@ -13,8 +16,9 @@ function hoursLabel(hours: number) {
   return `${hours} guided hours`;
 }
 
-export default function Home() {
-  const programs = catalogRepository.listPrograms();
+export default async function Home() {
+  const catalogRepository = await getRuntimeCatalogRepository();
+  const programs = await catalogRepository.listPrograms();
   const schools = Array.from(new Set(programs.map((program) => program.school)));
 
   return (
@@ -69,15 +73,15 @@ export default function Home() {
             <div className="hero-actions">
               <Link
                 className="button button-primary"
-                href="/programs/electrical-engineering"
+                href="/programs/computer-science"
               >
-                Open Electrical Engineering <span aria-hidden="true">→</span>
+                Open Computer Science <span aria-hidden="true">→</span>
               </Link>
               <Link
                 className="button button-quiet"
-                href="/programs/practical-spreadsheets"
+                href="/programs/electrical-engineering"
               >
-                Try an eight-week program
+                Open Electrical Engineering
               </Link>
             </div>
           </div>
@@ -117,9 +121,10 @@ export default function Home() {
               <h2>Different structures.<br />One learning engine.</h2>
             </div>
             <p>
-              The three-year engineering pathway and eight-week spreadsheet
-              sprint are rendered from the same content contract. Adding the
-              next program does not require another custom page.
+              Two three-year computing and engineering pathways and an
+              eight-week spreadsheet sprint are rendered from the same content
+              contract. Adding the next program does not require another
+              custom page.
             </p>
           </div>
 
@@ -159,11 +164,12 @@ export default function Home() {
 
           <div className="catalog-roadmap">
             <span>In research—not advertised as published</span>
-            {plannedDirections.map((direction) => (
+            {futureDirections.map((direction) => (
               <article key={direction.title}>
-                <small>{direction.school}</small>
+                <small>{direction.school} · {direction.discipline}</small>
                 <strong>{direction.title}</strong>
-                <p>{direction.note}</p>
+                <p>{direction.description}</p>
+                <small className="direction-status">{direction.status} · {direction.note}</small>
               </article>
             ))}
           </div>

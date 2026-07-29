@@ -1,0 +1,3128 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "f923995a-e971-492e-a6d4-4e17e21f9f7e",
+  "prevId": "cbe8d0c2-822b-4837-8407-33b6fbbd7d74",
+  "tables": {
+    "access_offers": {
+      "name": "access_offers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resource_version_id": {
+          "name": "resource_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_model": {
+          "name": "access_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown'"
+        },
+        "login_required": {
+          "name": "login_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "price_minor": {
+          "name": "price_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "region_code": {
+          "name": "region_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'*'"
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_checked_at": {
+          "name": "last_checked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "access_offers_resource_url_region_unique": {
+          "name": "access_offers_resource_url_region_unique",
+          "columns": [
+            "resource_version_id",
+            "url",
+            "region_code"
+          ],
+          "isUnique": true
+        },
+        "access_offers_status_checked_idx": {
+          "name": "access_offers_status_checked_idx",
+          "columns": [
+            "status",
+            "last_checked_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "access_offers_resource_version_id_resource_versions_id_fk": {
+          "name": "access_offers_resource_version_id_resource_versions_id_fk",
+          "tableFrom": "access_offers",
+          "tableTo": "resource_versions",
+          "columnsFrom": [
+            "resource_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "access_offers_provider_id_providers_id_fk": {
+          "name": "access_offers_provider_id_providers_id_fk",
+          "tableFrom": "access_offers",
+          "tableTo": "providers",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "access_offers_nonnegative_price_check": {
+          "name": "access_offers_nonnegative_price_check",
+          "value": "\"access_offers\".\"price_minor\" IS NULL OR \"access_offers\".\"price_minor\" >= 0"
+        },
+        "access_offers_price_currency_check": {
+          "name": "access_offers_price_currency_check",
+          "value": "\"access_offers\".\"price_minor\" IS NULL OR \"access_offers\".\"currency\" IS NOT NULL"
+        }
+      }
+    },
+    "audit_events": {
+      "name": "audit_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_type": {
+          "name": "actor_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "before_json": {
+          "name": "before_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "after_json": {
+          "name": "after_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata_json": {
+          "name": "metadata_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "audit_events_entity_time_idx": {
+          "name": "audit_events_entity_time_idx",
+          "columns": [
+            "entity_type",
+            "entity_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        },
+        "audit_events_correlation_idx": {
+          "name": "audit_events_correlation_idx",
+          "columns": [
+            "correlation_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "catalog_bundle_payload_chunks": {
+      "name": "catalog_bundle_payload_chunks",
+      "columns": {
+        "bundle_id": {
+          "name": "bundle_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "chunk_index": {
+          "name": "chunk_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_chunk": {
+          "name": "payload_chunk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "catalog_bundle_payload_chunks_bundle_id_catalog_bundles_id_fk": {
+          "name": "catalog_bundle_payload_chunks_bundle_id_catalog_bundles_id_fk",
+          "tableFrom": "catalog_bundle_payload_chunks",
+          "tableTo": "catalog_bundles",
+          "columnsFrom": [
+            "bundle_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "catalog_bundle_payload_chunks_pk": {
+          "columns": [
+            "bundle_id",
+            "chunk_index"
+          ],
+          "name": "catalog_bundle_payload_chunks_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "catalog_bundle_payload_chunks_index_check": {
+          "name": "catalog_bundle_payload_chunks_index_check",
+          "value": "\"catalog_bundle_payload_chunks\".\"chunk_index\" >= 0"
+        },
+        "catalog_bundle_payload_chunks_size_check": {
+          "name": "catalog_bundle_payload_chunks_size_check",
+          "value": "length(CAST(\"catalog_bundle_payload_chunks\".\"payload_chunk\" AS BLOB)) <= 250000"
+        }
+      }
+    },
+    "catalog_bundles": {
+      "name": "catalog_bundles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_id": {
+          "name": "program_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_version_id": {
+          "name": "program_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_slug": {
+          "name": "canonical_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "semantic_version": {
+          "name": "semantic_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "summary_json": {
+          "name": "summary_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "seeded_at": {
+          "name": "seeded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "catalog_bundles_program_version_id_unique": {
+          "name": "catalog_bundles_program_version_id_unique",
+          "columns": [
+            "program_version_id"
+          ],
+          "isUnique": true
+        },
+        "catalog_bundles_program_semver_unique": {
+          "name": "catalog_bundles_program_semver_unique",
+          "columns": [
+            "program_id",
+            "semantic_version"
+          ],
+          "isUnique": true
+        },
+        "catalog_bundles_id_program_version_unique": {
+          "name": "catalog_bundles_id_program_version_unique",
+          "columns": [
+            "id",
+            "program_version_id"
+          ],
+          "isUnique": true
+        },
+        "catalog_bundles_slug_idx": {
+          "name": "catalog_bundles_slug_idx",
+          "columns": [
+            "canonical_slug",
+            "semantic_version"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "catalog_bundles_schema_version_check": {
+          "name": "catalog_bundles_schema_version_check",
+          "value": "\"catalog_bundles\".\"schema_version\" > 0"
+        },
+        "catalog_bundles_payload_hash_check": {
+          "name": "catalog_bundles_payload_hash_check",
+          "value": "length(\"catalog_bundles\".\"payload_hash\") = 64"
+        }
+      }
+    },
+    "competencies": {
+      "name": "competencies",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "parent_competency_id": {
+          "name": "parent_competency_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "framework": {
+          "name": "framework",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'course-atlas'"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "competencies_framework_code_unique": {
+          "name": "competencies_framework_code_unique",
+          "columns": [
+            "framework",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "competencies_parent_idx": {
+          "name": "competencies_parent_idx",
+          "columns": [
+            "parent_competency_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "competencies_parent_competency_id_competencies_id_fk": {
+          "name": "competencies_parent_competency_id_competencies_id_fk",
+          "tableFrom": "competencies",
+          "tableTo": "competencies",
+          "columnsFrom": [
+            "parent_competency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "competency_mappings": {
+      "name": "competency_mappings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "competency_id": {
+          "name": "competency_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_version_id": {
+          "name": "program_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "course_version_id": {
+          "name": "course_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_unit_id": {
+          "name": "content_unit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "relation": {
+          "name": "relation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proficiency_level": {
+          "name": "proficiency_level",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "competency_mappings_competency_idx": {
+          "name": "competency_mappings_competency_idx",
+          "columns": [
+            "competency_id"
+          ],
+          "isUnique": false
+        },
+        "competency_mappings_program_idx": {
+          "name": "competency_mappings_program_idx",
+          "columns": [
+            "program_version_id"
+          ],
+          "isUnique": false
+        },
+        "competency_mappings_course_idx": {
+          "name": "competency_mappings_course_idx",
+          "columns": [
+            "course_version_id"
+          ],
+          "isUnique": false
+        },
+        "competency_mappings_unit_idx": {
+          "name": "competency_mappings_unit_idx",
+          "columns": [
+            "content_unit_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "competency_mappings_competency_id_competencies_id_fk": {
+          "name": "competency_mappings_competency_id_competencies_id_fk",
+          "tableFrom": "competency_mappings",
+          "tableTo": "competencies",
+          "columnsFrom": [
+            "competency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "competency_mappings_program_version_id_program_versions_id_fk": {
+          "name": "competency_mappings_program_version_id_program_versions_id_fk",
+          "tableFrom": "competency_mappings",
+          "tableTo": "program_versions",
+          "columnsFrom": [
+            "program_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "competency_mappings_course_version_id_course_versions_id_fk": {
+          "name": "competency_mappings_course_version_id_course_versions_id_fk",
+          "tableFrom": "competency_mappings",
+          "tableTo": "course_versions",
+          "columnsFrom": [
+            "course_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "competency_mappings_content_unit_id_content_units_id_fk": {
+          "name": "competency_mappings_content_unit_id_content_units_id_fk",
+          "tableFrom": "competency_mappings",
+          "tableTo": "content_units",
+          "columnsFrom": [
+            "content_unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "competency_mappings_one_target_check": {
+          "name": "competency_mappings_one_target_check",
+          "value": "(\n        CASE WHEN \"competency_mappings\".\"program_version_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"competency_mappings\".\"course_version_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"competency_mappings\".\"content_unit_id\" IS NOT NULL THEN 1 ELSE 0 END\n      ) = 1"
+        },
+        "competency_mappings_proficiency_range_check": {
+          "name": "competency_mappings_proficiency_range_check",
+          "value": "\"competency_mappings\".\"proficiency_level\" IS NULL OR \"competency_mappings\".\"proficiency_level\" BETWEEN 0 AND 5"
+        },
+        "competency_mappings_weight_range_check": {
+          "name": "competency_mappings_weight_range_check",
+          "value": "\"competency_mappings\".\"weight\" >= 0 AND \"competency_mappings\".\"weight\" <= 1"
+        }
+      }
+    },
+    "content_unit_resources": {
+      "name": "content_unit_resources",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_unit_id": {
+          "name": "content_unit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resource_version_id": {
+          "name": "resource_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "preferred_access_offer_id": {
+          "name": "preferred_access_offer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'primary'"
+        },
+        "instructions": {
+          "name": "instructions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "start_locator": {
+          "name": "start_locator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_locator": {
+          "name": "end_locator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "content_unit_resources_unit_resource_role_unique": {
+          "name": "content_unit_resources_unit_resource_role_unique",
+          "columns": [
+            "content_unit_id",
+            "resource_version_id",
+            "role"
+          ],
+          "isUnique": true
+        },
+        "content_unit_resources_unit_position_idx": {
+          "name": "content_unit_resources_unit_position_idx",
+          "columns": [
+            "content_unit_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "content_unit_resources_content_unit_id_content_units_id_fk": {
+          "name": "content_unit_resources_content_unit_id_content_units_id_fk",
+          "tableFrom": "content_unit_resources",
+          "tableTo": "content_units",
+          "columnsFrom": [
+            "content_unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "content_unit_resources_resource_version_id_resource_versions_id_fk": {
+          "name": "content_unit_resources_resource_version_id_resource_versions_id_fk",
+          "tableFrom": "content_unit_resources",
+          "tableTo": "resource_versions",
+          "columnsFrom": [
+            "resource_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "content_unit_resources_preferred_access_offer_id_access_offers_id_fk": {
+          "name": "content_unit_resources_preferred_access_offer_id_access_offers_id_fk",
+          "tableFrom": "content_unit_resources",
+          "tableTo": "access_offers",
+          "columnsFrom": [
+            "preferred_access_offer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "content_units": {
+      "name": "content_units",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "course_version_id": {
+          "name": "course_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "parent_unit_id": {
+          "name": "parent_unit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'lesson'"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "instructions_markdown": {
+          "name": "instructions_markdown",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "completion_rule": {
+          "name": "completion_rule",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'view'"
+        },
+        "estimated_minutes": {
+          "name": "estimated_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "release_offset_days": {
+          "name": "release_offset_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "due_offset_days": {
+          "name": "due_offset_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "content_units_course_key_unique": {
+          "name": "content_units_course_key_unique",
+          "columns": [
+            "course_version_id",
+            "key"
+          ],
+          "isUnique": true
+        },
+        "content_units_parent_position_idx": {
+          "name": "content_units_parent_position_idx",
+          "columns": [
+            "parent_unit_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "content_units_course_version_id_course_versions_id_fk": {
+          "name": "content_units_course_version_id_course_versions_id_fk",
+          "tableFrom": "content_units",
+          "tableTo": "course_versions",
+          "columnsFrom": [
+            "course_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "content_units_parent_unit_id_content_units_id_fk": {
+          "name": "content_units_parent_unit_id_content_units_id_fk",
+          "tableFrom": "content_units",
+          "tableTo": "content_units",
+          "columnsFrom": [
+            "parent_unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "content_units_nonnegative_minutes_check": {
+          "name": "content_units_nonnegative_minutes_check",
+          "value": "\"content_units\".\"estimated_minutes\" IS NULL OR \"content_units\".\"estimated_minutes\" >= 0"
+        },
+        "content_units_due_after_release_check": {
+          "name": "content_units_due_after_release_check",
+          "value": "\"content_units\".\"due_offset_days\" IS NULL OR \"content_units\".\"release_offset_days\" IS NULL OR \"content_units\".\"due_offset_days\" >= \"content_units\".\"release_offset_days\""
+        }
+      }
+    },
+    "course_versions": {
+      "name": "course_versions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "course_id": {
+          "name": "course_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version_number": {
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'en'"
+        },
+        "level": {
+          "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "nominal_hours": {
+          "name": "nominal_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credit_value": {
+          "name": "credit_value",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "course_versions_course_number_unique": {
+          "name": "course_versions_course_number_unique",
+          "columns": [
+            "course_id",
+            "version_number"
+          ],
+          "isUnique": true
+        },
+        "course_versions_status_idx": {
+          "name": "course_versions_status_idx",
+          "columns": [
+            "status",
+            "published_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "course_versions_course_id_courses_id_fk": {
+          "name": "course_versions_course_id_courses_id_fk",
+          "tableFrom": "course_versions",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "course_versions_positive_version_check": {
+          "name": "course_versions_positive_version_check",
+          "value": "\"course_versions\".\"version_number\" > 0"
+        },
+        "course_versions_nonnegative_hours_check": {
+          "name": "course_versions_nonnegative_hours_check",
+          "value": "\"course_versions\".\"nominal_hours\" IS NULL OR \"course_versions\".\"nominal_hours\" >= 0"
+        },
+        "course_versions_nonnegative_credit_check": {
+          "name": "course_versions_nonnegative_credit_check",
+          "value": "\"course_versions\".\"credit_value\" IS NULL OR \"course_versions\".\"credit_value\" >= 0"
+        }
+      }
+    },
+    "courses": {
+      "name": "courses",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "learner_accounts": {
+      "name": "learner_accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_subject": {
+          "name": "provider_subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "learner_accounts_provider_subject_unique": {
+          "name": "learner_accounts_provider_subject_unique",
+          "columns": [
+            "provider",
+            "provider_subject"
+          ],
+          "isUnique": true
+        },
+        "learner_accounts_learner_idx": {
+          "name": "learner_accounts_learner_idx",
+          "columns": [
+            "learner_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "learner_accounts_learner_id_learners_id_fk": {
+          "name": "learner_accounts_learner_id_learners_id_fk",
+          "tableFrom": "learner_accounts",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "learner_accounts_provider_check": {
+          "name": "learner_accounts_provider_check",
+          "value": "length(trim(\"learner_accounts\".\"provider\")) > 0"
+        },
+        "learner_accounts_subject_check": {
+          "name": "learner_accounts_subject_check",
+          "value": "length(trim(\"learner_accounts\".\"provider_subject\")) > 0"
+        }
+      }
+    },
+    "learner_program_progress": {
+      "name": "learner_program_progress",
+      "columns": {
+        "learner_id": {
+          "name": "learner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_version_id": {
+          "name": "program_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bundle_id": {
+          "name": "bundle_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selected_concentration_id": {
+          "name": "selected_concentration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "learner_program_progress_bundle_idx": {
+          "name": "learner_program_progress_bundle_idx",
+          "columns": [
+            "bundle_id"
+          ],
+          "isUnique": false
+        },
+        "learner_program_progress_updated_idx": {
+          "name": "learner_program_progress_updated_idx",
+          "columns": [
+            "updated_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "learner_program_progress_learner_id_learners_id_fk": {
+          "name": "learner_program_progress_learner_id_learners_id_fk",
+          "tableFrom": "learner_program_progress",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "learner_program_progress_bundle_version_fk": {
+          "name": "learner_program_progress_bundle_version_fk",
+          "tableFrom": "learner_program_progress",
+          "tableTo": "catalog_bundles",
+          "columnsFrom": [
+            "bundle_id",
+            "program_version_id"
+          ],
+          "columnsTo": [
+            "id",
+            "program_version_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "learner_program_progress_pk": {
+          "columns": [
+            "learner_id",
+            "program_version_id"
+          ],
+          "name": "learner_program_progress_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "learner_progress_imports": {
+      "name": "learner_progress_imports",
+      "columns": {
+        "learner_id": {
+          "name": "learner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_import_id": {
+          "name": "client_import_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "storage_namespace": {
+          "name": "storage_namespace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "disposition": {
+          "name": "disposition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "imported_unit_count": {
+          "name": "imported_unit_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "learner_progress_imports_confirmed_idx": {
+          "name": "learner_progress_imports_confirmed_idx",
+          "columns": [
+            "learner_id",
+            "confirmed_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "learner_progress_imports_learner_id_learners_id_fk": {
+          "name": "learner_progress_imports_learner_id_learners_id_fk",
+          "tableFrom": "learner_progress_imports",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "learner_progress_imports_pk": {
+          "columns": [
+            "learner_id",
+            "client_import_id"
+          ],
+          "name": "learner_progress_imports_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "learner_progress_imports_namespace_check": {
+          "name": "learner_progress_imports_namespace_check",
+          "value": "length(trim(\"learner_progress_imports\".\"storage_namespace\")) > 0"
+        },
+        "learner_progress_imports_hash_check": {
+          "name": "learner_progress_imports_hash_check",
+          "value": "length(\"learner_progress_imports\".\"payload_hash\") = 64"
+        },
+        "learner_progress_imports_count_check": {
+          "name": "learner_progress_imports_count_check",
+          "value": "\"learner_progress_imports\".\"imported_unit_count\" >= 0"
+        }
+      }
+    },
+    "learner_unit_completions": {
+      "name": "learner_unit_completions",
+      "columns": {
+        "learner_id": {
+          "name": "learner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_version_id": {
+          "name": "program_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "course_version_id": {
+          "name": "course_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "learning_unit_id": {
+          "name": "learning_unit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "learner_unit_completions_program_idx": {
+          "name": "learner_unit_completions_program_idx",
+          "columns": [
+            "learner_id",
+            "program_version_id"
+          ],
+          "isUnique": false
+        },
+        "learner_unit_completions_course_idx": {
+          "name": "learner_unit_completions_course_idx",
+          "columns": [
+            "learner_id",
+            "program_version_id",
+            "course_version_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "learner_unit_completions_progress_fk": {
+          "name": "learner_unit_completions_progress_fk",
+          "tableFrom": "learner_unit_completions",
+          "tableTo": "learner_program_progress",
+          "columnsFrom": [
+            "learner_id",
+            "program_version_id"
+          ],
+          "columnsTo": [
+            "learner_id",
+            "program_version_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "learner_unit_completions_pk": {
+          "columns": [
+            "learner_id",
+            "program_version_id",
+            "course_version_id",
+            "learning_unit_id"
+          ],
+          "name": "learner_unit_completions_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "learners": {
+      "name": "learners",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "outbox_events": {
+      "name": "outbox_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "outbox_events_dispatch_idx": {
+          "name": "outbox_events_dispatch_idx",
+          "columns": [
+            "status",
+            "available_at"
+          ],
+          "isUnique": false
+        },
+        "outbox_events_aggregate_idx": {
+          "name": "outbox_events_aggregate_idx",
+          "columns": [
+            "aggregate_type",
+            "aggregate_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "outbox_events_attempts_check": {
+          "name": "outbox_events_attempts_check",
+          "value": "\"outbox_events\".\"attempts\" >= 0"
+        }
+      }
+    },
+    "program_versions": {
+      "name": "program_versions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_id": {
+          "name": "program_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version_number": {
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "short_title": {
+          "name": "short_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "credential_type": {
+          "name": "credential_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "field_of_study": {
+          "name": "field_of_study",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'en'"
+        },
+        "duration_value": {
+          "name": "duration_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "duration_unit": {
+          "name": "duration_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "nominal_hours": {
+          "name": "nominal_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "program_versions_program_number_unique": {
+          "name": "program_versions_program_number_unique",
+          "columns": [
+            "program_id",
+            "version_number"
+          ],
+          "isUnique": true
+        },
+        "program_versions_status_idx": {
+          "name": "program_versions_status_idx",
+          "columns": [
+            "status",
+            "published_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "program_versions_program_id_programs_id_fk": {
+          "name": "program_versions_program_id_programs_id_fk",
+          "tableFrom": "program_versions",
+          "tableTo": "programs",
+          "columnsFrom": [
+            "program_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "program_versions_positive_version_check": {
+          "name": "program_versions_positive_version_check",
+          "value": "\"program_versions\".\"version_number\" > 0"
+        },
+        "program_versions_nonnegative_duration_check": {
+          "name": "program_versions_nonnegative_duration_check",
+          "value": "\"program_versions\".\"duration_value\" IS NULL OR \"program_versions\".\"duration_value\" > 0"
+        },
+        "program_versions_nonnegative_hours_check": {
+          "name": "program_versions_nonnegative_hours_check",
+          "value": "\"program_versions\".\"nominal_hours\" IS NULL OR \"program_versions\".\"nominal_hours\" >= 0"
+        }
+      }
+    },
+    "programs": {
+      "name": "programs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "provenance_assertions": {
+      "name": "provenance_assertions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_type": {
+          "name": "subject_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "predicate": {
+          "name": "predicate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value_json": {
+          "name": "value_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_resource_version_id": {
+          "name": "source_resource_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "asserted_by": {
+          "name": "asserted_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "asserted_at": {
+          "name": "asserted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "retracted_at": {
+          "name": "retracted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "provenance_assertions_subject_idx": {
+          "name": "provenance_assertions_subject_idx",
+          "columns": [
+            "subject_type",
+            "subject_id"
+          ],
+          "isUnique": false
+        },
+        "provenance_assertions_source_idx": {
+          "name": "provenance_assertions_source_idx",
+          "columns": [
+            "source_resource_version_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "provenance_assertions_source_resource_version_id_resource_versions_id_fk": {
+          "name": "provenance_assertions_source_resource_version_id_resource_versions_id_fk",
+          "tableFrom": "provenance_assertions",
+          "tableTo": "resource_versions",
+          "columnsFrom": [
+            "source_resource_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "provenance_assertions_confidence_range_check": {
+          "name": "provenance_assertions_confidence_range_check",
+          "value": "\"provenance_assertions\".\"confidence\" IS NULL OR \"provenance_assertions\".\"confidence\" BETWEEN 0 AND 1"
+        }
+      }
+    },
+    "providers": {
+      "name": "providers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_type": {
+          "name": "provider_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "homepage_url": {
+          "name": "homepage_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "providers_name_idx": {
+          "name": "providers_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "requirement_course_options": {
+      "name": "requirement_course_options",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requirement_group_id": {
+          "name": "requirement_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "course_version_id": {
+          "name": "course_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "credit_override": {
+          "name": "credit_override",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_recommended": {
+          "name": "is_recommended",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        }
+      },
+      "indexes": {
+        "requirement_course_options_group_course_unique": {
+          "name": "requirement_course_options_group_course_unique",
+          "columns": [
+            "requirement_group_id",
+            "course_version_id"
+          ],
+          "isUnique": true
+        },
+        "requirement_course_options_group_position_idx": {
+          "name": "requirement_course_options_group_position_idx",
+          "columns": [
+            "requirement_group_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "requirement_course_options_requirement_group_id_requirement_groups_id_fk": {
+          "name": "requirement_course_options_requirement_group_id_requirement_groups_id_fk",
+          "tableFrom": "requirement_course_options",
+          "tableTo": "requirement_groups",
+          "columnsFrom": [
+            "requirement_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "requirement_course_options_course_version_id_course_versions_id_fk": {
+          "name": "requirement_course_options_course_version_id_course_versions_id_fk",
+          "tableFrom": "requirement_course_options",
+          "tableTo": "course_versions",
+          "columnsFrom": [
+            "course_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "requirement_course_options_nonnegative_credit_check": {
+          "name": "requirement_course_options_nonnegative_credit_check",
+          "value": "\"requirement_course_options\".\"credit_override\" IS NULL OR \"requirement_course_options\".\"credit_override\" >= 0"
+        }
+      }
+    },
+    "requirement_groups": {
+      "name": "requirement_groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_version_id": {
+          "name": "program_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "parent_group_id": {
+          "name": "parent_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "rule_kind": {
+          "name": "rule_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'all_of'"
+        },
+        "minimum_selections": {
+          "name": "minimum_selections",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "maximum_selections": {
+          "name": "maximum_selections",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "required_credits": {
+          "name": "required_credits",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "required_hours": {
+          "name": "required_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "requirement_groups_program_key_unique": {
+          "name": "requirement_groups_program_key_unique",
+          "columns": [
+            "program_version_id",
+            "key"
+          ],
+          "isUnique": true
+        },
+        "requirement_groups_parent_position_idx": {
+          "name": "requirement_groups_parent_position_idx",
+          "columns": [
+            "parent_group_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "requirement_groups_program_version_id_program_versions_id_fk": {
+          "name": "requirement_groups_program_version_id_program_versions_id_fk",
+          "tableFrom": "requirement_groups",
+          "tableTo": "program_versions",
+          "columnsFrom": [
+            "program_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "requirement_groups_parent_group_id_requirement_groups_id_fk": {
+          "name": "requirement_groups_parent_group_id_requirement_groups_id_fk",
+          "tableFrom": "requirement_groups",
+          "tableTo": "requirement_groups",
+          "columnsFrom": [
+            "parent_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "requirement_groups_selection_range_check": {
+          "name": "requirement_groups_selection_range_check",
+          "value": "\"requirement_groups\".\"minimum_selections\" >= 0 AND (\"requirement_groups\".\"maximum_selections\" IS NULL OR \"requirement_groups\".\"maximum_selections\" >= \"requirement_groups\".\"minimum_selections\")"
+        },
+        "requirement_groups_nonnegative_credits_check": {
+          "name": "requirement_groups_nonnegative_credits_check",
+          "value": "\"requirement_groups\".\"required_credits\" IS NULL OR \"requirement_groups\".\"required_credits\" >= 0"
+        },
+        "requirement_groups_nonnegative_hours_check": {
+          "name": "requirement_groups_nonnegative_hours_check",
+          "value": "\"requirement_groups\".\"required_hours\" IS NULL OR \"requirement_groups\".\"required_hours\" >= 0"
+        }
+      }
+    },
+    "resource_rights": {
+      "name": "resource_rights",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resource_version_id": {
+          "name": "resource_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jurisdiction": {
+          "name": "jurisdiction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'*'"
+        },
+        "basis": {
+          "name": "basis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown'"
+        },
+        "license_identifier": {
+          "name": "license_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "license_url": {
+          "name": "license_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rights_holder": {
+          "name": "rights_holder",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "evidence_url": {
+          "name": "evidence_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "can_link": {
+          "name": "can_link",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "can_redistribute": {
+          "name": "can_redistribute",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "can_adapt": {
+          "name": "can_adapt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "commercial_use": {
+          "name": "commercial_use",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "resource_rights_scope_basis_unique": {
+          "name": "resource_rights_scope_basis_unique",
+          "columns": [
+            "resource_version_id",
+            "jurisdiction",
+            "basis"
+          ],
+          "isUnique": true
+        },
+        "resource_rights_verification_idx": {
+          "name": "resource_rights_verification_idx",
+          "columns": [
+            "verified_at",
+            "valid_until"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "resource_rights_resource_version_id_resource_versions_id_fk": {
+          "name": "resource_rights_resource_version_id_resource_versions_id_fk",
+          "tableFrom": "resource_rights",
+          "tableTo": "resource_versions",
+          "columnsFrom": [
+            "resource_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "resource_versions": {
+      "name": "resource_versions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version_number": {
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'en'"
+        },
+        "content_fingerprint": {
+          "name": "content_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source_published_at": {
+          "name": "source_published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "first_observed_at": {
+          "name": "first_observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "last_observed_at": {
+          "name": "last_observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "resource_versions_resource_number_unique": {
+          "name": "resource_versions_resource_number_unique",
+          "columns": [
+            "resource_id",
+            "version_number"
+          ],
+          "isUnique": true
+        },
+        "resource_versions_status_idx": {
+          "name": "resource_versions_status_idx",
+          "columns": [
+            "status",
+            "last_observed_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "resource_versions_resource_id_resources_id_fk": {
+          "name": "resource_versions_resource_id_resources_id_fk",
+          "tableFrom": "resource_versions",
+          "tableTo": "resources",
+          "columnsFrom": [
+            "resource_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "resource_versions_positive_version_check": {
+          "name": "resource_versions_positive_version_check",
+          "value": "\"resource_versions\".\"version_number\" > 0"
+        }
+      }
+    },
+    "resources": {
+      "name": "resources",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_resource_key": {
+          "name": "provider_resource_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "resources_provider_key_unique": {
+          "name": "resources_provider_key_unique",
+          "columns": [
+            "provider_id",
+            "provider_resource_key"
+          ],
+          "isUnique": true
+        },
+        "resources_provider_kind_idx": {
+          "name": "resources_provider_kind_idx",
+          "columns": [
+            "provider_id",
+            "kind"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "resources_provider_id_providers_id_fk": {
+          "name": "resources_provider_id_providers_id_fk",
+          "tableFrom": "resources",
+          "tableTo": "providers",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "slug_aliases": {
+      "name": "slug_aliases",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "namespace": {
+          "name": "namespace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "program_id": {
+          "name": "program_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "course_id": {
+          "name": "course_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "competency_id": {
+          "name": "competency_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'en'"
+        },
+        "is_canonical": {
+          "name": "is_canonical",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "slug_aliases_route_unique": {
+          "name": "slug_aliases_route_unique",
+          "columns": [
+            "namespace",
+            "locale",
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "slug_aliases_program_idx": {
+          "name": "slug_aliases_program_idx",
+          "columns": [
+            "program_id"
+          ],
+          "isUnique": false
+        },
+        "slug_aliases_course_idx": {
+          "name": "slug_aliases_course_idx",
+          "columns": [
+            "course_id"
+          ],
+          "isUnique": false
+        },
+        "slug_aliases_competency_idx": {
+          "name": "slug_aliases_competency_idx",
+          "columns": [
+            "competency_id"
+          ],
+          "isUnique": false
+        },
+        "slug_aliases_provider_idx": {
+          "name": "slug_aliases_provider_idx",
+          "columns": [
+            "provider_id"
+          ],
+          "isUnique": false
+        },
+        "slug_aliases_resource_idx": {
+          "name": "slug_aliases_resource_idx",
+          "columns": [
+            "resource_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "slug_aliases_program_id_programs_id_fk": {
+          "name": "slug_aliases_program_id_programs_id_fk",
+          "tableFrom": "slug_aliases",
+          "tableTo": "programs",
+          "columnsFrom": [
+            "program_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "slug_aliases_course_id_courses_id_fk": {
+          "name": "slug_aliases_course_id_courses_id_fk",
+          "tableFrom": "slug_aliases",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "slug_aliases_competency_id_competencies_id_fk": {
+          "name": "slug_aliases_competency_id_competencies_id_fk",
+          "tableFrom": "slug_aliases",
+          "tableTo": "competencies",
+          "columnsFrom": [
+            "competency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "slug_aliases_provider_id_providers_id_fk": {
+          "name": "slug_aliases_provider_id_providers_id_fk",
+          "tableFrom": "slug_aliases",
+          "tableTo": "providers",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "slug_aliases_resource_id_resources_id_fk": {
+          "name": "slug_aliases_resource_id_resources_id_fk",
+          "tableFrom": "slug_aliases",
+          "tableTo": "resources",
+          "columnsFrom": [
+            "resource_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "slug_aliases_one_target_check": {
+          "name": "slug_aliases_one_target_check",
+          "value": "(\n        CASE WHEN \"slug_aliases\".\"program_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"slug_aliases\".\"course_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"slug_aliases\".\"competency_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"slug_aliases\".\"provider_id\" IS NOT NULL THEN 1 ELSE 0 END +\n        CASE WHEN \"slug_aliases\".\"resource_id\" IS NOT NULL THEN 1 ELSE 0 END\n      ) = 1"
+        },
+        "slug_aliases_namespace_target_check": {
+          "name": "slug_aliases_namespace_target_check",
+          "value": "(\"slug_aliases\".\"namespace\" = 'program' AND \"slug_aliases\".\"program_id\" IS NOT NULL)\n        OR (\"slug_aliases\".\"namespace\" = 'course' AND \"slug_aliases\".\"course_id\" IS NOT NULL)\n        OR (\"slug_aliases\".\"namespace\" = 'competency' AND \"slug_aliases\".\"competency_id\" IS NOT NULL)\n        OR (\"slug_aliases\".\"namespace\" = 'provider' AND \"slug_aliases\".\"provider_id\" IS NOT NULL)\n        OR (\"slug_aliases\".\"namespace\" = 'resource' AND \"slug_aliases\".\"resource_id\" IS NOT NULL)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

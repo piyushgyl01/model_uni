@@ -1,29 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   CourseVersionId,
   LearningUnitId,
   ProgramVersionId,
 } from "./domain/catalog";
-
-const STORAGE_KEY = "course-atlas-progress-v2";
-const PROGRESS_EVENT = "course-atlas-progress-v2:changed";
-
-interface StoredCourseProgress {
-  readonly completedUnitIds?: readonly string[];
-  readonly updatedAt?: string;
-}
-
-interface StoredProgramProgress {
-  readonly courses?: Readonly<Record<string, StoredCourseProgress>>;
-  readonly selectedConcentrationId?: string;
-}
-
-interface ProgressStore {
-  readonly schemaVersion?: number;
-  readonly programs?: Readonly<Record<string, StoredProgramProgress>>;
-}
+import {
+  PROGRESS_STORAGE_NAMESPACE,
+  type AuthenticatedProgressResponse,
+} from "./learner-progress-contract";
+import {
+  connectionFromResponse,
+  importLocalProgress,
+  loadCloudProgress,
+  patchCloudProgress,
+  type ProgressConnection,
+  type ProgressSaveState,
+} from "./progress-sync-client";
+import ProgressSyncStatus from "./progress-sync-status";
+import {
+  ensureClientImportId,
+  getStoredProgram,
+  hasMeaningfulLocalProgress,
+  makeImportRequest,
+  pendingUpdatesForProgram,
+  PROGRESS_EVENT,
+  readLocalCourseUnits,
+  readProgressStore,
+  replaceLocalProgramFromCloud,
+  writeLocalConcentration,
+} from "./progress-storage";
 
 export interface ProgramProgressCourse {
   readonly courseVersionId: CourseVersionId;
@@ -42,43 +49,19 @@ export interface ProgramProgressProps {
   }[];
 }
 
-function readStore(): ProgressStore {
-  try {
-    const value = window.localStorage.getItem(STORAGE_KEY);
-    if (!value) return {};
-    const parsed: unknown = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as ProgressStore)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function readCompletedUnits(
+function localCompletedByCourse(
   programVersionId: ProgramVersionId,
   courses: readonly ProgramProgressCourse[],
 ) {
-  const storedCourses = readStore().programs?.[programVersionId]?.courses ?? {};
-  const allowedByCourse = new Map(
+  return Object.fromEntries(
     courses.map((course) => [
       course.courseVersionId,
-      new Set<string>(course.unitIds),
+      readLocalCourseUnits(
+        programVersionId,
+        course.courseVersionId,
+        new Set(course.unitIds),
+      ),
     ]),
-  );
-
-  return Object.fromEntries(
-    courses.map((course) => {
-      const allowed = allowedByCourse.get(course.courseVersionId);
-      const stored = storedCourses[course.courseVersionId]?.completedUnitIds;
-      const completed = Array.isArray(stored)
-        ? stored.filter(
-            (unitId): unitId is string =>
-              typeof unitId === "string" && Boolean(allowed?.has(unitId)),
-          )
-        : [];
-      return [course.courseVersionId, completed];
-    }),
   );
 }
 
@@ -89,37 +72,198 @@ export default function ProgramProgress({
   concentrations,
 }: ProgramProgressProps) {
   const [completedByCourse, setCompletedByCourse] = useState<
-    Record<string, readonly string[]>
+    Record<string, readonly LearningUnitId[]>
   >({});
   const [selectedConcentrationId, setSelectedConcentrationId] = useState(
     concentrations[0]?.id ?? "",
   );
+  const [connection, setConnection] = useState<ProgressConnection>({
+    kind: "checking",
+  });
+  const [saveState, setSaveState] =
+    useState<ProgressSaveState>("idle");
+  const [needsImportDecision, setNeedsImportDecision] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+
+  const refreshFromLocal = useCallback(() => {
+    setCompletedByCourse(localCompletedByCourse(programVersionId, courses));
+    const storedConcentration =
+      getStoredProgram(programVersionId)?.selectedConcentrationId;
+    if (
+      storedConcentration &&
+      concentrations.some(
+        (concentration) => concentration.id === storedConcentration,
+      )
+    ) {
+      setSelectedConcentrationId(storedConcentration);
+    }
+  }, [concentrations, courses, programVersionId]);
+
+  const validUnitsByCourse = useMemo(
+    () =>
+      new Map(
+        courses.map((course) => [
+          course.courseVersionId,
+          new Set<string>(course.unitIds),
+        ]),
+      ),
+    [courses],
+  );
+
+  const adoptCloudProgress = useCallback(
+    (response: AuthenticatedProgressResponse) => {
+      setCompletedByCourse(
+        Object.fromEntries(
+          courses.map((course) => {
+            const allowed = validUnitsByCourse.get(course.courseVersionId);
+            const completed =
+              response.progress.courses[course.courseVersionId]
+                ?.completedUnitIds ?? [];
+            return [
+              course.courseVersionId,
+              completed.filter((unitId) => allowed?.has(unitId)),
+            ];
+          }),
+        ),
+      );
+      const cloudConcentration = response.progress.selectedConcentrationId;
+      setSelectedConcentrationId(
+        cloudConcentration &&
+          concentrations.some(
+            (concentration) => concentration.id === cloudConcentration,
+          )
+          ? cloudConcentration
+          : concentrations[0]?.id ?? "",
+      );
+      replaceLocalProgramFromCloud(response.progress);
+      setConnection(connectionFromResponse(response));
+      setNeedsImportDecision(false);
+    },
+    [concentrations, courses, validUnitsByCourse],
+  );
+
+  const showCloudWithoutReplacingLocal = useCallback(
+    (response: AuthenticatedProgressResponse) => {
+      setCompletedByCourse(
+        Object.fromEntries(
+          courses.map((course) => {
+            const allowed = validUnitsByCourse.get(course.courseVersionId);
+            const completed =
+              response.progress.courses[course.courseVersionId]
+                ?.completedUnitIds ?? [];
+            return [
+              course.courseVersionId,
+              completed.filter((unitId) => allowed?.has(unitId)),
+            ];
+          }),
+        ),
+      );
+      const cloudConcentration = response.progress.selectedConcentrationId;
+      setSelectedConcentrationId(
+        cloudConcentration &&
+          concentrations.some(
+            (concentration) => concentration.id === cloudConcentration,
+          )
+          ? cloudConcentration
+          : concentrations[0]?.id ?? "",
+      );
+    },
+    [concentrations, courses, validUnitsByCourse],
+  );
+
+  const refreshFromCloud = useCallback(async () => {
+    const clientImportId = ensureClientImportId();
+    const localBeforeCloud = readProgressStore();
+    const response = await loadCloudProgress(
+      programVersionId,
+      clientImportId,
+    );
+    setConnection(connectionFromResponse(response));
+
+    if (!response.authenticated) {
+      setNeedsImportDecision(false);
+      setSaveState("idle");
+      return;
+    }
+
+    if (!response.importReceipt) {
+      if (hasMeaningfulLocalProgress(localBeforeCloud)) {
+        showCloudWithoutReplacingLocal(response);
+        setNeedsImportDecision(true);
+        return;
+      }
+
+      await importLocalProgress(
+        makeImportRequest(programVersionId, "cloud"),
+      );
+      const confirmed = await loadCloudProgress(
+        programVersionId,
+        clientImportId,
+      );
+      if (confirmed.authenticated) adoptCloudProgress(confirmed);
+      return;
+    }
+
+    const pending = pendingUpdatesForProgram(programVersionId);
+    if (
+      pending.courseUpdates.length > 0 ||
+      pending.concentrationUpdate
+    ) {
+      const saved = await patchCloudProgress({
+        programVersionId,
+        clientImportId,
+        courseUpdates: pending.courseUpdates,
+        concentrationUpdate: pending.concentrationUpdate,
+      });
+      adoptCloudProgress(saved);
+      setSaveState("saved");
+      return;
+    }
+
+    adoptCloudProgress(response);
+    setSaveState("idle");
+  }, [
+    adoptCloudProgress,
+    programVersionId,
+    showCloudWithoutReplacingLocal,
+  ]);
 
   useEffect(() => {
-    const refresh = () => {
-      setCompletedByCourse(readCompletedUnits(programVersionId, courses));
-      const stored =
-        readStore().programs?.[programVersionId]?.selectedConcentrationId;
-      if (
-        stored &&
-        concentrations.some((concentration) => concentration.id === stored)
-      ) {
-        setSelectedConcentrationId(stored);
-      }
-    };
-    const hydrationFrame = window.requestAnimationFrame(refresh);
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) refresh();
-    };
+    let active = true;
+    const hydrationFrame = window.requestAnimationFrame(() => {
+      if (!active) return;
+      refreshFromLocal();
+      refreshFromCloud().catch(() => {
+        if (!active) return;
+        setConnection({ kind: "offline" });
+        setNeedsImportDecision(false);
+        setSaveState("device-only");
+      });
+    });
 
-    window.addEventListener("storage", onStorage);
-    window.addEventListener(PROGRESS_EVENT, refresh);
-    return () => {
-      window.cancelAnimationFrame(hydrationFrame);
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(PROGRESS_EVENT, refresh);
+    const reconnect = () => {
+      setConnection({ kind: "checking" });
+      refreshFromCloud().catch(() => {
+        if (active) setConnection({ kind: "offline" });
+      });
     };
-  }, [concentrations, courses, programVersionId]);
+    const localProgressChanged = () => {
+      if (active) refreshFromLocal();
+    };
+    const storedProgressChanged = (event: StorageEvent) => {
+      if (event.key === PROGRESS_STORAGE_NAMESPACE) localProgressChanged();
+    };
+    window.addEventListener("online", reconnect);
+    window.addEventListener(PROGRESS_EVENT, localProgressChanged);
+    window.addEventListener("storage", storedProgressChanged);
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(hydrationFrame);
+      window.removeEventListener("online", reconnect);
+      window.removeEventListener(PROGRESS_EVENT, localProgressChanged);
+      window.removeEventListener("storage", storedProgressChanged);
+    };
+  }, [refreshFromCloud, refreshFromLocal]);
 
   const activeCourses = useMemo(() => {
     if (concentrations.length === 0) return courses;
@@ -164,24 +308,66 @@ export default function ProgramProgress({
       ? Math.round((totals.completedUnits / totals.totalUnits) * 100)
       : 0;
 
-  const chooseConcentration = (id: string) => {
+  const chooseConcentration = async (id: string) => {
     setSelectedConcentrationId(id);
-    const current = readStore();
-    const programs = { ...(current.programs ?? {}) };
-    const program = { ...(programs[programVersionId] ?? {}) };
-    programs[programVersionId] = {
-      ...program,
-      selectedConcentrationId: id,
-    };
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ schemaVersion: 2, programs }),
-    );
-    window.dispatchEvent(new Event(PROGRESS_EVENT));
+    if (connection.kind !== "signed-in") {
+      const cached = writeLocalConcentration(programVersionId, id, true);
+      setSaveState(cached ? "device-only" : "error");
+      return;
+    }
+
+    const clientImportId = ensureClientImportId();
+    const cached = writeLocalConcentration(programVersionId, id, true);
+    setSaveState("saving");
+    try {
+      const response = await patchCloudProgress({
+        programVersionId,
+        clientImportId,
+        concentrationUpdate: { selectedConcentrationId: id },
+      });
+      adoptCloudProgress(response);
+      setSaveState("saved");
+    } catch {
+      setSaveState(cached ? "device-only" : "error");
+    }
   };
+
+  const resolveImport = async (disposition: "merged" | "cloud") => {
+    setImportBusy(true);
+    setSaveState("saving");
+    try {
+      const request = makeImportRequest(programVersionId, disposition);
+      await importLocalProgress(request);
+      const response = await loadCloudProgress(
+        programVersionId,
+        request.clientImportId,
+      );
+      if (!response.authenticated) throw new Error("Sign-in ended.");
+      adoptCloudProgress(response);
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
+  const controlsDisabled =
+    connection.kind === "checking" ||
+    needsImportDecision ||
+    saveState === "saving";
 
   return (
     <aside className="universal-program-progress" aria-labelledby="program-progress-title">
+      <ProgressSyncStatus
+        connection={connection}
+        saveState={saveState}
+        needsImportDecision={needsImportDecision}
+        importBusy={importBusy}
+        onImport={() => void resolveImport("merged")}
+        onUseCloud={() => void resolveImport("cloud")}
+      />
+
       <div className="progress-label">
         <span id="program-progress-title">Your progress in this version</span>
         <strong>{percentage}%</strong>
@@ -201,7 +387,10 @@ export default function ProgramProgress({
         {totals.completedCourses} of {activeCourses.length} courses completed
       </p>
       {concentrations.length > 0 && (
-        <fieldset className="universal-progress-concentrations">
+        <fieldset
+          className="universal-progress-concentrations"
+          disabled={controlsDisabled}
+        >
           <legend>Progress pathway</legend>
           {concentrations.map((concentration) => (
             <label key={concentration.id}>
@@ -209,7 +398,7 @@ export default function ProgramProgress({
                 type="radio"
                 name={`concentration-${programVersionId}`}
                 checked={selectedConcentrationId === concentration.id}
-                onChange={() => chooseConcentration(concentration.id)}
+                onChange={() => void chooseConcentration(concentration.id)}
               />
               {concentration.title}
             </label>
@@ -218,8 +407,7 @@ export default function ProgramProgress({
       )}
       <small>
         This activity meter does not override requirement or elective rules.
-        Progress is saved only in this browser and kept separate for program
-        version {programVersionId}.
+        Progress is pinned to program version {programVersionId}.
       </small>
     </aside>
   );

@@ -11,24 +11,130 @@ import type {
 } from "../app/domain/catalog";
 import { catalogRepository } from "../content/catalog";
 
-test("publishes two structurally different programs through one repository", () => {
+test("publishes three structurally different programs through one repository", () => {
   const summaries = catalogRepository.listPrograms();
-  assert.equal(summaries.length, 2);
+  assert.equal(summaries.length, 3);
 
   const ee = summaries.find((program) => program.slug === "electrical-engineering");
+  const computerScience = summaries.find(
+    (program) => program.slug === "computer-science",
+  );
   const spreadsheets = summaries.find(
     (program) => program.slug === "practical-spreadsheets",
   );
   assert.ok(ee);
+  assert.ok(computerScience);
   assert.ok(spreadsheets);
   assert.equal(ee.courseCount, 31);
   assert.equal(ee.availableCourseCount, 37);
   assert.equal(ee.learningUnitCount, 496);
   assert.equal(ee.resourceCount, 78);
+  assert.equal(computerScience.courseCount, 30);
+  assert.equal(computerScience.availableCourseCount, 34);
+  assert.equal(computerScience.learningUnitCount, 240);
+  assert.equal(computerScience.resourceCount, 34);
+  assert.equal(computerScience.nominalHours, 4_800);
   assert.equal(spreadsheets.courseCount, 1);
   assert.equal(spreadsheets.availableCourseCount, 1);
   assert.equal(spreadsheets.learningUnitCount, 8);
   assert.equal(spreadsheets.resourceCount, 9);
+});
+
+test("the Computer Science publication is complete, coherent, and executable", () => {
+  const bundle = catalogRepository.loadBySlug("computer-science");
+  assert.ok(bundle);
+  assert.deepEqual(validatePublishedProgramBundle(bundle), {
+    valid: true,
+    issues: [],
+  });
+  assert.equal(bundle.courseVersions.length, 34);
+  assert.equal(bundle.learningUnits.length, 272);
+  assert.equal(bundle.assessmentVersions.length, 68);
+  assert.equal(bundle.resourceVersions.length, 34);
+  assert.equal(bundle.accessOffers.length, 34);
+  assert.equal(bundle.rights.length, 34);
+  assert.equal(bundle.freshness.length, 34);
+  assert.equal(bundle.calendars[0].periods.length, 6);
+  assert.equal(bundle.concentrations.length, 3);
+
+  const concentrationRequirement = bundle.programVersion.requirements.find(
+    (requirement) => requirement.id === "req_cs_concentration",
+  );
+  assert.ok(concentrationRequirement);
+  assert.equal(
+    concentrationRequirement.rule.selectionConstraint,
+    "same concentration",
+  );
+  const fixedCourseVersionIds = bundle.programVersion.requirements
+    .filter((requirement) => requirement.id !== concentrationRequirement.id)
+    .flatMap((requirement) =>
+      requirement.options.map((option) => option.courseVersionId),
+    );
+
+  for (const concentration of bundle.concentrations) {
+    const completed = new Set<CourseVersionId>([
+      ...fixedCourseVersionIds,
+      ...concentration.courseVersionIds,
+    ]);
+    assert.equal(completed.size, 30);
+    assert.equal(evaluateProgramRequirements(bundle, completed).satisfied, true);
+    assert.equal(
+      bundle.learningUnits.filter((unit) =>
+        completed.has(unit.courseVersionId),
+      ).length,
+      240,
+    );
+  }
+
+  const placementPeriod = new Map(
+    bundle.schedules[0].placements.map((placement) => [
+      placement.subject.kind === "courseVersion"
+        ? placement.subject.id
+        : "",
+      placement.periodId,
+    ]),
+  );
+  const periodOrder = new Map(
+    bundle.calendars[0].periods.map((period) => [
+      period.id,
+      period.order,
+    ]),
+  );
+  for (const course of bundle.courseVersions) {
+    assert.equal(
+      bundle.learningUnits.filter(
+        (unit) => unit.courseVersionId === course.id,
+      ).length,
+      8,
+    );
+    assert.equal(course.resourceReferences.length, 1);
+    assert.equal(course.gradingPolicy.contributions.length, 2);
+    const courseTerm = periodOrder.get(placementPeriod.get(course.id)!);
+    for (const prerequisite of course.prerequisites) {
+      const prerequisiteTerm = periodOrder.get(
+        placementPeriod.get(prerequisite.courseVersionId)!,
+      );
+      assert.ok(
+        prerequisiteTerm! <= courseTerm!,
+        `${course.id} cannot precede ${prerequisite.courseVersionId}`,
+      );
+      if (prerequisiteTerm === courseTerm) {
+        assert.equal(prerequisite.concurrentEnrollmentAllowed, true);
+      }
+    }
+  }
+
+  assert.equal(
+    new Set(
+      bundle.resourceVersions.map((resource) => resource.canonicalUrl),
+    ).size,
+    34,
+  );
+  assert.ok(
+    bundle.resourceVersions.every((resource) =>
+      resource.canonicalUrl.startsWith("https://"),
+    ),
+  );
 });
 
 test("the EE publication contains real specialization courses and valid paths", () => {

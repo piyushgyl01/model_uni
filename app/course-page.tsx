@@ -212,6 +212,15 @@ export default function CoursePage({ bundle, courseSlug }: CoursePageProps) {
     ]),
   );
 
+function unitDisplayLabel(unit: LearningUnit) {
+    const weekMatch = unit.label.match(/^weeks?\s+(\d+)(?:[–-](\d+))?$/i);
+    if (weekMatch) {
+      if (weekMatch[2]) return `Units ${weekMatch[1]}–${weekMatch[2]}`;
+      return `Unit ${weekMatch[1]}`;
+    }
+    return unit.label;
+  }
+
   const renderLearningUnit = (unit: LearningUnit, depth = 0) => {
     const unitResources = unit.resourceVersionIds.map((resourceVersionId) => ({
       resourceVersionId,
@@ -228,7 +237,7 @@ export default function CoursePage({ bundle, courseSlug }: CoursePageProps) {
         <header className="universal-unit-heading">
           <div>
             <span>
-              {unit.kindLabel ?? unit.kind} · {unit.label}
+              {unit.kindLabel ?? unit.kind} · {unitDisplayLabel(unit)}
             </span>
             <h3 id={`${unit.id}-title`}>{unit.title}</h3>
           </div>

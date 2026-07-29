@@ -1,4 +1,5 @@
 import { StaticCatalogRepository } from "../app/catalog/static-repository";
+import { computerScienceBundle } from "../app/content/computer-science/bundle";
 import { electricalEngineeringProgram } from "./programs/electrical-engineering";
 import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets";
 
@@ -9,22 +10,41 @@ import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets"
 export const catalogRepository = new StaticCatalogRepository([
   electricalEngineeringProgram,
   practicalSpreadsheetsProgram,
+  computerScienceBundle,
 ]);
 
-export const plannedDirections = [
-  {
-    school: "School of Computing",
-    title: "Computer Science",
-    note: "Curriculum research and resource review",
-  },
+export interface FutureProgramDirection {
+  readonly school: string;
+  readonly discipline: string;
+  readonly title: string;
+  readonly description: string;
+  readonly status: "research" | "design" | "authoring" | "validation";
+  readonly note: string;
+}
+
+export const futureDirections: readonly FutureProgramDirection[] = [
   {
     school: "School of Natural Sciences",
+    discipline: "Mathematics",
     title: "Mathematics",
-    note: "Requirement and competency normalization",
+    description: "A competency-normalized pure and applied mathematics pathway.",
+    status: "research",
+    note: "Requirement and competency normalization across calculus, linear algebra, analysis, probability, and discrete math.",
   },
   {
     school: "School of Humanities & Society",
+    discipline: "Economics",
     title: "Economics",
-    note: "Evidence and assessment design",
+    description: "An evidence-based economics pathway with computational focus.",
+    status: "research",
+    note: "Evidence and assessment design for micro, macro, econometrics, and policy analysis.",
+  },
+  {
+    school: "School of Engineering",
+    discipline: "Mechanical Engineering",
+    title: "Mechanical Engineering",
+    description: "Simulation-first mechanical engineering with lab alternatives.",
+    status: "design",
+    note: "Laboratory and simulation route research for mechanics, thermodynamics, and manufacturing.",
   },
 ] as const;
