@@ -1,4 +1,4 @@
-import type { TrackId } from "./data";
+import type { TrackId } from "./ee-source-data";
 
 export type AssessmentType =
   | "study"

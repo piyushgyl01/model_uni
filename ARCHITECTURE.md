@@ -1,6 +1,15 @@
 # Course Atlas: Universal Catalog Architecture
 
-Status: proposed foundation, July 2026
+Status: implemented content-domain foundation, July 2026
+
+The current release implements the universal publication contract, validation,
+repository boundary, stable seed identities, immutable EE and spreadsheet
+program bundles, generic program/course renderers, version-aware local progress,
+and the first D1 schema/migration. Checked-in publications remain the active
+read adapter while database seeding, editorial authoring, shadow comparison,
+and cutover are built. The later ingestion, account, credential, and search
+sections below remain the target architecture, not claims about the live
+product.
 
 ## 1. Product boundary
 
@@ -41,7 +50,8 @@ Terminology has deliberate legal meaning:
 
 ## 2. Architecture rules
 
-1. PostgreSQL/D1 is the system of record for structured data.
+1. D1 is the intended system of record for structured data after the verified
+   cutover; checked-in immutable publications are the current release source.
 2. Object storage is the system of record for permitted binary assets and raw
    ingestion evidence.
 3. Search indexes and caches are derived and disposable.
@@ -401,15 +411,16 @@ invalidation, and RFC 9457 problem responses. Mutation requests require an
 `Idempotency-Key`; edits require `If-Match` with the current revision. Public,
 learner, and editor endpoints have separate rate limits and authorization.
 
-## 14. Migration from the current static v1
+## 14. Migration from the original static v1
 
-The current `app/data.ts` is a seed source, not the future database contract.
-Migration should be additive and reversible:
+The original `app/data.ts` has moved to `content/seeds/ee-source-data.ts`; it is
+a preserved seed source, not the database contract. Migration is additive and
+reversible:
 
-1. **Freeze and export.** Convert the current arrays into a validated
-   `seed-ee-v1` import artifact and checked-in ID manifest. Retain the original
-   source for comparison; do not parse TypeScript at runtime.
-2. **Map the content.**
+1. **Freeze and export — complete.** The source arrays are preserved beneath
+   `content/seeds/`, converted into a validated publication bundle, and assigned
+   checked-in IDs in `content/manifests/ee-identities.ts`.
+2. **Map the content — complete for the publication contract.**
    - `Course` → `courses`, `course_versions`, codes, outcomes, prerequisite
      expressions.
    - `Semester.courseCodes` → one EE `program_version` and ordered
@@ -424,12 +435,15 @@ Migration should be additive and reversible:
    - `LabRoute` → reusable lab learning-object collections and tool
      requirements.
    - `ProvenanceSource` → provider/source/evidence records.
-3. **Introduce D1.** Add portable Drizzle tables and migrations, seed them
-   idempotently, and verify row counts, graph edges, credits, hours, URLs, and
-   content hashes against v1.
-4. **Add a repository boundary.** Serve the existing UI shape through a
-   catalog repository backed by D1, with the static seed as a temporary
-   feature-flag fallback. Do not dual-write.
+3. **Introduce D1 — schema complete, seed/cutover pending.** Portable Drizzle
+   tables and an executable migration now cover versioned programs, courses,
+   requirements, content, competencies, resources, access, rights, provenance,
+   aliases, audit events, and the outbox. The next slice is an idempotent seed
+   plus row-count, graph, hours, URL, and content-hash verification.
+4. **Add a repository boundary — interface and static adapter complete.** All
+   routes use `CatalogRepository`; no renderer imports program data. Add a D1
+   adapter, shadow-compare its output with the checked-in publications, then
+   switch reads by one feature flag. Do not dual-write.
 5. **Move user state.** Add authenticated plans/progress and the consent-based
    import of `course-atlas-track` and `course-atlas-ee-progress`.
 6. **Add object storage.** Store raw imports, rights evidence, generated
@@ -447,11 +461,12 @@ That keeps the PostgreSQL migration mechanical.
 
 ## 15. Scale phases
 
-### Phase 0 — universal static shell
+### Phase 0 — universal static shell (complete)
 
-- Rename product concepts generically while EE remains the only seed.
-- Add the ID manifest and schema validators.
-- Put all catalog access behind repository interfaces.
+- Use generic product concepts and prove them with two structurally different
+  programs.
+- Add the ID manifest, immutable version contract, and publication validators.
+- Put all catalog access behind repository interfaces and use generic routes.
 - No premature distributed system.
 
 ### Phase 1 — D1 + object storage, approximately 1–10,000 courses
@@ -512,15 +527,20 @@ service objectives.
 - Publish a correction, appeal, copyright, and takedown process. Preserve audit
   evidence while promptly stopping disputed delivery when required.
 
-## 17. First implementation slice
+## 17. Current implementation slice
 
-The first database release should remain intentionally small: schools,
-disciplines, programs/program versions, courses/course versions, content nodes,
-providers, resources/resource versions, licenses/access offers, prerequisite
-expressions, slug aliases, audit/outbox events, and the EE seed manifest. Add a
-read-only catalog API and shadow-compare it to the current static output before
-moving progress or assessments.
+The first release now contains stable programs/program versions,
+courses/course versions, requirement groups/options, arbitrary content units,
+competencies and mappings, assessments, resources/resource versions,
+licenses/access offers, provenance, slug aliases, audit/outbox events, and the
+EE seed manifest. The checked-in repository also proves the contract with a
+non-degree, non-semester spreadsheet program.
 
-This slice proves the universal identity, reuse, provenance, versioning, and
-publication rules—the decisions that are expensive to retrofit after thousands
-of courses have been ingested.
+The next database release should add an idempotent importer and D1 repository,
+expose a read-only catalog API, and shadow-compare every publication against the
+current repository before switching the active read path. That cutover should
+happen before account-backed progress or editorial writes.
+
+This slice proves universal identity, reuse, provenance, versioning,
+requirements, arbitrary course shape, and publication rules—the decisions that
+are expensive to retrofit after thousands of courses have been ingested.

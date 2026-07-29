@@ -1,14 +1,22 @@
 import Link from "next/link";
-import { degreeCatalog, liveDegrees } from "./program-registry";
+import { catalogRepository, plannedDirections } from "../content/catalog";
 
 const homeNav = [
-  ["Degrees", "degrees"],
-  ["How it works", "model"],
+  ["Programs", "programs"],
+  ["Learning model", "model"],
   ["Schools", "schools"],
-  ["About", "about"],
+  ["Scope", "scope"],
 ] as const;
 
+function hoursLabel(hours: number) {
+  if (hours >= 1000) return `${Math.round(hours / 100) / 10}k guided hours`;
+  return `${hours} guided hours`;
+}
+
 export default function Home() {
+  const programs = catalogRepository.listPrograms();
+  const schools = Array.from(new Set(programs.map((program) => program.school)));
+
   return (
     <div className="catalog-home">
       <header className="topbar catalog-topbar">
@@ -20,7 +28,7 @@ export default function Home() {
           </span>
           <span>
             <strong>Course Atlas</strong>
-            <small>complete degrees · free routes</small>
+            <small>executable learning paths</small>
           </span>
         </a>
 
@@ -30,8 +38,8 @@ export default function Home() {
           ))}
         </nav>
 
-        <a className="header-cta" href="#degrees">
-          Browse degrees <span aria-hidden="true">↓</span>
+        <a className="header-cta" href="#programs">
+          Browse programs <span aria-hidden="true">↓</span>
         </a>
 
         <details className="mobile-nav">
@@ -50,113 +58,138 @@ export default function Home() {
           <div className="catalog-hero-copy">
             <p className="eyebrow">
               <span className="status-dot" />
-              The university layer for the open web
+              A learning operating system for the open web
             </p>
-            <h1>Pick a degree.<br />Get the whole path.</h1>
+            <h1>Choose an outcome.<br />Get the whole path.</h1>
             <p>
-              Course Atlas turns the best free courses on the internet into complete,
-              semester-by-semester programs. No link pile. No guessing what comes next.
+              Course Atlas turns free courses, documentation, projects and
+              assessments into complete programs that tell you what to learn,
+              where to learn it, what to do and what evidence to keep.
             </p>
             <div className="hero-actions">
-              <Link className="button button-primary" href="/degrees/electrical-engineering">
+              <Link
+                className="button button-primary"
+                href="/programs/electrical-engineering"
+              >
                 Open Electrical Engineering <span aria-hidden="true">→</span>
               </Link>
-              <a className="button button-quiet" href="#model">
-                See the degree model
-              </a>
+              <Link
+                className="button button-quiet"
+                href="/programs/practical-spreadsheets"
+              >
+                Try an eight-week program
+              </Link>
             </div>
           </div>
 
           <aside className="catalog-manifesto">
-            <span>Course Atlas / Manifesto 01</span>
+            <span>Course Atlas / Publication model</span>
             <blockquote>
-              A degree is not a building. It is a sequenced body of work, feedback,
-              evidence, and standards.
+              A program is a versioned sequence of competencies, work,
+              assessment and evidence—not a custom webpage.
             </blockquote>
             <div>
-              <span><strong>{liveDegrees.length}</strong> complete degree live</span>
-              <span><strong>{degreeCatalog.length}</strong> programs in the registry</span>
-              <span><strong>∞</strong> programs the system can hold</span>
+              <span><strong>{programs.length}</strong> complete programs</span>
+              <span>
+                <strong>{programs.reduce((sum, program) => sum + program.courseCount, 0)}</strong>{" "}
+                courses across minimum paths
+              </span>
+              <span>
+                <strong>{programs.reduce((sum, program) => sum + program.learningUnitCount, 0)}</strong>{" "}
+                executable learning units
+              </span>
             </div>
           </aside>
         </section>
 
-        <section className="catalog-trust-strip" aria-label="Course Atlas promise">
-          <span>One homepage</span>
+        <section className="catalog-trust-strip" aria-label="Course Atlas model">
+          <span>One universal renderer</span>
           <i aria-hidden="true">→</i>
-          <span>Many independent degree pages</span>
+          <span>Versioned program publications</span>
           <i aria-hidden="true">→</i>
-          <span>Every degree owns its semesters, courses, weeks, and resources</span>
+          <span>Any duration, calendar, field or course count</span>
         </section>
 
-        <section className="catalog-section degree-directory" id="degrees">
+        <section className="catalog-section degree-directory" id="programs">
           <div className="catalog-section-heading">
             <div>
-              <p className="section-index">01 / Degree directory</p>
-              <h2>Choose the program.<br />Enter its university.</h2>
+              <p className="section-index">01 / Published programs</p>
+              <h2>Different structures.<br />One learning engine.</h2>
             </div>
             <p>
-              Each degree is a separate destination with its own roadmap, classrooms,
-              assessments, labs, resources, progress, and specialization choices.
+              The three-year engineering pathway and eight-week spreadsheet
+              sprint are rendered from the same content contract. Adding the
+              next program does not require another custom page.
             </p>
           </div>
 
           <div className="degree-card-grid">
-            {degreeCatalog.map((degree, index) => {
-              const isLive = degree.status === "live";
-              return (
-                <article
-                  className={`degree-directory-card degree-${degree.color} ${isLive ? "is-live" : ""}`}
-                  key={degree.slug}
-                >
-                  <div className="degree-card-top">
-                    <span>{String(index + 1).padStart(2, "0")} · {degree.school}</span>
-                    <b>{isLive ? "Open now" : degree.status === "building" ? "Building" : "Planned"}</b>
-                  </div>
-                  <div className="degree-card-title">
-                    <span>{degree.credential}</span>
-                    <h3>{degree.name}</h3>
-                    <p>{degree.description}</p>
-                  </div>
-                  <div className="degree-card-facts">
-                    {degree.facts.map((fact) => <span key={fact}>{fact}</span>)}
-                  </div>
-                  {isLive ? (
-                    <Link href={`/degrees/${degree.slug}`}>
-                      Enter degree <span aria-hidden="true">→</span>
-                    </Link>
-                  ) : (
-                    <span className="degree-card-locked">
-                      Not published yet—no fake empty page
-                    </span>
+            {programs.map((program, index) => (
+              <article
+                className={`degree-directory-card ${
+                  index % 2 === 0 ? "degree-teal" : "degree-coral"
+                } is-live`}
+                key={program.programId}
+              >
+                <div className="degree-card-top">
+                  <span>{String(index + 1).padStart(2, "0")} · {program.school}</span>
+                  <b>Published v{program.latestVersion}</b>
+                </div>
+                <div className="degree-card-title">
+                  <span>{program.credentialLabel}</span>
+                  <h3>{program.title}</h3>
+                  <p>{program.summary}</p>
+                </div>
+                <div className="degree-card-facts">
+                  <span>{program.nominalDuration}</span>
+                  <span>{program.courseCount}-course minimum path</span>
+                  {program.availableCourseCount !== program.courseCount && (
+                    <span>{program.availableCourseCount} course options</span>
                   )}
-                </article>
-              );
-            })}
+                  <span>{program.learningUnitCount} learning units</span>
+                  <span>{program.resourceCount} reviewed resources</span>
+                  <span>{hoursLabel(program.nominalHours)}</span>
+                </div>
+                <Link href={`/programs/${program.slug}`}>
+                  Enter program <span aria-hidden="true">→</span>
+                </Link>
+              </article>
+            ))}
+          </div>
+
+          <div className="catalog-roadmap">
+            <span>In research—not advertised as published</span>
+            {plannedDirections.map((direction) => (
+              <article key={direction.title}>
+                <small>{direction.school}</small>
+                <strong>{direction.title}</strong>
+                <p>{direction.note}</p>
+              </article>
+            ))}
           </div>
         </section>
 
         <section className="catalog-section degree-model" id="model">
           <div className="catalog-section-heading">
             <div>
-              <p className="section-index">02 / The degree model</p>
-              <h2>Same structure.<br />Any field.</h2>
+              <p className="section-index">02 / The learning model</p>
+              <h2>The degree is one view.<br />Mastery is the foundation.</h2>
             </div>
             <p>
-              The platform separates reusable university infrastructure from each
-              program&apos;s academic content, so adding a degree does not make the
-              homepage or another degree more complicated.
+              Programs arrange reusable, versioned learning components into a
+              recommended path. Semesters and weeks are projections—not
+              assumptions embedded in every course.
             </p>
           </div>
 
-          <div className="degree-stack" aria-label="Scalable degree content model">
+          <div className="degree-stack" aria-label="Course Atlas learning model">
             {[
-              ["01", "Degree registry", "Title, school, credential, status, and route"],
-              ["02", "Semester map", "Five or six coordinated courses per term"],
-              ["03", "Course classrooms", "Setup, prerequisites, outcomes, and assessments"],
-              ["04", "Executable weeks", "What, where, work, evidence, and time"],
-              ["05", "Resource graph", "Primary free course, backups, tools, and access labels"],
-              ["06", "Local progress", "Continue exactly where you stopped"],
+              ["01", "Competencies", "The abilities a learner is expected to develop"],
+              ["02", "Learning units", "Lessons, practice, laboratories, projects and reviews"],
+              ["03", "Resources", "Exact free routes with access, rights and freshness separated"],
+              ["04", "Assessments", "Course-specific demonstrations instead of one global exam template"],
+              ["05", "Evidence", "Workbooks, code, measurements, reports, portfolios and defenses"],
+              ["06", "Mastery", "Version-aware progress tied to exact units and course versions"],
             ].map(([number, title, note]) => (
               <article key={number}>
                 <span>{number}</span>
@@ -171,48 +204,51 @@ export default function Home() {
           <div className="catalog-section-heading">
             <div>
               <p className="section-index">03 / Schools</p>
-              <h2>A catalog built<br />to keep expanding.</h2>
+              <h2>Organize the catalog.<br />Do not trap the content.</h2>
             </div>
             <p>
-              Schools organize related degrees. A new program joins the registry and
-              receives its own route; it never gets squeezed into the Electrical
-              Engineering page.
+              Schools and disciplines support discovery. Courses retain stable
+              identities so they can later serve multiple programs without
+              being copied into each one.
             </p>
           </div>
 
           <div className="school-home-grid">
-            {Array.from(new Set(degreeCatalog.map((degree) => degree.school))).map(
-              (school, index) => {
-                const schoolDegrees = degreeCatalog.filter(
-                  (degree) => degree.school === school,
-                );
-                return (
-                  <article key={school}>
-                    <span>School {String(index + 1).padStart(2, "0")}</span>
-                    <h3>{school}</h3>
-                    <p>{schoolDegrees.map((degree) => degree.name).join(" · ")}</p>
-                    <small>
-                      {schoolDegrees.filter((degree) => degree.status === "live").length} live ·{" "}
-                      {schoolDegrees.length} registered
-                    </small>
-                  </article>
-                );
-              },
-            )}
+            {schools.map((school, index) => {
+              const schoolPrograms = programs.filter(
+                (program) => program.school === school,
+              );
+              return (
+                <article key={school}>
+                  <span>School {String(index + 1).padStart(2, "0")}</span>
+                  <h3>{school}</h3>
+                  <p>
+                    {schoolPrograms
+                      .map((program) => program.discipline)
+                      .join(" · ")}
+                  </p>
+                  <small>
+                    {schoolPrograms.length} complete{" "}
+                    {schoolPrograms.length === 1 ? "program" : "programs"}
+                  </small>
+                </article>
+              );
+            })}
           </div>
         </section>
 
-        <section className="catalog-about" id="about">
+        <section className="catalog-about" id="scope">
           <p className="section-index">04 / Honest scope</p>
-          <h2>The learning can be rebuilt.<br />The credential cannot be faked.</h2>
+          <h2>Rebuild the learning.<br />Never fake the credential.</h2>
           <p>
-            Course Atlas reproduces curriculum structure, free learning routes,
-            assessments, laboratory evidence, and portfolio work. It is independent
-            self-study—not enrollment, accreditation, transferable credit, or a
-            university-issued degree.
+            Course Atlas publishes independent study pathways, not enrollment,
+            accreditation, transferable credit, licensure or university-issued
+            degrees. Every program carries its own recognition, workload,
+            provenance and resource-access notices.
           </p>
-          <Link href="/degrees/electrical-engineering">
-            Explore the first complete degree <span aria-hidden="true">→</span>
+          <Link href="/programs/electrical-engineering">
+            Inspect the complete engineering publication{" "}
+            <span aria-hidden="true">→</span>
           </Link>
         </section>
       </main>
@@ -220,21 +256,34 @@ export default function Home() {
       <footer id="catalog-footer">
         <div className="footer-brand">
           <a className="brand" href="#top">
-            <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-            <span><strong>Course Atlas</strong><small>complete degrees · free routes</small></span>
+            <span className="brand-mark" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>
+              <strong>Course Atlas</strong>
+              <small>executable learning paths</small>
+            </span>
           </a>
-          <p>One degree registry. Independent program pages. A platform designed to hold every serious field without becoming one endless document.</p>
+          <p>
+            Programs are immutable publications loaded by one universal engine.
+            Their calendars, courses, assessments and resources remain data.
+          </p>
         </div>
         <div className="provenance">
-          <span>Live now</span>
-          <p>Electrical Engineering is the first complete program. Other cards are clearly labeled as building or planned until their full academic routes exist.</p>
+          <span>Published now</span>
           <div>
-            <Link href="/degrees/electrical-engineering">Electrical Engineering <span aria-hidden="true">→</span></Link>
+            {programs.map((program) => (
+              <Link key={program.programId} href={`/programs/${program.slug}`}>
+                {program.title} <span aria-hidden="true">→</span>
+              </Link>
+            ))}
           </div>
         </div>
         <div className="footer-meta">
-          <span>Course Atlas · Degree catalog</span>
-          <span>Every subject. One navigable education.</span>
+          <span>Course Atlas · Universal program catalog</span>
+          <span>What to learn · Where · Work · Evidence</span>
         </div>
       </footer>
     </div>

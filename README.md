@@ -1,24 +1,36 @@
 # Course Atlas
 
-**Every subject. One navigable education.**
+**Choose an outcome. Get the whole path.**
 
-Course Atlas is a universal curriculum map organized as:
+Course Atlas is an independent learning-path catalog. A published program tells
+the learner what to learn, in what order, where to learn it for free, what work
+to produce, and how that work is assessed.
 
-`Schools → Disciplines → Programs → Courses → Weeks → Resources`
+The product is not tied to electrical engineering. The homepage is a catalog,
+each program has its own route, and every course has a standalone classroom:
 
-The root route is a degree directory. Every published program receives its own
-route at `/degrees/[slug]`, so new degrees join the registry instead of extending
-one monolithic page.
+```text
+/
+└── programs/{program-slug}
+    └── courses/{course-slug}
+```
 
-The launch catalog contains one complete, original Electrical Engineering
-program: six semesters over three years, 96 internal workload credits, 31
-courses, four specialization routes, 496 explicit study weeks, a two-semester
-capstone, three accessible laboratory routes, and a carefully labeled library
-of free/open resources.
+The same versioned model and generic renderers currently publish two deliberately
+different programs:
 
-This project is an independent, non-accredited learning blueprint. It is not a
-degree-granting university and is not affiliated with the institutions cited as
-curricular provenance.
+- **Electrical Engineering** — 37 available courses, four real concentrations,
+  592 authored learning units, and 78 reviewed resources. A coherent selected
+  path contains 31 courses and 496 units across six terms.
+- **Practical Spreadsheets & Decision Modeling** — one 40-hour short course,
+  eight learning units, two assessments, no concentration, and a one-sprint
+  schedule.
+
+That contrast is a contract test: new programs join the catalog as validated
+content bundles rather than through new degree-specific pages.
+
+Course Atlas is community-curated and non-accredited. It does not award a
+degree, university credit, or a regulated qualification, and it is not
+affiliated with the providers whose free resources it links to.
 
 ## Local development
 
@@ -29,31 +41,51 @@ npm ci
 npm run dev
 ```
 
-To create the production worker bundle:
-
-```bash
-npm run build
-```
-
-To build and verify the server-rendered experience:
+Run the complete production and contract verification:
 
 ```bash
 npm test
+npm run lint
 ```
 
-## Implementation
+Database schema changes use Drizzle:
 
-- `app/page.tsx` is the universal degree-directory homepage.
-- `app/program-registry.ts` is the scalable catalog of live, building, and
-  planned degree routes.
-- `app/degrees/[slug]/page.tsx` resolves published degrees to independent pages.
-- `app/degree-page.tsx` contains the interactive Electrical Engineering program.
-- `app/data.ts` is the typed curriculum, hierarchy, assessment, laboratory, and
-  resource dataset.
-- `app/course-plans.ts` contains the executable course routes: primary and
-  alternative resources, setup, weekly work, evidence, and assessments.
-- `app/globals.css` defines the paper-and-ink visual system.
-- Track choice and weekly progress are device-local and stored in the browser.
-- No account, database, or paid learning service is required.
+```bash
+npm run db:generate
+```
 
-The application uses the existing vinext and Cloudflare Sites starter runtime.
+## How the implementation scales
+
+- `app/domain/catalog.ts` is the universal publishable content contract:
+  stable identities, immutable versions, requirements, concentrations,
+  arbitrary learning units, assessments, competencies, calendars, schedules,
+  resource access, rights, freshness, and provenance.
+- `app/domain/validation.ts` rejects invalid publications and evaluates whether
+  a set of completed course versions satisfies a program.
+- `app/catalog/repository.ts` is the read boundary used by every route.
+  `app/catalog/static-repository.ts` is the current immutable publication
+  adapter.
+- `content/programs/` contains reviewed publication bundles. The original EE
+  material remains in `content/seeds/`, with stable IDs in
+  `content/manifests/`.
+- `app/program-page.tsx` and `app/course-page.tsx` are generic renderers. They
+  have no EE-specific imports or fixed semester/week assumptions.
+- `app/programs/[slug]/` contains the canonical program and course routes.
+  Legacy `/degrees/[slug]` links redirect permanently.
+- `db/schema.ts` and `drizzle/0000_supreme_bloodscream.sql` provide the first
+  relational D1 publishing foundation: versioned programs/courses/content,
+  requirements, resources, rights, access, provenance, aliases, audit events,
+  and an outbox.
+
+Published catalog bundles are still checked into source and served through the
+repository adapter. D1 is provisioned for the next authoring/import slice; it
+does not yet pretend to be the authoritative runtime catalog before an
+idempotent seed, shadow comparison, and cutover exist.
+
+Anonymous progress is stored on the learner's device under exact program,
+course, and unit version IDs. It supports arbitrary course lengths and keeps
+different concentration course versions separate. Accounts, cross-device
+sync, graded submissions, and credentials are intentionally outside this
+release.
+
+The application uses vinext on the Cloudflare Sites runtime.

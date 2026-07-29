@@ -2,16 +2,15 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-const projectRoot = new URL("../", import.meta.url);
-
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${path}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
     new Request(`http://localhost${path}`, {
       headers: { accept: "text/html" },
+      redirect: "manual",
     }),
     {
       ASSETS: {
@@ -25,100 +24,142 @@ async function render(path = "/") {
   );
 }
 
-test("server-renders a universal degree catalog homepage", async () => {
+test("homepage is a universal catalog derived from published programs", async () => {
   const response = await render();
   assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
   const html = await response.text();
-  assert.match(html, /<title>Course Atlas/);
-  assert.match(html, /Pick a degree/);
-  assert.match(html, /Degree directory/);
-  assert.match(html, /Many independent degree pages/);
-  assert.match(html, /\/degrees\/electrical-engineering/);
+  assert.match(html, /Choose an outcome/);
+  assert.match(html, /Different structures/);
   assert.match(html, /Electrical Engineering/);
-  assert.match(html, /Computer Science/);
-  assert.match(html, /Not published yet/);
+  assert.match(html, /Practical Spreadsheets/);
+  assert.match(html, /\/programs\/electrical-engineering/);
+  assert.match(html, /\/programs\/practical-spreadsheets/);
+  assert.match(html, /31/);
+  assert.match(html, /course minimum path/);
+  assert.match(html, /8/);
+  assert.match(html, /learning units/);
+  assert.doesNotMatch(html, /∞/);
   assert.doesNotMatch(html, /Your three-year electrical engineering university/);
-  assert.doesNotMatch(html, /Your EE progress/);
-  assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
-test("server-renders Electrical Engineering as its own degree route", async () => {
-  const response = await render("/degrees/electrical-engineering");
+test("generic program route renders the EE publication without placeholders", async () => {
+  const response = await render("/programs/electrical-engineering");
   assert.equal(response.status, 200);
-
   const html = await response.text();
-  assert.match(html, /three-year electrical engineering university/i);
-  assert.match(html, /Six semesters\. Thirty-one courses\./);
-  assert.match(html, /Start Semester 1/);
-  assert.match(html, /School of Engineering/);
-  assert.match(html, /96/);
-  assert.match(html, /Midterm I/);
-  assert.match(html, /Cumulative final/);
-  assert.match(html, /independent, non-accredited learning blueprint/i);
-  assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
-  assert.doesNotMatch(html, /codex-preview/);
-  assert.doesNotMatch(html, /OpenEE/i);
+  assert.match(html, /Electrical Engineering/);
+  assert.match(html, /31/);
+  assert.match(html, /selected from/);
+  assert.match(html, /37/);
+  assert.match(html, /Coherent specialization/);
+  assert.match(html, /FPGA Systems/);
+  assert.match(html, /Robot Kinematics/);
+  assert.match(html, /Access is not the same as permission/);
+  assert.match(html, /independent, non-accredited/i);
+  assert.doesNotMatch(html, /TRK401|TRK402/);
 });
 
-test("does not publish empty degree shells", async () => {
-  const response = await render("/degrees/computer-science");
-  assert.equal(response.status, 404);
+test("the same program route renders a one-course eight-week intensive", async () => {
+  const response = await render("/programs/practical-spreadsheets");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Practical Spreadsheets &amp; Decision Modeling/);
+  assert.match(html, /8 weeks/);
+  assert.match(html, /1/);
+  assert.match(html, /Eight-week self-directed schedule/);
+  assert.match(html, /Power Query/);
+  assert.doesNotMatch(html, /id="concentrations"/);
+  assert.doesNotMatch(html, /six semesters/i);
 });
 
-test("ships the universal hierarchy, executable classrooms, and no starter infrastructure", async () => {
-  const [page, degreePage, degreeRoute, registry, layout, data, coursePlans, classroom, packageJson, lockfile] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/degree-page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/degrees/[slug]/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/program-registry.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/data.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/course-plans.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/course-classroom.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readFile(new URL("../package-lock.json", import.meta.url), "utf8"),
+test("standalone course route is an executable arbitrary-length classroom", async () => {
+  const response = await render(
+    "/programs/practical-spreadsheets/courses/practical-spreadsheets-and-decision-modeling",
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  for (const phrase of [
+    "What to learn",
+    "Where to learn it",
+    "What to do",
+    "Evidence to keep",
+    "Course resources",
+    "Assessments and grading",
+    "Week 8",
+    "8 learning units",
+  ]) {
+    assert.match(html, new RegExp(phrase));
+  }
+  assert.match(html, /Access/);
+  assert.match(html, /Rights/);
+  assert.match(html, /Freshness/);
+  assert.doesNotMatch(html, /Week 16/);
+});
+
+test("a sixteen-unit EE course uses the same standalone classroom", async () => {
+  const response = await render(
+    "/programs/electrical-engineering/courses/calculus-i-models-and-change",
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Calculus I/);
+  assert.match(html, /16 learning units/);
+  assert.match(html, /Week 16/);
+  assert.match(html, /Cumulative/);
+});
+
+test("legacy degree URLs redirect and unpublished programs remain 404", async () => {
+  const legacy = await render("/degrees/electrical-engineering");
+  assert.ok([307, 308].includes(legacy.status));
+  assert.equal(
+    new URL(legacy.headers.get("location"), "http://localhost").pathname,
+    "/programs/electrical-engineering",
+  );
+
+  const missing = await render("/programs/computer-science");
+  assert.equal(missing.status, 404);
+});
+
+test("source architecture has one renderer, stable progress, and D1 migrations", async () => {
+  const [
+    programRoute,
+    courseRoute,
+    programPage,
+    coursePage,
+    progress,
+    catalog,
+    schema,
+  ] = await Promise.all([
+    readFile(new URL("../app/programs/[slug]/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../app/programs/[slug]/courses/[courseSlug]/page.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(new URL("../app/program-page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/course-page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/course-progress.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../content/catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
   ]);
 
-  for (const level of [
-    "Schools",
-    "Disciplines",
-    "Programs",
-    "Courses",
-    "Weeks",
-    "Resources",
-  ]) {
-    assert.match(degreePage, new RegExp(`"${level}"`));
-  }
+  assert.match(programRoute, /catalogRepository\.loadBySlug/);
+  assert.match(programRoute, /<ProgramPage bundle=\{bundle\}/);
+  assert.doesNotMatch(programRoute, /ee-beng|electrical-engineering/);
+  assert.match(courseRoute, /<CoursePage bundle=\{bundle\}/);
+  assert.doesNotMatch(programPage, /from "\.\/data"|from "\.\/course-plans"/);
+  assert.doesNotMatch(coursePage, /length === 16|Array\.from\(\{ length: 16/);
+  assert.match(progress, /course-atlas-progress-v2/);
+  assert.match(progress, /programVersionId/);
+  assert.match(progress, /courseVersionId/);
+  assert.match(progress, /completedUnitIds/);
+  assert.match(catalog, /StaticCatalogRepository/);
+  assert.match(schema, /programVersions/);
+  assert.match(schema, /courseVersions/);
+  assert.match(schema, /resourceRights/);
+  assert.match(schema, /competencies/);
 
-  assert.match(page, /degreeCatalog/);
-  assert.match(page, /\/degrees\/\$\{degree\.slug\}/);
-  assert.match(degreeRoute, /generateStaticParams/);
-  assert.match(registry, /electrical-engineering/);
-  assert.match(registry, /computer-science/);
-  assert.match(degreePage, /course-atlas-track/);
-  assert.match(degreePage, /course-atlas-ee-progress/);
-  assert.match(degreePage, /course-atlas-week-progress-v1/);
-  assert.match(layout, /Course Atlas/);
-  assert.match(layout, /\/og\.png/);
-  assert.match(data, /export const schools/);
-  assert.match(data, /export const disciplines/);
-  assert.match(data, /export const programs/);
-  assert.match(data, /3 years · 6 semesters/);
-  assert.match(coursePlans, /export const coursePlans/);
-  assert.match(coursePlans, /export const trackCoursePlans/);
-  assert.match(coursePlans, /getCoursePlan/);
-  assert.match(classroom, /What to learn/);
-  assert.match(classroom, /Where to learn it/);
-  assert.match(classroom, /What to submit/);
-  assert.doesNotMatch(degreePage, /Eight semesters|S7–S8|39 courses|128 credits/);
-  assert.doesNotMatch(degreePage, /openee/i);
-  assert.doesNotMatch(packageJson, /react-loading-skeleton/);
-  assert.doesNotMatch(lockfile, /react-loading-skeleton/);
-
-  await assert.rejects(access(new URL("../app/_sites-preview", import.meta.url)));
-  await access(new URL("../public/og.png", import.meta.url));
+  await access(new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url));
   await access(new URL("../.openai/hosting.json", import.meta.url));
-  await access(projectRoot);
 });

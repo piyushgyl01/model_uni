@@ -24,36 +24,38 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase,
-    title: "Course Atlas — Complete degrees built from free courses",
+    title: "Course Atlas — Complete learning paths built from free resources",
     description:
-      "A scalable catalog of complete degree-shaped self-study programs, each with semesters, courses, executable weeks, assessments, and carefully labeled free resources.",
+      "A content-driven catalog of complete self-study programs with executable learning units, assessments, evidence, competencies, and carefully labeled free resources.",
     applicationName: "Course Atlas",
     keywords: [
       "open curriculum",
       "self-directed learning",
       "electrical engineering",
+      "spreadsheet course",
       "free courses",
       "course planner",
     ],
     openGraph: {
       title: "Course Atlas",
-      description: "Pick a degree. Get the whole path—built from the best free courses on the open web.",
+      description:
+        "Choose an outcome. Get the whole path—what to learn, where to learn it, what to do and what evidence to keep.",
       type: "website",
       siteName: "Course Atlas",
       images: [
         {
-          url: "/og.png",
+          url: "/og-v2.png",
           width: 1200,
           height: 630,
-          alt: "Course Atlas — Every subject. One navigable education.",
+          alt: "Course Atlas — Choose an outcome. Get the whole path.",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
       title: "Course Atlas",
-      description: "Complete degree-shaped self-study routes built from free courses.",
-      images: ["/og.png"],
+      description: "Complete, executable self-study routes built from free resources.",
+      images: ["/og-v2.png"],
     },
     icons: {
       icon: "/favicon.svg",
