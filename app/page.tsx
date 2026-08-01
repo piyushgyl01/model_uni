@@ -99,7 +99,14 @@ export default async function Home() {
                 courses across minimum paths
               </span>
               <span>
-                <strong>{programs.reduce((sum, program) => sum + program.learningUnitCount, 0)}</strong>{" "}
+                <strong>
+                  {programs
+                    .reduce(
+                      (sum, program) => sum + program.learningUnitCount,
+                      0,
+                    )
+                    .toLocaleString("en-US")}
+                </strong>{" "}
                 executable learning units
               </span>
             </div>
@@ -121,10 +128,10 @@ export default async function Home() {
               <h2>Different structures.<br />One learning engine.</h2>
             </div>
             <p>
-              Three complete computing and engineering pathways, each spanning
-              three years, and an eight-week spreadsheet sprint are rendered
-              from the same content contract. Adding the next program does not
-              require another custom page.
+              Four complete three-year disciplinary pathways, spanning
+              computing, engineering and natural science, plus an eight-week
+              spreadsheet sprint are rendered from the same content contract.
+              Adding the next program does not require another custom page.
             </p>
           </div>
 

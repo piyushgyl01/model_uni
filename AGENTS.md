@@ -22,10 +22,11 @@
 - **Catalog contract**: `app/domain/catalog.ts` — universal publication types, stable IDs (`crs_*`, `crv_*`, `unt_*`, etc.)
 - **Validation**: `app/domain/validation.ts` — publication integrity + program requirement evaluation
 - **Repository boundary**: `app/catalog/` — `StaticCatalogRepository` (checked-in bundles) ↔ `D1CatalogRepository` (runtime D1) ↔ `runtime-repository.ts` (shadow-verified runtime)
-- **Programs**: `content/programs/` — four published program families across five checked-in, immutable publication bundles:
+- **Programs**: `content/programs/` — five published program families across six checked-in, immutable publication bundles:
   - `electrical-engineering.ts` (37 courses, 4 concentrations, 496 units)
   - `computer-science.ts` + `computer-science-v1-1.ts` (34 courses, 3 concentrations, 240 selected units)
   - `mechanical-engineering.ts` (34 courses, 3 concentrations, 240 selected units)
+  - `physics.ts` (34 courses, 3 concentrations, 240 selected units)
   - `practical-spreadsheets.ts` (1 course, 8 units, 1 sprint)
 - **Routes**: `app/programs/[slug]/` (canonical), legacy `/degrees/[slug]` redirects
 - **Renderers**: `app/program-page.tsx`, `app/course-page.tsx` — generic, no program-specific imports
@@ -43,7 +44,7 @@
 
 | File | Purpose | Notes |
 |------|---------|-------|
-| `tests/catalog-contract.test.ts` | Contract tests against `StaticCatalogRepository` | Validates all 3 programs, requirements, prerequisites, schedule neutrality |
+| `tests/catalog-contract.test.ts` | Contract tests against `StaticCatalogRepository` | Validates all published programs, requirements, prerequisites, schedule neutrality |
 | `tests/catalog-persistence.test.ts` | D1 persistence + shadow comparison | Uses Miniflare D1; seeds idempotently; tests conflict rejection, chunked bundles, fallback rules |
 | `tests/progress-api.test.mjs` | Auth + progress API | Spins up built worker (`dist/server/index.js`); tests ChatGPT auth gate, CORS, import consent |
 | `tests/rendered-html.test.mjs` | Source-level architecture guards | Greps route/page files for forbidden patterns (EE-specific imports, hardcoded semesters, etc.) |
@@ -72,7 +73,7 @@
 
 **Modify catalog contract** (`app/domain/catalog.ts`):
 - Update types, validation (`validation.ts`), repositories, and seed bundles together
-- All 3 programs must pass `validatePublishedProgramBundle`
+- All published programs must pass `validatePublishedProgramBundle`
 
 **Debug D1 locally**: `npm run dev` starts Miniflare with D1; `wrangler d1 execute` works against `.wrangler/state/...`
 

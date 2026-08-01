@@ -4,6 +4,7 @@ import { computerScienceBundle } from "./programs/computer-science-v1-1";
 import { computerScienceBundleV1 } from "./programs/computer-science";
 import { electricalEngineeringProgram } from "./programs/electrical-engineering";
 import { mechanicalEngineeringBundle } from "./programs/mechanical-engineering";
+import { physicsBundle } from "./programs/physics";
 import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets";
 
 /**
@@ -16,6 +17,7 @@ export const catalogRepository = new StaticCatalogRepository([
   computerScienceBundleV1,
   computerScienceBundle,
   mechanicalEngineeringBundle,
+  physicsBundle,
 ]);
 
 /**

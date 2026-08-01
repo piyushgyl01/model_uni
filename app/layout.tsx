@@ -33,6 +33,8 @@ export async function generateMetadata(): Promise<Metadata> {
       "self-directed learning",
       "computer science",
       "electrical engineering",
+      "mechanical engineering",
+      "physics",
       "spreadsheet course",
       "free courses",
       "course planner",

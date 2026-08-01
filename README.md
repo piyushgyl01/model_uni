@@ -17,7 +17,7 @@ each program has its own route, and every course has a standalone classroom:
         └── courses/{course-slug}
 ```
 
-The same versioned model and generic renderers currently publish four
+The same versioned model and generic renderers currently publish five
 deliberately different programs:
 
 - **Electrical Engineering** — 37 available courses, four real concentrations,
@@ -32,6 +32,11 @@ deliberately different programs:
   primary resources. A selected six-term path contains 30 courses, 240 units,
   120 Course Atlas credits, and simulation-first alternatives wherever safe
   physical laboratory or shop access is unavailable.
+- **Physics** — 34 available courses, three coherent concentrations, 272
+  learning units, 68 assessments, and 34 reviewed free primary resources. A
+  selected six-term path contains 30 courses, 240 units, 120 Course Atlas
+  credits, experimental and computational work, and a defended research
+  thesis.
 - **Practical Spreadsheets & Decision Modeling** — one 40-hour short course,
   eight learning units, two assessments, no concentration, and a one-sprint
   schedule.

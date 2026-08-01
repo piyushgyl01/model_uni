@@ -33,22 +33,24 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.match(html, /Computer Science/);
   assert.match(html, /Electrical Engineering/);
   assert.match(html, /Mechanical Engineering/);
+  assert.match(html, /Physics/);
   assert.match(html, /Practical Spreadsheets/);
   assert.match(html, /\/programs\/computer-science/);
   assert.match(html, /\/programs\/electrical-engineering/);
   assert.match(html, /\/programs\/mechanical-engineering/);
+  assert.match(html, /\/programs\/physics/);
   assert.match(html, /\/programs\/practical-spreadsheets/);
   assert.match(
     html,
-    /<strong>4<\/strong>(?:<!-- -->)?\s*complete programs/,
+    /<strong>5<\/strong>(?:<!-- -->)?\s*complete programs/,
   );
   assert.match(
     html,
-    /<strong>92<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
+    /<strong>122<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
   );
   assert.match(
     html,
-    /<strong>984<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
+    /<strong>1,224<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
   );
   assert.match(html, /31/);
   assert.match(html, /course minimum path/);
@@ -128,6 +130,36 @@ test("Mechanical Engineering renders as a complete six-term program and course c
   assert.match(courseHtml, /What to learn/);
   assert.match(courseHtml, /Evidence to keep/);
   assert.match(courseHtml, /Safety note/);
+});
+
+test("Physics renders as a complete six-term program and quantum classroom", async () => {
+  const programResponse = await render("/programs/physics");
+  assert.equal(programResponse.status, 200);
+  const programHtml = await programResponse.text();
+  assert.match(programHtml, /Physics/);
+  assert.match(
+    programHtml,
+    /30(?:<!-- -->)?\s*selected from\s*(?:<!-- -->)?34(?:<!-- -->)?\s*options/,
+  );
+  assert.match(programHtml, /3 years · 6 terms/);
+  assert.match(programHtml, /Astrophysics and Gravitation/);
+  assert.match(programHtml, /Quantum Science and Materials/);
+  assert.match(programHtml, /Particle and Nuclear Physics/);
+  assert.match(programHtml, /MIT undergraduate Physics pathways/);
+  assert.match(programHtml, /awards no degree/i);
+  assert.match(programHtml, /Access is not the same as permission/);
+
+  const courseResponse = await render(
+    "/programs/physics/courses/quantum-mechanics-1",
+  );
+  assert.equal(courseResponse.status, 200);
+  const courseHtml = await courseResponse.text();
+  assert.match(courseHtml, /Quantum Mechanics I/);
+  assert.match(courseHtml, /8 learning units/);
+  assert.match(courseHtml, /Unit 8/);
+  assert.match(courseHtml, /8\.04: Quantum Physics I/);
+  assert.match(courseHtml, /What to learn/);
+  assert.match(courseHtml, /Evidence to keep/);
 });
 
 test("the same program route renders a one-course eight-week intensive", async () => {
@@ -239,7 +271,7 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(programRoute, /await catalogRepository\.loadBySlug/);
   assert.match(programRoute, /<ProgramPage bundle=\{bundle\}/);
   const programSpecificHardcoding =
-    /ee-beng|electrical-engineering|mechanical-engineering|mechanicalEngineering/;
+    /ee-beng|electrical-engineering|mechanical-engineering|mechanicalEngineering|physicsBundle|physicsCourseSpecs|["'`]physics["'`]|\/programs\/physics(?:\/|["'`])/;
   assert.doesNotMatch(programRoute, programSpecificHardcoding);
   assert.match(courseRoute, /<CoursePage bundle=\{bundle\}/);
   assert.doesNotMatch(courseRoute, programSpecificHardcoding);

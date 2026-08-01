@@ -27,6 +27,7 @@ import { practicalSpreadsheetsProgram } from "../content/programs/practical-spre
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
 import { mechanicalEngineeringBundle } from "../content/programs/mechanical-engineering";
+import { physicsBundle } from "../content/programs/physics";
 
 const migrationUrls = [
   new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url),
@@ -312,6 +313,30 @@ test("Mechanical Engineering survives a complete D1 seed and reconstruction", as
 
   const summary = (await repository.listPrograms()).find(
     (program) => program.programId === mechanicalEngineeringBundle.program.id,
+  );
+  assert.ok(summary);
+  assert.equal(summary.courseCount, 30);
+  assert.equal(summary.availableCourseCount, 34);
+  assert.equal(summary.learningUnitCount, 240);
+  assert.equal(summary.resourceCount, 34);
+  assert.equal(summary.nominalHours, 4_800);
+});
+
+test("Physics survives a complete D1 seed and reconstruction", async (t) => {
+  const { database, miniflare } = await createTestDatabase();
+  t.after(() => miniflare.dispose());
+
+  await seedPublishedProgramBundles(database, [physicsBundle]);
+
+  const repository = new D1CatalogRepository(database);
+  const reconstructed = await repository.loadByProgramId(
+    physicsBundle.program.id,
+  );
+  assert.ok(reconstructed);
+  assert.equal(canonicalJson(reconstructed), canonicalJson(physicsBundle));
+
+  const summary = (await repository.listPrograms()).find(
+    (program) => program.programId === physicsBundle.program.id,
   );
   assert.ok(summary);
   assert.equal(summary.courseCount, 30);
