@@ -1,89 +1,111 @@
 import type {
-  AccessOfferId,
   Assessment,
-  AssessmentId,
   AssessmentKind,
-  AssessmentVersionId,
-  BundleId,
-  CalendarMilestoneId,
-  CalendarPeriodId,
   Competency,
   CompetencyId,
   CompetencyMapping,
-  CompetencyMappingId,
   Concentration,
   ConcentrationId,
   Course,
-  CourseId,
-  CourseVersionId,
-  FreshnessRecordId,
   LearningUnit,
   LearningUnitId,
-  ProgramId,
-  ProgramVersionId,
   ProvenanceEvidence,
-  ProvenanceEvidenceId,
   PublishedAssessmentVersion,
   PublishedCourseVersion,
   PublishedProgramBundle,
   PublishedResourceVersion,
   RequirementGroup,
   RequirementGroupId,
-  RequirementOptionId,
   Resource,
   ResourceFreshness,
-  ResourceId,
   ResourceRights,
-  ResourceVersionId,
-  RightsRecordId,
   SchedulePlacement,
-  SchedulePlacementId,
-} from "../../domain/catalog";
+} from "../../app/domain/catalog";
+import { computerScienceIdentities } from "../manifests/computer-science-identities";
 import {
   computerScienceCourseSpecs,
   type ComputerScienceCourseSpec,
-} from "./course-specs";
+} from "./computer-science-course-specs";
 
 const PUBLISHED_AT = "2026-07-29T00:00:00Z" as const;
 const CHECKED_AT = "2026-07-29T00:00:00Z" as const;
 const VERSION = "1.0.0" as const;
 const CREDIT_SYSTEM = "Course Atlas credits";
 
-const PROGRAM_ID: ProgramId = "prg_computer_science";
-const PROGRAM_VERSION_ID: ProgramVersionId = "prv_computer_science_1";
-const BUNDLE_ID: BundleId = "bnd_computer_science_1";
-const CALENDAR_ID = "cal_computer_science_three_year" as const;
-const SCHEDULE_ID = "sch_computer_science_default" as const;
-const PROGRAM_EVIDENCE_ID: ProvenanceEvidenceId =
-  "prvdc_computer_science_cs2023";
+const PROGRAM_ID = computerScienceIdentities.programId;
+const PROGRAM_VERSION_ID = computerScienceIdentities.programVersionId;
+const BUNDLE_ID = computerScienceIdentities.bundleId;
+const CALENDAR_ID = computerScienceIdentities.calendar.id;
+const SCHEDULE_ID = computerScienceIdentities.calendar.scheduleId;
+const PROGRAM_EVIDENCE_ID =
+  computerScienceIdentities.programProvenanceEvidenceId;
 
 const courseSpecs: readonly ComputerScienceCourseSpec[] =
   computerScienceCourseSpecs;
 
-const courseId = (key: string): CourseId => `crs_cs_${key}`;
-const courseVersionId = (key: string): CourseVersionId => `crv_cs_${key}_1`;
-const unitId = (key: string, index: number): LearningUnitId =>
-  `unt_cs_${key}_${index + 1}`;
-const assessmentId = (
+type CourseIdentity =
+  (typeof computerScienceIdentities.courses)[keyof typeof computerScienceIdentities.courses];
+
+function lookupIdentity<T>(
+  identities: Readonly<Record<string, T>>,
   key: string,
-  position: "applied" | "final",
-): AssessmentId => `asm_cs_${key}_${position}`;
+  identityKind: string,
+): T {
+  const identity = identities[key];
+  if (!identity) {
+    throw new Error(`Missing Computer Science ${identityKind} identity for ${key}`);
+  }
+  return identity;
+}
+
+function courseIdentity(key: string): CourseIdentity {
+  return lookupIdentity<CourseIdentity>(
+    computerScienceIdentities.courses,
+    key,
+    "course",
+  );
+}
+
+const courseId = (key: string) => courseIdentity(key).courseId;
+const courseVersionId = (key: string) => courseIdentity(key).courseVersionId;
+const unitId = (key: string, topicKey: string): LearningUnitId =>
+  lookupIdentity<LearningUnitId>(
+    courseIdentity(key).learningUnitIds,
+    topicKey,
+    "learning unit",
+  );
+const assessmentId = (key: string, position: "applied" | "final") =>
+  courseIdentity(key).assessmentIds[position];
 const assessmentVersionId = (
   key: string,
   position: "applied" | "final",
-): AssessmentVersionId => `asv_cs_${key}_${position}_1`;
-const resourceId = (key: string): ResourceId => `res_cs_${key}`;
-const resourceVersionId = (key: string): ResourceVersionId =>
-  `rsv_cs_${key}_1`;
-const accessOfferId = (key: string): AccessOfferId => `acc_cs_${key}_free`;
-const rightsRecordId = (key: string): RightsRecordId =>
-  `rgt_cs_${key}_link`;
-const freshnessRecordId = (key: string): FreshnessRecordId =>
-  `frs_cs_${key}_20260729`;
-const resourceEvidenceId = (key: string): ProvenanceEvidenceId =>
-  `prvdc_cs_${key}_source`;
-const periodId = (term: number): CalendarPeriodId => `per_cs_term_${term}`;
-const placementId = (key: string): SchedulePlacementId => `plc_cs_${key}`;
+) => courseIdentity(key).assessmentVersionIds[position];
+const resourceId = (key: string) => courseIdentity(key).resourceId;
+const resourceVersionId = (key: string) =>
+  courseIdentity(key).resourceVersionId;
+const accessOfferId = (key: string) => courseIdentity(key).accessOfferId;
+const rightsRecordId = (key: string) => courseIdentity(key).rightsRecordId;
+const freshnessRecordId = (key: string) =>
+  courseIdentity(key).freshnessRecordId;
+const resourceEvidenceId = (key: string) =>
+  courseIdentity(key).provenanceEvidenceId;
+const requirementOptionId = (key: string) =>
+  courseIdentity(key).requirementOptionId;
+const placementId = (key: string) =>
+  courseIdentity(key).schedulePlacementId;
+
+const periodKeyByTerm = {
+  1: "term-1",
+  2: "term-2",
+  3: "term-3",
+  4: "term-4",
+  5: "term-5",
+  6: "term-6",
+} as const;
+
+function periodId(term: keyof typeof periodKeyByTerm) {
+  return computerScienceIdentities.calendar.periodIds[periodKeyByTerm[term]];
+}
 
 type CompetencySpec = {
   readonly key: string;
@@ -224,7 +246,12 @@ const competencySpecs: readonly CompetencySpec[] = [
   },
 ];
 
-const competencyId = (key: string): CompetencyId => `cmp_cs_${key}`;
+const competencyId = (key: string): CompetencyId =>
+  lookupIdentity<CompetencyId>(
+    computerScienceIdentities.competencyIds,
+    key,
+    "competency",
+  );
 
 const competencies: readonly Competency[] = competencySpecs.map((spec) => ({
   id: competencyId(spec.key),
@@ -276,6 +303,7 @@ function assessmentInstructions(
   if (position === "applied") {
     return `Complete a course-specific ${kind} that applies ${spec.topics
       .slice(0, 6)
+      .map((topic) => topic.title)
       .join(
         ", ",
       )}. Submit source work, tests or calculations, a short decision record, and corrections after self-review.`;
@@ -289,6 +317,21 @@ function assessmentInstructions(
   return `Produce a cumulative ${kind} for ${spec.title}. Integrate all eight units, include reproducible evidence, document limitations, and complete a structured self-critique.`;
 }
 
+function assessmentTopicKey(
+  spec: ComputerScienceCourseSpec,
+  position: "applied" | "final",
+) {
+  const topic = spec.topics.find(
+    (candidate) => candidate.assessmentPosition === position,
+  );
+  if (!topic) {
+    throw new Error(
+      `Missing ${position} assessment topic in Computer Science course ${spec.key}`,
+    );
+  }
+  return topic.key;
+}
+
 const assessmentVersions: readonly PublishedAssessmentVersion[] =
   courseSpecs.flatMap((spec) => {
     const [appliedKind, finalKind] = resolvedAssessmentKinds(spec);
@@ -300,7 +343,7 @@ const assessmentVersions: readonly PublishedAssessmentVersion[] =
         id: assessmentVersionId(spec.key, "applied"),
         assessmentId: assessmentId(spec.key, "applied"),
         courseVersionId: courseVersionId(spec.key),
-        unitId: unitId(spec.key, 3),
+        unitId: unitId(spec.key, assessmentTopicKey(spec, "applied")),
         version: VERSION,
         status: "published",
         publishedAt: PUBLISHED_AT,
@@ -322,7 +365,7 @@ const assessmentVersions: readonly PublishedAssessmentVersion[] =
         id: assessmentVersionId(spec.key, "final"),
         assessmentId: assessmentId(spec.key, "final"),
         courseVersionId: courseVersionId(spec.key),
-        unitId: unitId(spec.key, 7),
+        unitId: unitId(spec.key, assessmentTopicKey(spec, "final")),
         version: VERSION,
         status: "published",
         publishedAt: PUBLISHED_AT,
@@ -346,16 +389,16 @@ const learningUnits: readonly LearningUnit[] = courseSpecs.flatMap((spec) => {
   const [appliedKind, finalKind] = resolvedAssessmentKinds(spec);
   const competencyIds = spec.competencyKeys.map(competencyId);
   return spec.topics.map((topic, index) => ({
-    id: unitId(spec.key, index),
+    id: unitId(spec.key, topic.key),
     courseVersionId: courseVersionId(spec.key),
     kind: index === 3 ? "project" : index === 7 ? "review" : "module",
     order: index + 1,
-    label: `Weeks ${index * 2 + 1}–${index * 2 + 2}`,
-    title: topic.charAt(0).toUpperCase() + topic.slice(1),
-    topic,
-    resourceLocator: `Use the sections, lectures, or exercises in “${spec.resource.title}” that cover ${topic}.`,
-    activity: `Study ${topic} in the primary resource. Reproduce one worked example, complete provider exercises where available, then implement, calculate, or critique one new example without copying a solution.`,
-    evidence: `Submit a checked ${topic} artifact, an error log, and a short explanation of what the evidence establishes and what it does not.`,
+    label: `Unit ${index + 1}`,
+    title: topic.title.charAt(0).toUpperCase() + topic.title.slice(1),
+    topic: topic.title,
+    resourceLocator: `Use the sections, lectures, or exercises in “${spec.resource.title}” that cover ${topic.title}.`,
+    activity: `Study ${topic.title} in the primary resource. Reproduce one worked example, complete provider exercises where available, then implement, calculate, or critique one new example without copying a solution.`,
+    evidence: `Submit a checked ${topic.title} artifact, an error log, and a short explanation of what the evidence establishes and what it does not.`,
     nominalHours: 20,
     resourceVersionIds: [resourceVersionId(spec.key)],
     competencyIds,
@@ -385,7 +428,7 @@ const courseVersions: readonly PublishedCourseVersion[] = courseSpecs.map(
       "Create a version-controlled course workspace with folders for notes, exercises, assessments, corrections, and the final portfolio.",
       "Write a one-page integrity agreement: attempt work independently, cite help and reused code, and never publish provider solutions.",
     ],
-    firstAction: `Study the primary resource material for ${spec.topics[0]}, complete one diagnostic exercise, and record what you need to review.`,
+    firstAction: `Study the primary resource material for ${spec.topics[0].title}, complete one diagnostic exercise, and record what you need to review.`,
     safetyNote:
       spec.key === "computer-security" || spec.key === "applied-cryptography"
         ? "Perform security work only on systems you own or have explicit permission to test. Use the provider's legal training environments; never target third parties."
@@ -411,7 +454,7 @@ const courseVersions: readonly PublishedCourseVersion[] = courseSpecs.map(
         note: "Official or author-maintained source checked for free public access on 2026-07-29.",
       },
     ],
-    rootUnitIds: spec.topics.map((_, index) => unitId(spec.key, index)),
+    rootUnitIds: spec.topics.map((topic) => unitId(spec.key, topic.key)),
     gradingPolicy: {
       passingPercentage: 70,
       contributions: [
@@ -514,7 +557,7 @@ const resourceProvenance: readonly ProvenanceEvidence[] = courseSpecs.map(
 
 const concentrations: readonly Concentration[] = [
   {
-    id: "con_cs_intelligent_systems",
+    id: computerScienceIdentities.concentrationIds["intelligent-systems"],
     canonicalSlug: "intelligent-systems",
     title: "Intelligent Systems",
     description:
@@ -529,7 +572,9 @@ const concentrations: readonly Concentration[] = [
     ],
   },
   {
-    id: "con_cs_scalable_secure_systems",
+    id: computerScienceIdentities.concentrationIds[
+      "scalable-secure-systems"
+    ],
     canonicalSlug: "scalable-secure-systems",
     title: "Scalable and Secure Systems",
     description:
@@ -544,7 +589,9 @@ const concentrations: readonly Concentration[] = [
     ],
   },
   {
-    id: "con_cs_interactive_applications",
+    id: computerScienceIdentities.concentrationIds[
+      "interactive-applications"
+    ],
     canonicalSlug: "interactive-applications",
     title: "Interactive Applications",
     description:
@@ -563,10 +610,28 @@ const concentrations: readonly Concentration[] = [
 const concentrationIdByKey: Readonly<
   Record<NonNullable<ComputerScienceCourseSpec["concentrationKey"]>, ConcentrationId>
 > = {
-  "intelligent-systems": "con_cs_intelligent_systems",
-  "scalable-secure-systems": "con_cs_scalable_secure_systems",
-  "interactive-applications": "con_cs_interactive_applications",
+  "intelligent-systems":
+    computerScienceIdentities.concentrationIds["intelligent-systems"],
+  "scalable-secure-systems":
+    computerScienceIdentities.concentrationIds["scalable-secure-systems"],
+  "interactive-applications":
+    computerScienceIdentities.concentrationIds["interactive-applications"],
 };
+
+const concentrationTitleByKey: Readonly<
+  Record<NonNullable<ComputerScienceCourseSpec["concentrationKey"]>, string>
+> = {
+  "intelligent-systems": "Intelligent Systems",
+  "scalable-secure-systems": "Scalable and Secure Systems",
+  "interactive-applications": "Interactive Applications",
+};
+
+const requirementGroupId = (key: string): RequirementGroupId =>
+  lookupIdentity<RequirementGroupId>(
+    computerScienceIdentities.requirementGroupIds,
+    key,
+    "requirement group",
+  );
 
 function requirementGroup(
   id: RequirementGroupId,
@@ -589,7 +654,7 @@ function requirementGroup(
       },
     },
     options: specs.map((spec) => ({
-      id: `opt_cs_${spec.key}` as RequirementOptionId,
+      id: requirementOptionId(spec.key),
       courseVersionId: courseVersionId(spec.key),
       credits: { value: spec.credits, system: CREDIT_SYSTEM },
       recommendedPeriodId: periodId(spec.term),
@@ -604,10 +669,10 @@ const concentrationSpecs = courseSpecs.filter(
     Boolean(spec.concentrationKey),
 );
 
-const fixedRequirementGroups = [1, 2, 3, 4, 5, 6].map((term) => {
+const fixedRequirementGroups = ([1, 2, 3, 4, 5, 6] as const).map((term) => {
   const specs = fixedSpecs.filter((spec) => spec.term === term);
   return requirementGroup(
-    `req_cs_term_${term}` as RequirementGroupId,
+    requirementGroupId(periodKeyByTerm[term]),
     `Term ${term} core`,
     `Complete all ${specs.length} fixed courses in the recommended Term ${term} sequence.`,
     term,
@@ -616,7 +681,7 @@ const fixedRequirementGroups = [1, 2, 3, 4, 5, 6].map((term) => {
 });
 
 const concentrationRequirement: RequirementGroup = {
-  id: "req_cs_concentration",
+  id: computerScienceIdentities.requirementGroupIds.concentration,
   title: "Coherent concentration",
   description:
     "Complete both courses in one concentration: Intelligent Systems, Scalable and Secure Systems, or Interactive Applications.",
@@ -628,7 +693,7 @@ const concentrationRequirement: RequirementGroup = {
     selectionConstraint: "same concentration",
   },
   options: concentrationSpecs.map((spec) => ({
-    id: `opt_cs_${spec.key}` as RequirementOptionId,
+    id: requirementOptionId(spec.key),
     courseVersionId: courseVersionId(spec.key),
     credits: { value: spec.credits, system: CREDIT_SYSTEM },
     concentrationId: concentrationIdByKey[spec.concentrationKey],
@@ -657,10 +722,27 @@ const programEvidence: ProvenanceEvidence = {
   note: "CS2023 informed breadth, competency language, mathematics, ethics, and professional-practice coverage. Course Atlas independently selected and sequenced the free resources. This is not an ACM, IEEE-CS, AAAI, or university-accredited program.",
 };
 
+const programCompetencyMappingId = (key: string) =>
+  lookupIdentity(
+    computerScienceIdentities.programCompetencyMappingIds,
+    key,
+    "program competency mapping",
+  );
+
+const courseCompetencyMappingId = (courseKey: string, competencyKey: string) =>
+  lookupIdentity(
+    courseIdentity(courseKey).competencyMappingIds,
+    competencyKey,
+    "course competency mapping",
+  );
+
+const finalAssessmentMappingId = (courseKey: string) =>
+  courseIdentity(courseKey).finalAssessmentMappingId;
+
 const competencyMappings: readonly CompetencyMapping[] = [
-  ...competencies.map((competency) => ({
-    id: `cpm_cs_program_${competency.id.slice("cmp_cs_".length)}` as CompetencyMappingId,
-    competencyId: competency.id,
+  ...competencySpecs.map((spec) => ({
+    id: programCompetencyMappingId(spec.key),
+    competencyId: competencyId(spec.key),
     subject: { kind: "programVersion" as const, id: PROGRAM_VERSION_ID },
     relationship: "develops" as const,
     targetLevel: "advanced" as const,
@@ -669,7 +751,7 @@ const competencyMappings: readonly CompetencyMapping[] = [
   })),
   ...courseSpecs.flatMap((spec) =>
     spec.competencyKeys.map((key) => ({
-      id: `cpm_cs_${spec.key}_${key}` as CompetencyMappingId,
+      id: courseCompetencyMappingId(spec.key, key),
       competencyId: competencyId(key),
       subject: {
         kind: "courseVersion" as const,
@@ -686,7 +768,7 @@ const competencyMappings: readonly CompetencyMapping[] = [
     })),
   ),
   ...courseSpecs.map((spec) => ({
-    id: `cpm_cs_${spec.key}_final` as CompetencyMappingId,
+    id: finalAssessmentMappingId(spec.key),
     competencyId: competencyId(spec.competencyKeys[0]),
     subject: {
       kind: "assessmentVersion" as const,
@@ -704,21 +786,28 @@ const competencyMappings: readonly CompetencyMapping[] = [
   })),
 ];
 
-const periods = [1, 2, 3, 4, 5, 6].map((term) => ({
+const periods = ([1, 2, 3, 4, 5, 6] as const).map((term) => ({
   id: periodId(term),
   order: term,
   label: `Term ${term}`,
 }));
 
-const milestones = [1, 2, 3, 4, 5, 6].flatMap((term) => [
+const milestoneId = (key: string) =>
+  lookupIdentity(
+    computerScienceIdentities.calendar.milestoneIds,
+    key,
+    "calendar milestone",
+  );
+
+const milestones = ([1, 2, 3, 4, 5, 6] as const).flatMap((term) => [
   {
-    id: `mil_cs_term_${term}_midpoint` as CalendarMilestoneId,
+    id: milestoneId(`term-${term}-midpoint`),
     label: `Term ${term} midpoint assessments`,
     periodId: periodId(term),
     kind: "checkpoint" as const,
   },
   {
-    id: `mil_cs_term_${term}_finals` as CalendarMilestoneId,
+    id: milestoneId(`term-${term}-final`),
     label: `Term ${term} final demonstrations and corrections`,
     periodId: periodId(term),
     kind: term === 6 ? ("project" as const) : ("exam" as const),
@@ -732,14 +821,12 @@ const placements: readonly SchedulePlacement[] = courseSpecs.map(
     order: index + 1,
     periodId: periodId(spec.term),
     note: spec.concentrationKey
-      ? `Take only if completing the ${concentrationIdByKey[
-          spec.concentrationKey
-        ].replace("con_cs_", "").replaceAll("_", " ")} concentration.`
+      ? `Take only if completing the ${concentrationTitleByKey[spec.concentrationKey]} concentration.`
       : `Recommended in Term ${spec.term}.`,
   }),
 );
 
-export const computerScienceBundle = {
+export const computerScienceBundleV1 = {
   schemaVersion: 1,
   id: BUNDLE_ID,
   publishedAt: PUBLISHED_AT,
@@ -776,7 +863,7 @@ export const computerScienceBundle = {
       "Plan, build, evaluate, document, and publicly defend a substantial capstone artifact.",
     ],
     workloadPolicy:
-      "Every course carries 4 Course Atlas credits and 160 nominal hours: eight two-week units of about 20 hours each. The completion contract is 30 courses and 120 Course Atlas credits, approximately 4,800 hours. A standard term is 20 weeks with five concurrent courses at roughly 40 hours per week; learners may slow the calendar without changing requirements.",
+      "Every course carries 4 Course Atlas credits and 160 nominal hours: eight ordered units of about 20 hours each. Unit numbers express sequence, not fixed calendar weeks. The completion contract is 30 courses and 120 Course Atlas credits, approximately 4,800 hours. A standard term is 20 weeks with five concurrent courses at roughly 40 hours per week; learners may slow the calendar without changing requirements.",
     defaultScheduleId: SCHEDULE_ID,
     requirements,
     concentrationIds: concentrations.map((concentration) => concentration.id),

@@ -5,11 +5,14 @@ import type {
   RequirementGroup,
   ResourceVersionId,
   SchedulePlacement,
+  SemanticVersion,
 } from "./domain/catalog";
 import ProgramProgress from "./program-progress";
 
 export interface ProgramPageProps {
   readonly bundle: PublishedProgramBundle;
+  readonly routeBase?: string;
+  readonly availableVersions?: readonly SemanticVersion[];
 }
 
 function formatDate(value: string) {
@@ -23,8 +26,8 @@ function formatDate(value: string) {
   }).format(parsed);
 }
 
-function courseHref(programSlug: string, courseSlug: string) {
-  return `/programs/${programSlug}/courses/${courseSlug}`;
+function courseHref(routeBase: string, courseSlug: string) {
+  return `${routeBase}/courses/${courseSlug}`;
 }
 
 function requirementRule(group: RequirementGroup) {
@@ -57,7 +60,11 @@ function requirementRule(group: RequirementGroup) {
   return pieces.join(" · ");
 }
 
-export default function ProgramPage({ bundle }: ProgramPageProps) {
+export default function ProgramPage({
+  bundle,
+  routeBase = `/programs/${bundle.program.canonicalSlug}`,
+  availableVersions = [bundle.programVersion.version],
+}: ProgramPageProps) {
   const {
     program,
     programVersion,
@@ -155,7 +162,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
       return {
         label: record.version.format,
         title: record.version.title,
-        href: courseHref(programSlug, record.course.canonicalSlug),
+        href: courseHref(routeBase, record.course.canonicalSlug),
       };
     }
 
@@ -169,7 +176,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
         title: unit ? `${unit.label}: ${unit.title}` : placement.subject.id,
         href:
           unit && record
-            ? `${courseHref(programSlug, record.course.canonicalSlug)}#${unit.id}`
+            ? `${courseHref(routeBase, record.course.canonicalSlug)}#${unit.id}`
             : undefined,
       };
     }
@@ -187,7 +194,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
       href:
         assessmentVersion && record
           ? `${courseHref(
-              programSlug,
+              routeBase,
               record.course.canonicalSlug,
             )}#assessment-${assessmentVersion.id}`
           : undefined,
@@ -265,6 +272,26 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
             <span aria-hidden="true">/</span>
             <span>{program.school}</span>
           </div>
+          {availableVersions.length > 1 && (
+            <nav className="publication-versions" aria-label="Program versions">
+              <span>Publication</span>
+              {availableVersions.map((version) => (
+                <Link
+                  aria-current={
+                    version === programVersion.version ? "page" : undefined
+                  }
+                  href={
+                    version === availableVersions[0]
+                      ? `/programs/${programSlug}`
+                      : `/programs/${programSlug}/versions/${version}`
+                  }
+                  key={version}
+                >
+                  v{version}
+                </Link>
+              ))}
+            </nav>
+          )}
           <div className="hero-grid">
             <div className="hero-copy">
               <p className="eyebrow">
@@ -436,7 +463,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
                             {record ? (
                               <Link
                                 href={courseHref(
-                                  programSlug,
+                                  routeBase,
                                   record.course.canonicalSlug,
                                 )}
                               >
@@ -637,7 +664,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
                           {record ? (
                             <Link
                               href={courseHref(
-                                programSlug,
+                                routeBase,
                                 record.course.canonicalSlug,
                               )}
                             >
@@ -699,7 +726,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
                   <div className="catalog-drilldown">
                     <span>{version.format}</span>
                     <h3>
-                      <Link href={courseHref(programSlug, course.canonicalSlug)}>
+                      <Link href={courseHref(routeBase, course.canonicalSlug)}>
                         {version.title}
                       </Link>
                     </h3>
@@ -714,7 +741,7 @@ export default function ProgramPage({ bundle }: ProgramPageProps) {
                   </div>
                   <Link
                     className="course-open"
-                    href={courseHref(programSlug, course.canonicalSlug)}
+                    href={courseHref(routeBase, course.canonicalSlug)}
                     aria-label={`Open ${version.title}`}
                   >
                     Open course <span aria-hidden="true">→</span>

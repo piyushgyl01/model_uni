@@ -792,6 +792,30 @@ export const catalogBundles = sqliteTable(
 );
 
 /**
+ * Explicit identity corrections keep an accidentally published predecessor
+ * readable by stable version ID while removing its slug from the active
+ * catalog. Supersessions are never inferred from matching titles or slugs.
+ */
+export const catalogProgramSupersessions = sqliteTable(
+  "catalog_program_supersessions",
+  {
+    retiredProgramId: text("retired_program_id").primaryKey(),
+    successorProgramId: text("successor_program_id").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("catalog_program_supersessions_successor_idx").on(
+      table.successorProgramId,
+    ),
+    check(
+      "catalog_program_supersessions_distinct_ids_check",
+      sql`${table.retiredProgramId} <> ${table.successorProgramId}`,
+    ),
+  ],
+);
+
+/**
  * Chunks keep even unusually large degree publications comfortably below D1's
  * per-row limit while preserving one byte-for-byte canonical JSON document.
  */

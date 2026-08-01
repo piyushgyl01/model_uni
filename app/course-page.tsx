@@ -11,6 +11,7 @@ import type {
 export interface CoursePageProps {
   readonly bundle: PublishedProgramBundle;
   readonly courseSlug: string;
+  readonly routeBase?: string;
 }
 
 function formatDate(value: string) {
@@ -24,7 +25,11 @@ function formatDate(value: string) {
   }).format(parsed);
 }
 
-export default function CoursePage({ bundle, courseSlug }: CoursePageProps) {
+export default function CoursePage({
+  bundle,
+  courseSlug,
+  routeBase = `/programs/${bundle.program.canonicalSlug}`,
+}: CoursePageProps) {
   const course = bundle.courses.find(
     (candidate) => candidate.canonicalSlug === courseSlug,
   );
@@ -35,7 +40,7 @@ export default function CoursePage({ bundle, courseSlug }: CoursePageProps) {
   );
   if (!courseVersion) notFound();
 
-  const programHref = `/programs/${bundle.program.canonicalSlug}`;
+  const programHref = routeBase;
   const courseHref = `${programHref}/courses/${course.canonicalSlug}`;
   const coursesById = new Map(bundle.courses.map((item) => [item.id, item]));
   const courseVersionsById = new Map(
@@ -212,15 +217,6 @@ export default function CoursePage({ bundle, courseSlug }: CoursePageProps) {
     ]),
   );
 
-function unitDisplayLabel(unit: LearningUnit) {
-    const weekMatch = unit.label.match(/^weeks?\s+(\d+)(?:[–-](\d+))?$/i);
-    if (weekMatch) {
-      if (weekMatch[2]) return `Units ${weekMatch[1]}–${weekMatch[2]}`;
-      return `Unit ${weekMatch[1]}`;
-    }
-    return unit.label;
-  }
-
   const renderLearningUnit = (unit: LearningUnit, depth = 0) => {
     const unitResources = unit.resourceVersionIds.map((resourceVersionId) => ({
       resourceVersionId,
@@ -237,7 +233,11 @@ function unitDisplayLabel(unit: LearningUnit) {
         <header className="universal-unit-heading">
           <div>
             <span>
-              {unit.kindLabel ?? unit.kind} · {unitDisplayLabel(unit)}
+              {[
+                `Unit ${unit.order}`,
+                unit.kindLabel ?? unit.kind,
+                ...(unit.label === `Unit ${unit.order}` ? [] : [unit.label]),
+              ].join(" · ")}
             </span>
             <h3 id={`${unit.id}-title`}>{unit.title}</h3>
           </div>
@@ -535,7 +535,8 @@ function unitDisplayLabel(unit: LearningUnit) {
             </div>
             <p className="section-intro">
               Pass at {courseVersion.gradingPolicy.passingPercentage}%. Published
-              weights refer to the final course score.
+              weights refer to the final course score. Assessment effort is
+              included in the guided course workload, not added on top of it.
             </p>
           </div>
 

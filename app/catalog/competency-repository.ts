@@ -6,6 +6,8 @@ import type {
   CompetencySubject,
   CourseVersionId,
   LearningUnitId,
+  AssessmentVersionId,
+  ProgramVersionId,
   PublishedProgramBundle,
 } from "../domain/catalog";
 
@@ -15,12 +17,12 @@ export interface CompetencyRepository {
   getMappingsForSubject(subject: CompetencySubject): CompetencyMapping[];
   getCompetenciesForCourseVersion(courseVersionId: CourseVersionId): Competency[];
   getCompetenciesForLearningUnit(learningUnitId: LearningUnitId): Competency[];
-  getCompetenciesForAssessmentVersion(assessmentVersionId: string): Competency[];
-  getCompetenciesForProgramVersion(programVersionId: string): Competency[];
+  getCompetenciesForAssessmentVersion(assessmentVersionId: AssessmentVersionId): Competency[];
+  getCompetenciesForProgramVersion(programVersionId: ProgramVersionId): Competency[];
   getPrerequisiteCompetencies(competencyId: CompetencyId): Competency[];
   getDependentCompetencies(competencyId: CompetencyId): Competency[];
   getGapAnalysis(
-    programVersionId: string,
+    programVersionId: ProgramVersionId,
     completedCompetencies: ReadonlySet<CompetencyId>
   ): CompetencyGap[];
   getEquivalencyPaths(
@@ -49,11 +51,13 @@ export interface CompetencyEquivalencyPath {
 export class StaticCompetencyRepository implements CompetencyRepository {
   private readonly competencyById: Map<CompetencyId, Competency>;
   private readonly mappingsBySubject: Map<string, CompetencyMapping[]>;
+  private readonly mappingsByCompetency: Map<CompetencyId, CompetencyMapping[]>;
   private readonly competencyGraph: Map<CompetencyId, CompetencyId[]>;
 
   constructor(bundles: readonly PublishedProgramBundle[]) {
     this.competencyById = new Map();
     this.mappingsBySubject = new Map();
+    this.mappingsByCompetency = new Map();
     this.competencyGraph = new Map();
 
     for (const bundle of bundles) {
@@ -66,13 +70,13 @@ export class StaticCompetencyRepository implements CompetencyRepository {
         const existing = this.mappingsBySubject.get(key) ?? [];
         existing.push(mapping);
         this.mappingsBySubject.set(key, existing);
-      }
-      for (const mapping of bundle.competencyMappings) {
-        if (mapping.subject.kind === "competency") {
-          const deps = this.competencyGraph.get(mapping.competencyId) ?? [];
-          deps.push(mapping.subject.id);
-          this.competencyGraph.set(mapping.competencyId, deps);
-        }
+        const competencyMappings =
+          this.mappingsByCompetency.get(mapping.competencyId) ?? [];
+        competencyMappings.push(mapping);
+        this.mappingsByCompetency.set(
+          mapping.competencyId,
+          competencyMappings,
+        );
       }
     }
   }
@@ -102,13 +106,13 @@ export class StaticCompetencyRepository implements CompetencyRepository {
       .filter(Boolean) as Competency[];
   }
 
-  getCompetenciesForAssessmentVersion(assessmentVersionId: string): Competency[] {
+  getCompetenciesForAssessmentVersion(assessmentVersionId: AssessmentVersionId): Competency[] {
     return this.getMappingsForSubject({ kind: "assessmentVersion", id: assessmentVersionId })
       .map((m) => this.competencyById.get(m.competencyId))
       .filter(Boolean) as Competency[];
   }
 
-  getCompetenciesForProgramVersion(programVersionId: string): Competency[] {
+  getCompetenciesForProgramVersion(programVersionId: ProgramVersionId): Competency[] {
     return this.getMappingsForSubject({ kind: "programVersion", id: programVersionId })
       .map((m) => this.competencyById.get(m.competencyId))
       .filter(Boolean) as Competency[];
@@ -130,7 +134,7 @@ export class StaticCompetencyRepository implements CompetencyRepository {
   }
 
   getGapAnalysis(
-    programVersionId: string,
+    programVersionId: ProgramVersionId,
     completedCompetencies: ReadonlySet<CompetencyId>
   ): CompetencyGap[] {
     const programCompetencies = this.getCompetenciesForProgramVersion(programVersionId);
@@ -142,8 +146,7 @@ export class StaticCompetencyRepository implements CompetencyRepository {
       const targetLevel = this.inferTargetLevel(competency, programVersionId);
 
       if (currentLevel !== targetLevel && currentLevel === "none") {
-        const mappings = this.getMappingsForSubject({ kind: "programVersion", id: programVersionId })
-          .filter((m) => m.competencyId === competency.id);
+        const mappings = this.mappingsByCompetency.get(competency.id) ?? [];
 
         const suggestedUnits: LearningUnitId[] = [];
         const suggestedAssessments: string[] = [];
@@ -170,7 +173,7 @@ export class StaticCompetencyRepository implements CompetencyRepository {
     return gaps;
   }
 
-  private inferTargetLevel(competency: Competency, programVersionId: string): CompetencyLevel {
+  private inferTargetLevel(competency: Competency, programVersionId: ProgramVersionId): CompetencyLevel {
     const mappings = this.getMappingsForSubject({ kind: "programVersion", id: programVersionId })
       .filter((m) => m.competencyId === competency.id);
 

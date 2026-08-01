@@ -3,6 +3,7 @@ import test from "node:test";
 import { StaticCatalogRepository } from "../app/catalog/static-repository";
 import {
   evaluateProgramRequirements,
+  validateCatalogBundles,
   validatePublishedProgramBundle,
 } from "../app/domain/validation";
 import type {
@@ -10,6 +11,58 @@ import type {
   PublishedProgramBundle,
 } from "../app/domain/catalog";
 import { catalogRepository } from "../content/catalog";
+import { computerScienceIdentities } from "../content/manifests/computer-science-identities";
+import { computerScienceV11Identities } from "../content/manifests/computer-science-v1-1-identities";
+import {
+  computerScienceCourseSpecs,
+  type ComputerScienceCourseSpec,
+} from "../content/programs/computer-science-course-specs";
+import { computerScienceCourseSpecsV1_1 } from "../content/programs/computer-science-course-specs-v1-1";
+import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
+import { computerScienceBundleV1 } from "../content/programs/computer-science";
+
+function collectManifestIdentityValues(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (!value || typeof value !== "object") return [];
+  return Object.values(value).flatMap(collectManifestIdentityValues);
+}
+
+function collectBundleEntityIds(bundle: PublishedProgramBundle): string[] {
+  return [
+    bundle.id,
+    bundle.program.id,
+    bundle.programVersion.id,
+    ...bundle.programVersion.requirements.flatMap((requirement) => [
+      requirement.id,
+      ...requirement.options.map((option) => option.id),
+    ]),
+    ...bundle.courses.map((course) => course.id),
+    ...bundle.courseVersions.map((courseVersion) => courseVersion.id),
+    ...bundle.learningUnits.map((unit) => unit.id),
+    ...bundle.assessments.map((assessment) => assessment.id),
+    ...bundle.assessmentVersions.map(
+      (assessmentVersion) => assessmentVersion.id,
+    ),
+    ...bundle.competencies.map((competency) => competency.id),
+    ...bundle.competencyMappings.map((mapping) => mapping.id),
+    ...bundle.concentrations.map((concentration) => concentration.id),
+    ...bundle.resources.map((resource) => resource.id),
+    ...bundle.resourceVersions.map((resourceVersion) => resourceVersion.id),
+    ...bundle.accessOffers.map((offer) => offer.id),
+    ...bundle.rights.map((record) => record.id),
+    ...bundle.freshness.map((record) => record.id),
+    ...bundle.provenance.map((evidence) => evidence.id),
+    ...bundle.calendars.flatMap((calendar) => [
+      calendar.id,
+      ...calendar.periods.map((period) => period.id),
+      ...calendar.milestones.map((milestone) => milestone.id),
+    ]),
+    ...bundle.schedules.flatMap((schedule) => [
+      schedule.id,
+      ...schedule.placements.map((placement) => placement.id),
+    ]),
+  ];
+}
 
 test("publishes three structurally different programs through one repository", () => {
   const summaries = catalogRepository.listPrograms();
@@ -34,6 +87,7 @@ test("publishes three structurally different programs through one repository", (
   assert.equal(computerScience.learningUnitCount, 240);
   assert.equal(computerScience.resourceCount, 34);
   assert.equal(computerScience.nominalHours, 4_800);
+  assert.equal(computerScience.latestVersion, "1.1.0");
   assert.equal(spreadsheets.courseCount, 1);
   assert.equal(spreadsheets.availableCourseCount, 1);
   assert.equal(spreadsheets.learningUnitCount, 8);
@@ -43,6 +97,11 @@ test("publishes three structurally different programs through one repository", (
 test("the Computer Science publication is complete, coherent, and executable", () => {
   const bundle = catalogRepository.loadBySlug("computer-science");
   assert.ok(bundle);
+  assert.equal(bundle.programVersion.version, "1.1.0");
+  assert.deepEqual(catalogRepository.listVersions("computer-science"), [
+    "1.1.0",
+    "1.0.0",
+  ]);
   assert.deepEqual(validatePublishedProgramBundle(bundle), {
     valid: true,
     issues: [],
@@ -58,7 +117,9 @@ test("the Computer Science publication is complete, coherent, and executable", (
   assert.equal(bundle.concentrations.length, 3);
 
   const concentrationRequirement = bundle.programVersion.requirements.find(
-    (requirement) => requirement.id === "req_cs_concentration",
+    (requirement) =>
+      requirement.id ===
+      computerScienceV11Identities.requirementGroupIds.concentration,
   );
   assert.ok(concentrationRequirement);
   assert.equal(
@@ -137,6 +198,187 @@ test("the Computer Science publication is complete, coherent, and executable", (
   );
 });
 
+function assertComputerScienceManifestParity(
+  bundle: PublishedProgramBundle,
+  identities: unknown,
+  specs: readonly ComputerScienceCourseSpec[],
+) {
+  const bundleIds = collectBundleEntityIds(bundle);
+  const manifestIds = collectManifestIdentityValues(identities);
+  const uuidV7Identity =
+    /^[a-z]+_[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  assert.ok(bundleIds.every((id) => uuidV7Identity.test(id)));
+  assert.ok(manifestIds.every((id) => uuidV7Identity.test(id)));
+  assert.equal(new Set(bundleIds).size, bundleIds.length);
+  assert.equal(new Set(manifestIds).size, manifestIds.length);
+  assert.equal(
+    new Set(bundleIds.map((id) => id.slice(id.indexOf("_") + 1))).size,
+    bundleIds.length,
+  );
+  assert.deepEqual([...manifestIds].sort(), [...bundleIds].sort());
+
+  const courseIdentities = (identities as typeof computerScienceIdentities)
+    .courses as Readonly<
+      Record<
+        string,
+        { readonly learningUnitIds: Readonly<Record<string, string>> }
+      >
+    >;
+  for (const spec of specs) {
+    const topicKeys = spec.topics.map((topic) => topic.key);
+    assert.equal(new Set(topicKeys).size, 8);
+    assert.deepEqual(
+      Object.keys(
+        courseIdentities[spec.key].learningUnitIds,
+      ).sort(),
+      [...topicKeys].sort(),
+    );
+    assert.deepEqual(
+      spec.topics
+        .flatMap((topic) =>
+          "assessmentPosition" in topic
+            ? [topic.assessmentPosition]
+            : [],
+        ),
+      ["applied", "final"],
+    );
+  }
+
+  for (const course of bundle.courseVersions) {
+    assert.deepEqual(
+      bundle.learningUnits
+        .filter((unit) => unit.courseVersionId === course.id)
+        .sort((left, right) => left.order - right.order)
+        .map((unit) => unit.label),
+      [
+        "Unit 1",
+        "Unit 2",
+        "Unit 3",
+        "Unit 4",
+        "Unit 5",
+        "Unit 6",
+        "Unit 7",
+        "Unit 8",
+      ],
+    );
+  }
+}
+
+test("every Computer Science identity is a unique manifest-owned UUIDv7", () => {
+  assertComputerScienceManifestParity(
+    computerScienceBundleV1,
+    computerScienceIdentities,
+    computerScienceCourseSpecs,
+  );
+  assertComputerScienceManifestParity(
+    computerScienceBundle,
+    computerScienceV11Identities,
+    computerScienceCourseSpecsV1_1,
+  );
+});
+
+test("Computer Science 1.1 preserves 1.0 and strengthens the audited sequence", () => {
+  assert.deepEqual(validateCatalogBundles([
+    computerScienceBundleV1,
+    computerScienceBundle,
+  ]), {
+    valid: true,
+    issues: [],
+  });
+  assert.equal(
+    catalogRepository.loadBySlug("computer-science", "1.0.0"),
+    computerScienceBundleV1,
+  );
+
+  const latest = catalogRepository.loadBySlug("computer-science", "1.1.0");
+  assert.equal(latest, computerScienceBundle);
+  assert.ok(latest);
+
+  const courseVersion = (key: keyof typeof computerScienceV11Identities.courses) =>
+    latest.courseVersions.find(
+      (version) =>
+        version.id ===
+        computerScienceV11Identities.courses[key].courseVersionId,
+    );
+  const courseUnits = (key: keyof typeof computerScienceV11Identities.courses) =>
+    latest.learningUnits.filter(
+      (unit) =>
+        unit.courseVersionId ===
+        computerScienceV11Identities.courses[key].courseVersionId,
+    );
+
+  const architecture = courseVersion("computer-architecture");
+  assert.ok(architecture);
+  assert.match(architecture.summary, /pipelining/i);
+  assert.match(architecture.summary, /memory hierarchy/i);
+  assert.ok(
+    courseUnits("computer-architecture").some((unit) =>
+      /virtual memory/i.test(unit.topic),
+    ),
+  );
+
+  const algorithms = courseVersion("algorithms");
+  assert.ok(algorithms);
+  assert.match(algorithms.summary, /network flow/i);
+  assert.ok(
+    courseUnits("algorithms").some((unit) => /NP-completeness/i.test(unit.topic)),
+  );
+  assert.ok(
+    courseUnits("algorithms").some((unit) => /approximation/i.test(unit.topic)),
+  );
+
+  const programmingLanguages = courseVersion("programming-languages");
+  assert.ok(programmingLanguages);
+  assert.match(programmingLanguages.summary, /functional/i);
+  assert.ok(
+    courseUnits("programming-languages").some((unit) =>
+      /algebraic data types/i.test(unit.topic),
+    ),
+  );
+
+  const machineLearning = courseVersion("machine-learning");
+  assert.ok(machineLearning);
+  assert.match(machineLearning.summary, /margin-based/i);
+  assert.ok(
+    courseUnits("machine-learning").some((unit) =>
+      /generalization/i.test(unit.topic),
+    ),
+  );
+
+  const parallel = courseVersion("parallel-computing");
+  assert.ok(parallel);
+  assert.match(parallel.summary, /work-span/i);
+  assert.ok(
+    courseUnits("parallel-computing").some((unit) => /work efficiency/i.test(unit.topic)),
+  );
+
+  const placementByCourseVersion = new Map(
+    latest.schedules[0].placements.map((placement) => [
+      placement.subject.kind === "courseVersion" ? placement.subject.id : "",
+      placement.periodId,
+    ]),
+  );
+  const periodOrder = new Map(
+    latest.calendars[0].periods.map((period) => [period.id, period.order]),
+  );
+  const programmingLanguagesTerm = periodOrder.get(
+    placementByCourseVersion.get(programmingLanguages.id)!,
+  );
+  const compilers = courseVersion("compilers");
+  assert.ok(compilers);
+  const compilersTerm = periodOrder.get(
+    placementByCourseVersion.get(compilers.id)!,
+  );
+  assert.equal(programmingLanguagesTerm, 3);
+  assert.equal(compilersTerm, 4);
+  const languagePrerequisite = compilers.prerequisites.find(
+    (prerequisite) => prerequisite.courseVersionId === programmingLanguages.id,
+  );
+  assert.ok(languagePrerequisite);
+  assert.equal(languagePrerequisite.concurrentEnrollmentAllowed, undefined);
+});
+
 test("the EE publication contains real specialization courses and valid paths", () => {
   const bundle = catalogRepository.loadBySlug("electrical-engineering");
   assert.ok(bundle);
@@ -173,7 +415,7 @@ test("the EE publication contains real specialization courses and valid paths", 
   );
 
   for (const concentration of bundle.concentrations) {
-    const completed = new Set<CourseVersionId>([
+    const completed: Set<CourseVersionId> = new Set([
       ...core.options.map((option) => option.courseVersionId),
       ...concentration.courseVersionIds,
     ]);
@@ -184,7 +426,7 @@ test("the EE publication contains real specialization courses and valid paths", 
       `${concentration.title} should form a complete path`,
     );
     assert.equal(completed.size, 31);
-    const unitCount = bundle.learningUnits.filter((unit) =>
+    const unitCount: number = bundle.learningUnits.filter((unit) =>
       completed.has(unit.courseVersionId),
     ).length;
     assert.equal(unitCount, 496);

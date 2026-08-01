@@ -24,6 +24,13 @@ export interface D1DatabaseLike {
   ): Promise<readonly D1ResultLike[]>;
 }
 
+/**
+ * Keep every Worker-to-D1 batch comfortably below provider statement limits.
+ * Callers retain statement order across chunks; operations that require a
+ * single transaction must submit no more than this many statements together.
+ */
+export const MAX_D1_BATCH_STATEMENTS = 50;
+
 export class D1OperationError extends Error {
   constructor(
     readonly operation: string,
@@ -60,9 +67,22 @@ export async function d1Batch(
   operation: string,
 ): Promise<readonly D1ResultLike[]> {
   if (statements.length === 0) return [];
-  const results = await database.batch(statements);
-  results.forEach((result, index) =>
-    assertD1Success(result, `${operation} (statement ${index + 1})`),
-  );
-  return results;
+  const complete: D1ResultLike[] = [];
+  for (
+    let offset = 0;
+    offset < statements.length;
+    offset += MAX_D1_BATCH_STATEMENTS
+  ) {
+    const results = await database.batch(
+      statements.slice(offset, offset + MAX_D1_BATCH_STATEMENTS),
+    );
+    results.forEach((result, index) =>
+      assertD1Success(
+        result,
+        `${operation} (statement ${offset + index + 1})`,
+      ),
+    );
+    complete.push(...results);
+  }
+  return complete;
 }

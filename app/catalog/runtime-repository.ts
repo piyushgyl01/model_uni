@@ -2,7 +2,6 @@ import type { CatalogRepository } from "./repository";
 import {
   AsyncStaticCatalogRepository,
   collectStaticCatalogBundles,
-  compareSemanticVersions,
   D1CatalogRepository,
   seedPublishedProgramBundles,
   type AsyncCatalogRepository,
@@ -10,15 +9,19 @@ import {
 import type { D1DatabaseLike } from "./d1-contract";
 import { initializeCatalogRuntimeSchema } from "./d1-runtime-schema";
 import {
+  registerCatalogProgramSupersessions,
+  type CatalogProgramSupersession,
+} from "./catalog-supersessions";
+import {
   CatalogShadowMismatchError,
   compareCatalogBundleShadows,
 } from "./catalog-shadow";
-import type { SemanticVersion } from "../domain/catalog";
 
 export interface RuntimeCatalogRepositoryOptions {
   readonly database?: D1DatabaseLike | null;
   readonly staticRepository: CatalogRepository;
   readonly verifyShadow?: boolean;
+  readonly programSupersessions?: readonly CatalogProgramSupersession[];
 }
 
 /**
@@ -30,57 +33,31 @@ export async function createRuntimeCatalogRepository({
   database,
   staticRepository,
   verifyShadow = true,
+  programSupersessions = [],
 }: RuntimeCatalogRepositoryOptions): Promise<AsyncCatalogRepository> {
   if (!database) return new AsyncStaticCatalogRepository(staticRepository);
 
   await initializeCatalogRuntimeSchema(database);
+  await registerCatalogProgramSupersessions(database, programSupersessions);
   const checkedInBundles = collectStaticCatalogBundles(staticRepository);
   await seedPublishedProgramBundles(database, checkedInBundles);
   const repository = new D1CatalogRepository(database);
   if (verifyShadow) {
+    const runtimeBundles = (
+      await Promise.all(
+        checkedInBundles.map((bundle) =>
+          repository.loadByProgramId(
+            bundle.program.id,
+            bundle.programVersion.version,
+          ),
+        ),
+      )
+    ).filter((bundle) => bundle !== undefined);
     const report = compareCatalogBundleShadows(
       checkedInBundles,
-      await repository.loadAll(),
+      runtimeBundles,
     );
-    const latestCheckedIn = new Map<string, SemanticVersion>();
-    for (const bundle of checkedInBundles) {
-      const existing = latestCheckedIn.get(bundle.program.id);
-      if (
-        !existing ||
-        compareSemanticVersions(
-          bundle.programVersion.version,
-          existing,
-        ) > 0
-      ) {
-        latestCheckedIn.set(
-          bundle.program.id,
-          bundle.programVersion.version,
-        );
-      }
-    }
-    const blocking = report.mismatches.filter((mismatch) => {
-      if (mismatch.kind !== "missing_in_static") return true;
-      const separator = mismatch.publication.lastIndexOf("@");
-      const programId = mismatch.publication.slice(0, separator);
-      const version = mismatch.publication.slice(
-        separator + 1,
-      ) as SemanticVersion;
-      const latest = latestCheckedIn.get(programId);
-      // Older immutable D1 publications remain valid for version-pinned
-      // learner progress after source moves on to a newer publication.
-      return (
-        !latest ||
-        !/^\d+\.\d+\.\d+$/.test(version) ||
-        compareSemanticVersions(version, latest) >= 0
-      );
-    });
-    if (blocking.length > 0) {
-      throw new CatalogShadowMismatchError({
-        ...report,
-        matches: false,
-        mismatches: blocking,
-      });
-    }
+    if (!report.matches) throw new CatalogShadowMismatchError(report);
   }
   return repository;
 }

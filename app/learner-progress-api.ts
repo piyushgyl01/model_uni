@@ -132,8 +132,8 @@ export async function getAuthenticatedLearner(): Promise<
   }
   const normalizedEmail = user.email.trim().toLowerCase();
   const learner = await repository.resolveLearner({
-    provider: "chatgpt",
-    subject: normalizedEmail,
+    provider: "openai-sites",
+    subject: user.id,
     email: normalizedEmail,
     displayName: user.displayName,
   });

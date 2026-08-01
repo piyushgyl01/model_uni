@@ -1,15 +1,17 @@
 # Course Atlas: Universal Catalog Architecture
 
-Status: D1-backed catalog and learner-progress foundation, July 2026
+Status: D1-backed catalog, publication, and learner-progress foundation, August 2026
 
 The current release implements the universal publication contract, validation,
 repository boundary, stable seed identities, immutable EE, Computer Science,
 and spreadsheet publications, generic program/course renderers, D1-backed
 catalog reads, and authenticated version-aware progress. Checked-in
 publications are the reviewed seed inputs; D1 stores the immutable runtime
-snapshots and every startup shadow-compares their canonical content. The later
-editorial authoring, connector ingestion, credential, and search sections below
-remain target architecture, not claims about the live product.
+snapshots and every startup shadow-compares their canonical content. A protected
+publication endpoint also accepts independently validated, immutable D1-only
+bundles. The later editorial drafting, connector ingestion, credential, and
+search sections below remain target architecture, not claims about the live
+product.
 
 ## 1. Product boundary
 
@@ -451,12 +453,18 @@ reversible:
    `course-atlas-progress-v2` data is imported only after an explicit merge or
    cloud-only choice; the import receipt and payload hash make retries
    idempotent. Device data remains the anonymous/offline cache.
-6. **Add object storage.** Store raw imports, rights evidence, generated
+6. **Add controlled publication import — complete.** An authenticated,
+   same-origin endpoint uses a server-only stable-user-ID allowlist, bounded
+   request parsing, whole-catalog validation, immutable idempotent D1 seeding,
+   canonical resource-identity collision checks, and post-write shadow
+   verification. Canonical exports carry SHA-256 manifests and never overwrite
+   an existing destination.
+7. **Add object storage.** Store raw imports, rights evidence, generated
    thumbnails, submissions, and only legally mirrorable resources. Backfill
    checksums before switching reads.
-7. **Add search projection.** Start with D1 FTS; feed it from the transactional
+8. **Add search projection.** Start with D1 FTS; feed it from the transactional
    outbox and compare indexed counts/revisions.
-8. **Cut over safely.** Run static and database read paths in shadow comparison,
+9. **Cut over safely.** Run static and database read paths in shadow comparison,
    switch by feature flag, monitor errors/staleness, then remove the static
    runtime dependency after at least one verified release.
 
@@ -543,10 +551,11 @@ degree-equivalent structure, while the non-degree spreadsheet sprint proves
 that the model is not coupled to degrees or semesters.
 
 The active runtime path now idempotently seeds checked-in publications into
-D1, reads them through the D1 repository, verifies every publication against
-the source shadow, and stores authenticated learner progress under immutable
-version IDs. The next persistence slice is editorial authoring/import workflow,
-not another read-path rewrite.
+D1, reads them through the D1 repository, verifies every checked-in publication
+against the source shadow, accepts allowlisted D1-only publication imports, and
+stores authenticated learner progress under immutable version IDs. The next
+persistence slice is editorial drafting, source ingestion, and search—not
+another read-path rewrite.
 
 This slice proves universal identity, reuse, provenance, versioning,
 requirements, arbitrary course shape, immutable persistence, cross-device

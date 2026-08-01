@@ -7,6 +7,7 @@ import {
 const RUNTIME_SCHEMA_OBJECTS = [
   "catalog_bundles",
   "catalog_bundle_payload_chunks",
+  "catalog_program_supersessions",
   "learners",
   "learner_accounts",
   "learner_program_progress",
@@ -16,6 +17,7 @@ const RUNTIME_SCHEMA_OBJECTS = [
   "catalog_bundles_program_semver_unique",
   "catalog_bundles_id_program_version_unique",
   "catalog_bundles_slug_idx",
+  "catalog_program_supersessions_successor_idx",
   "learner_accounts_provider_subject_unique",
   "learner_accounts_learner_idx",
   "learner_program_progress_bundle_idx",
@@ -55,6 +57,14 @@ const RUNTIME_SCHEMA_STATEMENTS = [
       CHECK(chunk_index >= 0),
     CONSTRAINT catalog_bundle_payload_chunks_size_check
       CHECK(length(CAST(payload_chunk AS BLOB)) <= 250000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_program_supersessions (
+    retired_program_id text PRIMARY KEY NOT NULL,
+    successor_program_id text NOT NULL,
+    reason text NOT NULL,
+    created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT catalog_program_supersessions_distinct_ids_check
+      CHECK(retired_program_id <> successor_program_id)
   )`,
   `CREATE TABLE IF NOT EXISTS learners (
     id text PRIMARY KEY NOT NULL,
@@ -146,6 +156,9 @@ const RUNTIME_SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS
     catalog_bundles_slug_idx
     ON catalog_bundles(canonical_slug, semantic_version)`,
+  `CREATE INDEX IF NOT EXISTS
+    catalog_program_supersessions_successor_idx
+    ON catalog_program_supersessions(successor_program_id)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS
     learner_accounts_provider_subject_unique
     ON learner_accounts(provider, provider_subject)`,
@@ -171,6 +184,7 @@ const RUNTIME_SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS
     learner_progress_imports_confirmed_idx
     ON learner_progress_imports(learner_id, confirmed_at)`,
+  "PRAGMA optimize",
 ] as const;
 
 export interface CatalogRuntimeSchemaResult {

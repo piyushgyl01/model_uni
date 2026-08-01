@@ -4,6 +4,7 @@ import type {
   CourseId,
   CourseVersionId,
   LearningUnitKind,
+  ProgramVersionId,
   PublishedProgramBundle,
   ResourceVersionId,
 } from "../../app/domain/catalog";
@@ -32,7 +33,8 @@ import {
 
 const PUBLISHED_AT = "2026-07-24T00:00:00Z" as const;
 const PROGRAM_ID = "prg_course_atlas_ee";
-const PROGRAM_VERSION_ID = "prv_course_atlas_ee_2026_1";
+const PROGRAM_VERSION_ID: ProgramVersionId =
+  "prv_course_atlas_ee_2026_1";
 
 const slugify = (value: string) =>
   value

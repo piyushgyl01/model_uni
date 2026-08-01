@@ -25,13 +25,16 @@ import type {
 } from "../app/domain/catalog";
 import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
+import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
 
 const migrationUrls = [
   new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url),
   new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url),
+  new URL("../drizzle/0002_pale_nextwave.sql", import.meta.url),
+  new URL("../drizzle/0003_dazzling_paladin.sql", import.meta.url),
 ];
 
-async function createTestDatabase() {
+async function createEmptyDatabase() {
   const miniflare = new Miniflare({
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
@@ -40,6 +43,13 @@ async function createTestDatabase() {
   const database = (await miniflare.getD1Database(
     "DB",
   )) as unknown as D1DatabaseLike;
+
+  await database.prepare("PRAGMA foreign_keys = ON").run();
+  return { database, miniflare };
+}
+
+async function createTestDatabase() {
+  const { database, miniflare } = await createEmptyDatabase();
 
   for (const migrationUrl of migrationUrls) {
     const migration = await readFile(migrationUrl, "utf8");
@@ -56,9 +66,99 @@ async function createTestDatabase() {
       );
     }
   }
-  await database.prepare("PRAGMA foreign_keys = ON").run();
   return { database, miniflare };
 }
+
+test("a fresh local D1 binding bootstraps the narrow runtime schema", async (t) => {
+  const { database, miniflare } = await createEmptyDatabase();
+  t.after(() => miniflare.dispose());
+
+  const repository = await createRuntimeCatalogRepository({
+    database,
+    staticRepository: new StaticCatalogRepository([
+      practicalSpreadsheetsProgram,
+    ]),
+  });
+  assert.equal(
+    (await repository.loadBySlug("practical-spreadsheets"))?.id,
+    practicalSpreadsheetsProgram.id,
+  );
+
+  const requiredObjects = await database
+    .prepare(
+      `SELECT name
+       FROM sqlite_schema
+       WHERE name IN (
+         'catalog_bundles',
+         'catalog_bundle_payload_chunks',
+         'catalog_program_supersessions',
+         'learners',
+         'learner_accounts',
+         'learner_program_progress',
+         'learner_unit_completions',
+         'learner_progress_imports'
+       )
+       ORDER BY name`,
+    )
+    .all<{ name: string }>();
+  assert.equal(requiredObjects.results?.length, 8);
+  const foreignKeyProblems = await database
+    .prepare("PRAGMA foreign_key_check")
+    .all();
+  assert.deepEqual(foreignKeyProblems.results ?? [], []);
+});
+
+test("an explicit program supersession retires a draft slug without deleting its history", async (t) => {
+  const { database, miniflare } = await createEmptyDatabase();
+  t.after(() => miniflare.dispose());
+  await createRuntimeCatalogRepository({
+    database,
+    staticRepository: new StaticCatalogRepository([]),
+  });
+
+  const legacyProgramId = "prg_computer_science";
+  const legacyProgramVersionId = "prv_computer_science_1";
+  const legacyBundleId = "bnd_computer_science_1";
+  const legacy = JSON.parse(
+    canonicalJson(computerScienceBundle)
+      .replaceAll(computerScienceBundle.program.id, legacyProgramId)
+      .replaceAll(
+        computerScienceBundle.programVersion.id,
+        legacyProgramVersionId,
+      )
+      .replaceAll(computerScienceBundle.id, legacyBundleId),
+  ) as PublishedProgramBundle;
+  await seedPublishedProgramBundles(database, [legacy]);
+
+  const repository = await createRuntimeCatalogRepository({
+    database,
+    staticRepository: new StaticCatalogRepository([computerScienceBundle]),
+    programSupersessions: [
+      {
+        retiredProgramId: legacyProgramId,
+        successorProgramId: computerScienceBundle.program.id,
+        reason: "Replace a pre-release derived identity.",
+      },
+    ],
+  });
+  const programs = await repository.listPrograms();
+  assert.deepEqual(
+    programs.map((program) => program.programId),
+    [computerScienceBundle.program.id],
+  );
+  assert.equal(
+    (await repository.loadBySlug("computer-science"))?.program.id,
+    computerScienceBundle.program.id,
+  );
+  assert.equal(
+    (
+      await new D1CatalogRepository(database).loadByProgramVersionId(
+        legacyProgramVersionId,
+      )
+    )?.program.id,
+    legacyProgramId,
+  );
+});
 
 test("D1 seed is idempotent and reconstructs a complete validated bundle", async (t) => {
   const { database, miniflare } = await createTestDatabase();

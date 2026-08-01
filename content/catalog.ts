@@ -1,5 +1,7 @@
 import { StaticCatalogRepository } from "../app/catalog/static-repository";
-import { computerScienceBundle } from "../app/content/computer-science/bundle";
+import type { CatalogProgramSupersession } from "../app/catalog/catalog-supersessions";
+import { computerScienceBundle } from "./programs/computer-science-v1-1";
+import { computerScienceBundleV1 } from "./programs/computer-science";
 import { electricalEngineeringProgram } from "./programs/electrical-engineering";
 import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets";
 
@@ -10,8 +12,22 @@ import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets"
 export const catalogRepository = new StaticCatalogRepository([
   electricalEngineeringProgram,
   practicalSpreadsheetsProgram,
+  computerScienceBundleV1,
   computerScienceBundle,
 ]);
+
+/**
+ * The first local CS draft synthesized readable IDs before it had been released
+ * externally. Keep that immutable snapshot readable if it reached a D1
+ * environment, but retire its slug in favor of the reviewed UUIDv7 identity.
+ */
+export const catalogProgramSupersessions: readonly CatalogProgramSupersession[] = [
+  {
+    retiredProgramId: "prg_computer_science",
+    successorProgramId: computerScienceBundle.program.id,
+    reason: "Replaced the pre-release derived identity with its reviewed UUIDv7 manifest.",
+  },
+];
 
 export interface FutureProgramDirection {
   readonly school: string;

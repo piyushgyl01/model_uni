@@ -28,5 +28,8 @@ export default async function ProgramRoute({ params }: ProgramRouteProps) {
   const catalogRepository = await getRuntimeCatalogRepository();
   const bundle = await catalogRepository.loadBySlug(slug);
   if (!bundle) notFound();
-  return <ProgramPage bundle={bundle} />;
+  const availableVersions = await catalogRepository.listVersions(slug);
+  return (
+    <ProgramPage bundle={bundle} availableVersions={availableVersions} />
+  );
 }

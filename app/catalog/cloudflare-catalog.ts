@@ -1,4 +1,7 @@
-import { catalogRepository as checkedInCatalog } from "../../content/catalog";
+import {
+  catalogProgramSupersessions,
+  catalogRepository as checkedInCatalog,
+} from "../../content/catalog";
 import type { D1DatabaseLike } from "./d1-contract";
 import type { AsyncCatalogRepository } from "./d1-repository";
 import { D1LearnerProgressRepository } from "./learner-progress-repository";
@@ -43,6 +46,7 @@ export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
     createRuntimeCatalogRepository({
       database: await getCatalogD1Binding(),
       staticRepository: checkedInCatalog,
+      programSupersessions: catalogProgramSupersessions,
     }))();
   return runtimeRepository;
 }

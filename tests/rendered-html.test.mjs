@@ -65,7 +65,7 @@ test("Computer Science renders as a complete six-term program and course classro
   const courseHtml = await courseResponse.text();
   assert.match(courseHtml, /Operating Systems/);
   assert.match(courseHtml, /8 learning units/);
-  assert.match(courseHtml, /Units 15–16/);
+  assert.match(courseHtml, /Unit 8/);
   assert.match(courseHtml, /Operating Systems: Three Easy Pieces/);
   assert.match(courseHtml, /What to learn/);
   assert.match(courseHtml, /Evidence to keep/);
@@ -136,7 +136,14 @@ test("a sixteen-unit EE course uses the same standalone classroom", async () => 
   assert.match(html, /Cumulative/);
 });
 
-test("unknown programs remain 404", async () => {
+test("legacy degree links redirect and unknown programs remain 404", async () => {
+  const legacy = await render("/degrees/computer-science");
+  assert.ok([307, 308].includes(legacy.status));
+  assert.equal(
+    new URL(legacy.headers.get("location"), "http://localhost").pathname,
+    "/programs/computer-science",
+  );
+
   const missing = await render("/programs/not-a-published-program");
   assert.equal(missing.status, 404);
 });
@@ -152,6 +159,8 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     runtimeCatalog,
     progressApi,
     progressStorage,
+    chatgptAuth,
+    learnerProgressApi,
     schema,
   ] = await Promise.all([
     readFile(new URL("../app/programs/[slug]/page.tsx", import.meta.url), "utf8"),
@@ -175,6 +184,11 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
       "utf8",
     ),
     readFile(new URL("../app/progress-storage.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/chatgpt-auth.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/learner-progress-api.ts", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
   ]);
 
@@ -199,6 +213,8 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     progressStorage,
     /disposition === "merged" \? sanitizedImportPrograms\(store\) : \{\}/,
   );
+  assert.match(chatgptAuth, /oai-authenticated-user-id/);
+  assert.match(learnerProgressApi, /subject: user\.id/);
   assert.match(schema, /programVersions/);
   assert.match(schema, /courseVersions/);
   assert.match(schema, /resourceRights/);
@@ -209,5 +225,7 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
 
   await access(new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url));
   await access(new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url));
+  await access(new URL("../drizzle/0002_pale_nextwave.sql", import.meta.url));
+  await access(new URL("../drizzle/0003_dazzling_paladin.sql", import.meta.url));
   await access(new URL("../.openai/hosting.json", import.meta.url));
 });

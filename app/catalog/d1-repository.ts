@@ -11,6 +11,7 @@ import { canonicalJson, sha256Hex } from "./canonical-json";
 import {
   d1All,
   d1Batch,
+  MAX_D1_BATCH_STATEMENTS,
   type D1DatabaseLike,
   type D1ResultLike,
 } from "./d1-contract";
@@ -378,9 +379,10 @@ export async function seedPublishedProgramBundles(
     unchanged += 1;
   });
 
-  await d1Batch(
-    database,
-    missing.flatMap((seed) => [
+  const insertionBatches: Array<ReturnType<D1DatabaseLike["prepare"]>[]> = [];
+  let insertionBatch: ReturnType<D1DatabaseLike["prepare"]>[] = [];
+  for (const seed of missing) {
+    const publicationStatements = [
       database
         .prepare(
           `INSERT INTO catalog_bundles (
@@ -432,9 +434,30 @@ export async function seedPublishedProgramBundles(
             seed.payloadHash,
           ),
       ),
-    ]),
-    "catalog seed insert",
-  );
+    ];
+    if (publicationStatements.length > MAX_D1_BATCH_STATEMENTS) {
+      throw new CatalogValidationError([
+        `Bundle ${seed.bundle.id} requires ${publicationStatements.length} atomic insert statements; the supported maximum is ${MAX_D1_BATCH_STATEMENTS}. Split the publication into smaller reusable bundles.`,
+      ]);
+    }
+    if (
+      insertionBatch.length > 0 &&
+      insertionBatch.length + publicationStatements.length >
+        MAX_D1_BATCH_STATEMENTS
+    ) {
+      insertionBatches.push(insertionBatch);
+      insertionBatch = [];
+    }
+    insertionBatch.push(...publicationStatements);
+  }
+  if (insertionBatch.length > 0) insertionBatches.push(insertionBatch);
+  for (let index = 0; index < insertionBatches.length; index += 1) {
+    await d1Batch(
+      database,
+      insertionBatches[index],
+      `catalog seed insert batch ${index + 1}`,
+    );
+  }
 
   const verification = await d1Batch(
     database,
@@ -572,7 +595,12 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
     const rows = await d1All<CatalogSummaryRow>(
       this.database.prepare(
         `SELECT program_id, canonical_slug, semantic_version, summary_json
-         FROM catalog_bundles`,
+         FROM catalog_bundles
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM catalog_program_supersessions
+           WHERE retired_program_id = catalog_bundles.program_id
+         )`,
       ),
       "list catalog programs",
     );
@@ -618,7 +646,12 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
         .prepare(
           `SELECT program_id, semantic_version
            FROM catalog_bundles
-           WHERE canonical_slug = ?`,
+           WHERE canonical_slug = ?
+             AND NOT EXISTS (
+               SELECT 1
+               FROM catalog_program_supersessions
+               WHERE retired_program_id = catalog_bundles.program_id
+             )`,
         )
         .bind(slug),
       `list versions for ${slug}`,
@@ -645,6 +678,8 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
     slug: string,
     version?: SemanticVersion,
   ): Promise<PublishedProgramBundle | undefined> {
+    const resolvedVersion = version ?? (await this.listVersions(slug))[0];
+    if (!resolvedVersion) return undefined;
     return latestBundle(
       await this.loadRows(
         this.database
@@ -652,9 +687,14 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
             `SELECT ${BUNDLE_ROW_COLUMNS}
              FROM catalog_bundles
              WHERE canonical_slug = ?
-               AND (? IS NULL OR semantic_version = ?)`,
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM catalog_program_supersessions
+                 WHERE retired_program_id = catalog_bundles.program_id
+             )
+               AND semantic_version = ?`,
           )
-          .bind(slug, version ?? null, version ?? null),
+          .bind(slug, resolvedVersion),
         `load catalog slug ${slug}`,
       ),
     );
@@ -664,6 +704,9 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
     programId: ProgramId,
     version?: SemanticVersion,
   ): Promise<PublishedProgramBundle | undefined> {
+    const resolvedVersion =
+      version ?? (await this.listVersionsByProgramId(programId))[0];
+    if (!resolvedVersion) return undefined;
     return latestBundle(
       await this.loadRows(
         this.database
@@ -671,12 +714,37 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
             `SELECT ${BUNDLE_ROW_COLUMNS}
              FROM catalog_bundles
              WHERE program_id = ?
-               AND (? IS NULL OR semantic_version = ?)`,
+               AND semantic_version = ?`,
           )
-          .bind(programId, version ?? null, version ?? null),
+          .bind(programId, resolvedVersion),
         `load catalog program ${programId}`,
       ),
     );
+  }
+
+  private async listVersionsByProgramId(
+    programId: ProgramId,
+  ): Promise<readonly SemanticVersion[]> {
+    const rows = await d1All<CatalogVersionRow>(
+      this.database
+        .prepare(
+          `SELECT program_id, semantic_version
+           FROM catalog_bundles
+           WHERE program_id = ?`,
+        )
+        .bind(programId),
+      `list versions for catalog program ${programId}`,
+    );
+    return rows
+      .map((row) => {
+        if (!isSemanticVersion(row.semantic_version)) {
+          throw new CatalogDataError(`catalog program ${programId}`, [
+            `Invalid semantic version ${JSON.stringify(row.semantic_version)}.`,
+          ]);
+        }
+        return row.semantic_version;
+      })
+      .sort((left, right) => compareSemanticVersions(right, left));
   }
 
   async loadByProgramVersionId(
@@ -705,7 +773,12 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
     return this.loadRows(
       this.database.prepare(
         `SELECT ${BUNDLE_ROW_COLUMNS}
-         FROM catalog_bundles`,
+         FROM catalog_bundles
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM catalog_program_supersessions
+           WHERE retired_program_id = catalog_bundles.program_id
+         )`,
       ),
       "load complete catalog",
     );

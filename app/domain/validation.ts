@@ -39,11 +39,94 @@ export interface ValidationResult {
 
 type ExpectedId = readonly [value: string, prefix: string, path: string];
 type SlugEntry = readonly [slug: string, path: string];
+type CatalogIdentityEntry = {
+  readonly id: string;
+  readonly path: string;
+  readonly value: unknown;
+};
 
 const ID_BODY = "[A-Za-z0-9][A-Za-z0-9_-]*";
 const SEMANTIC_VERSION = /^\d+\.\d+\.\d+$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const WEIGHT_TOLERANCE = 0.000_001;
+
+function canonicalIdentityValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalIdentityValue).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .filter(([, child]) => child !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(
+        ([key, child]) =>
+          `${JSON.stringify(key)}:${canonicalIdentityValue(child)}`,
+      )
+      .join(",")}}`;
+  }
+  const encoded = JSON.stringify(value);
+  return encoded === undefined ? "null" : encoded;
+}
+
+function catalogIdentityEntries(
+  bundle: PublishedProgramBundle,
+  bundleIndex: number,
+): readonly CatalogIdentityEntry[] {
+  const root = `bundles[${bundleIndex}]`;
+  const entries: CatalogIdentityEntry[] = [
+    { id: bundle.id, path: `${root}.id`, value: bundle },
+    { id: bundle.program.id, path: `${root}.program.id`, value: bundle.program },
+    {
+      id: bundle.programVersion.id,
+      path: `${root}.programVersion.id`,
+      value: bundle.programVersion,
+    },
+  ];
+  const append = (
+    values: readonly { readonly id: string }[],
+    collectionPath: string,
+  ) => {
+    values.forEach((value, index) =>
+      entries.push({
+        id: value.id,
+        path: `${root}.${collectionPath}[${index}].id`,
+        value,
+      }),
+    );
+  };
+
+  append(bundle.programVersion.requirements, "programVersion.requirements");
+  bundle.programVersion.requirements.forEach((requirement, requirementIndex) =>
+    append(
+      requirement.options,
+      `programVersion.requirements[${requirementIndex}].options`,
+    ),
+  );
+  append(bundle.courses, "courses");
+  append(bundle.courseVersions, "courseVersions");
+  append(bundle.learningUnits, "learningUnits");
+  append(bundle.assessments, "assessments");
+  append(bundle.assessmentVersions, "assessmentVersions");
+  append(bundle.competencies, "competencies");
+  append(bundle.competencyMappings, "competencyMappings");
+  append(bundle.concentrations, "concentrations");
+  append(bundle.resources, "resources");
+  append(bundle.resourceVersions, "resourceVersions");
+  append(bundle.accessOffers, "accessOffers");
+  append(bundle.rights, "rights");
+  append(bundle.freshness, "freshness");
+  append(bundle.provenance, "provenance");
+  append(bundle.calendars, "calendars");
+  bundle.calendars.forEach((calendar, calendarIndex) => {
+    append(calendar.periods, `calendars[${calendarIndex}].periods`);
+    append(calendar.milestones, `calendars[${calendarIndex}].milestones`);
+  });
+  append(bundle.schedules, "schedules");
+  bundle.schedules.forEach((schedule, scheduleIndex) =>
+    append(schedule.placements, `schedules[${scheduleIndex}].placements`),
+  );
+  return entries;
+}
 
 function collectDuplicateValues(
   values: readonly (readonly [value: string, path: string])[],
@@ -1111,6 +1194,28 @@ export function validateCatalogBundles(
       });
     }
     versionKeys.add(versionKey);
+  });
+
+  const identityOwners = new Map<
+    string,
+    { readonly path: string; readonly canonicalValue: string }
+  >();
+  bundles.forEach((bundle, bundleIndex) => {
+    for (const entry of catalogIdentityEntries(bundle, bundleIndex)) {
+      const canonicalValue = canonicalIdentityValue(entry.value);
+      const existing = identityOwners.get(entry.id);
+      if (!existing) {
+        identityOwners.set(entry.id, { path: entry.path, canonicalValue });
+        continue;
+      }
+      if (existing.canonicalValue !== canonicalValue) {
+        issues.push({
+          code: "duplicate_id",
+          path: entry.path,
+          message: `Identity ${entry.id} conflicts with the definition at ${existing.path}. Reused catalog identities must be byte-equivalent after canonicalization.`,
+        });
+      }
+    }
   });
 
   return { valid: issues.length === 0, issues };

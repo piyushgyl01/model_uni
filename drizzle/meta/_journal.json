@@ -22,6 +22,13 @@
       "when": 1785331507084,
       "tag": "0002_pale_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785570359920,
+      "tag": "0003_dazzling_paladin",
+      "breakpoints": true
     }
   ]
 }
