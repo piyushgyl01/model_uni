@@ -32,10 +32,24 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.match(html, /Different structures/);
   assert.match(html, /Computer Science/);
   assert.match(html, /Electrical Engineering/);
+  assert.match(html, /Mechanical Engineering/);
   assert.match(html, /Practical Spreadsheets/);
   assert.match(html, /\/programs\/computer-science/);
   assert.match(html, /\/programs\/electrical-engineering/);
+  assert.match(html, /\/programs\/mechanical-engineering/);
   assert.match(html, /\/programs\/practical-spreadsheets/);
+  assert.match(
+    html,
+    /<strong>4<\/strong>(?:<!-- -->)?\s*complete programs/,
+  );
+  assert.match(
+    html,
+    /<strong>92<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
+  );
+  assert.match(
+    html,
+    /<strong>984<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
+  );
   assert.match(html, /31/);
   assert.match(html, /course minimum path/);
   assert.match(html, /8/);
@@ -85,6 +99,35 @@ test("generic program route renders the EE publication without placeholders", as
   assert.match(html, /Access is not the same as permission/);
   assert.match(html, /independent, non-accredited/i);
   assert.doesNotMatch(html, /TRK401|TRK402/);
+});
+
+test("Mechanical Engineering renders as a complete six-term program and course classroom", async () => {
+  const programResponse = await render("/programs/mechanical-engineering");
+  assert.equal(programResponse.status, 200);
+  const programHtml = await programResponse.text();
+  assert.match(programHtml, /Mechanical Engineering/);
+  assert.match(programHtml, /30(?:<!-- -->)? selected from 34 options/);
+  assert.match(programHtml, /3 years · 6 terms/);
+  assert.match(programHtml, /Six-term recommended sequence/);
+  assert.match(programHtml, /Robotics and Autonomous Systems/);
+  assert.match(programHtml, /Aerospace and Propulsion/);
+  assert.match(programHtml, /Sustainable Energy/);
+  assert.match(programHtml, /MIT Mechanical Engineering degree chart/);
+  assert.match(programHtml, /awards no degree/i);
+  assert.match(programHtml, /Access is not the same as permission/);
+
+  const courseResponse = await render(
+    "/programs/mechanical-engineering/courses/engineering-thermodynamics",
+  );
+  assert.equal(courseResponse.status, 200);
+  const courseHtml = await courseResponse.text();
+  assert.match(courseHtml, /Engineering Thermodynamics/);
+  assert.match(courseHtml, /8 learning units/);
+  assert.match(courseHtml, /Unit 8/);
+  assert.match(courseHtml, /Thermodynamics and Climate Change/);
+  assert.match(courseHtml, /What to learn/);
+  assert.match(courseHtml, /Evidence to keep/);
+  assert.match(courseHtml, /Safety note/);
 });
 
 test("the same program route renders a one-course eight-week intensive", async () => {
@@ -195,10 +238,15 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(programRoute, /getRuntimeCatalogRepository/);
   assert.match(programRoute, /await catalogRepository\.loadBySlug/);
   assert.match(programRoute, /<ProgramPage bundle=\{bundle\}/);
-  assert.doesNotMatch(programRoute, /ee-beng|electrical-engineering/);
+  const programSpecificHardcoding =
+    /ee-beng|electrical-engineering|mechanical-engineering|mechanicalEngineering/;
+  assert.doesNotMatch(programRoute, programSpecificHardcoding);
   assert.match(courseRoute, /<CoursePage bundle=\{bundle\}/);
+  assert.doesNotMatch(courseRoute, programSpecificHardcoding);
   assert.doesNotMatch(programPage, /from "\.\/data"|from "\.\/course-plans"/);
+  assert.doesNotMatch(programPage, programSpecificHardcoding);
   assert.doesNotMatch(coursePage, /length === 16|Array\.from\(\{ length: 16/);
+  assert.doesNotMatch(coursePage, programSpecificHardcoding);
   assert.match(progress, /course-atlas-progress-v2/);
   assert.match(progress, /programVersionId/);
   assert.match(progress, /courseVersionId/);

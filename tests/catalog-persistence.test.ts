@@ -26,6 +26,7 @@ import type {
 import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
+import { mechanicalEngineeringBundle } from "../content/programs/mechanical-engineering";
 
 const migrationUrls = [
   new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url),
@@ -291,6 +292,33 @@ test("large degree bundles are reconstructed from bounded UTF-8 chunks", async (
     canonicalJson(electricalEngineeringProgram),
   );
   assert.equal(reconstructed.learningUnits.length, 592);
+});
+
+test("Mechanical Engineering survives a complete D1 seed and reconstruction", async (t) => {
+  const { database, miniflare } = await createTestDatabase();
+  t.after(() => miniflare.dispose());
+
+  await seedPublishedProgramBundles(database, [mechanicalEngineeringBundle]);
+
+  const repository = new D1CatalogRepository(database);
+  const reconstructed = await repository.loadByProgramId(
+    mechanicalEngineeringBundle.program.id,
+  );
+  assert.ok(reconstructed);
+  assert.equal(
+    canonicalJson(reconstructed),
+    canonicalJson(mechanicalEngineeringBundle),
+  );
+
+  const summary = (await repository.listPrograms()).find(
+    (program) => program.programId === mechanicalEngineeringBundle.program.id,
+  );
+  assert.ok(summary);
+  assert.equal(summary.courseCount, 30);
+  assert.equal(summary.availableCourseCount, 34);
+  assert.equal(summary.learningUnitCount, 240);
+  assert.equal(summary.resourceCount, 34);
+  assert.equal(summary.nominalHours, 4_800);
 });
 
 test("shadow comparison reports exact field paths and missing publications", () => {

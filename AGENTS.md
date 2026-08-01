@@ -22,9 +22,10 @@
 - **Catalog contract**: `app/domain/catalog.ts` — universal publication types, stable IDs (`crs_*`, `crv_*`, `unt_*`, etc.)
 - **Validation**: `app/domain/validation.ts` — publication integrity + program requirement evaluation
 - **Repository boundary**: `app/catalog/` — `StaticCatalogRepository` (checked-in bundles) ↔ `D1CatalogRepository` (runtime D1) ↔ `runtime-repository.ts` (shadow-verified runtime)
-- **Programs**: `content/programs/` — three checked-in, immutable publication bundles:
+- **Programs**: `content/programs/` — four published program families across five checked-in, immutable publication bundles:
   - `electrical-engineering.ts` (37 courses, 4 concentrations, 496 units)
-  - `computer-science.ts` (34 courses, 3 concentrations, 240 units)
+  - `computer-science.ts` + `computer-science-v1-1.ts` (34 courses, 3 concentrations, 240 selected units)
+  - `mechanical-engineering.ts` (34 courses, 3 concentrations, 240 selected units)
   - `practical-spreadsheets.ts` (1 course, 8 units, 1 sprint)
 - **Routes**: `app/programs/[slug]/` (canonical), legacy `/degrees/[slug]` redirects
 - **Renderers**: `app/program-page.tsx`, `app/course-page.tsx` — generic, no program-specific imports

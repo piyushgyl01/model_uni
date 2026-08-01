@@ -121,10 +121,10 @@ export default async function Home() {
               <h2>Different structures.<br />One learning engine.</h2>
             </div>
             <p>
-              Two three-year computing and engineering pathways and an
-              eight-week spreadsheet sprint are rendered from the same content
-              contract. Adding the next program does not require another
-              custom page.
+              Three complete computing and engineering pathways, each spanning
+              three years, and an eight-week spreadsheet sprint are rendered
+              from the same content contract. Adding the next program does not
+              require another custom page.
             </p>
           </div>
 
