@@ -4,6 +4,7 @@ import { computerScienceBundle } from "./programs/computer-science-v1-1";
 import { computerScienceBundleV1 } from "./programs/computer-science";
 import { electricalEngineeringProgram } from "./programs/electrical-engineering";
 import { mechanicalEngineeringBundle } from "./programs/mechanical-engineering";
+import { mathematicsBundle } from "./programs/mathematics";
 import { physicsBundle } from "./programs/physics";
 import { practicalSpreadsheetsProgram } from "./programs/practical-spreadsheets";
 
@@ -18,6 +19,7 @@ export const catalogRepository = new StaticCatalogRepository([
   computerScienceBundle,
   mechanicalEngineeringBundle,
   physicsBundle,
+  mathematicsBundle,
 ]);
 
 /**
@@ -43,14 +45,6 @@ export interface FutureProgramDirection {
 }
 
 export const futureDirections: readonly FutureProgramDirection[] = [
-  {
-    school: "School of Natural Sciences",
-    discipline: "Mathematics",
-    title: "Mathematics",
-    description: "A competency-normalized pure and applied mathematics pathway.",
-    status: "research",
-    note: "Requirement and competency normalization across calculus, linear algebra, analysis, probability, and discrete math.",
-  },
   {
     school: "School of Humanities & Society",
     discipline: "Economics",

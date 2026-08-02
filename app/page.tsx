@@ -128,7 +128,7 @@ export default async function Home() {
               <h2>Different structures.<br />One learning engine.</h2>
             </div>
             <p>
-              Four complete three-year disciplinary pathways, spanning
+              Five complete three-year disciplinary pathways, spanning
               computing, engineering and natural science, plus an eight-week
               spreadsheet sprint are rendered from the same content contract.
               Adding the next program does not require another custom page.

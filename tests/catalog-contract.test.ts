@@ -14,6 +14,7 @@ import { catalogRepository } from "../content/catalog";
 import { computerScienceIdentities } from "../content/manifests/computer-science-identities";
 import { computerScienceV11Identities } from "../content/manifests/computer-science-v1-1-identities";
 import { mechanicalEngineeringIdentities } from "../content/manifests/mechanical-engineering-identities";
+import { mathematicsIdentities } from "../content/manifests/mathematics-identities";
 import { physicsIdentities } from "../content/manifests/physics-identities";
 import {
   computerScienceCourseSpecs,
@@ -22,16 +23,23 @@ import {
 import { computerScienceCourseSpecsV1_1 } from "../content/programs/computer-science-course-specs-v1-1";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
 import { computerScienceBundleV1 } from "../content/programs/computer-science";
+import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import {
   mechanicalEngineeringCourseSpecs,
   type MechanicalEngineeringCourseSpec,
 } from "../content/programs/mechanical-engineering-course-specs";
 import { mechanicalEngineeringBundle } from "../content/programs/mechanical-engineering";
 import {
+  mathematicsCourseSpecs,
+  type MathematicsCourseSpec,
+} from "../content/programs/mathematics-course-specs";
+import { mathematicsBundle } from "../content/programs/mathematics";
+import {
   physicsCourseSpecs,
   type PhysicsCourseSpec,
 } from "../content/programs/physics-course-specs";
 import { physicsBundle } from "../content/programs/physics";
+import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
 
 function collectManifestIdentityValues(value: unknown): string[] {
   if (typeof value === "string") return [value];
@@ -76,16 +84,16 @@ function collectBundleEntityIds(bundle: PublishedProgramBundle): string[] {
   ];
 }
 
-test("publishes five structurally different programs from six publication versions", () => {
+test("publishes six structurally different programs from seven publication versions", () => {
   const summaries = catalogRepository.listPrograms();
-  assert.equal(summaries.length, 5);
+  assert.equal(summaries.length, 6);
   assert.equal(
     summaries.reduce(
       (total, program) =>
         total + catalogRepository.listVersions(program.slug).length,
       0,
     ),
-    6,
+    7,
   );
 
   const ee = summaries.find((program) => program.slug === "electrical-engineering");
@@ -96,6 +104,9 @@ test("publishes five structurally different programs from six publication versio
     (program) => program.slug === "mechanical-engineering",
   );
   const physics = summaries.find((program) => program.slug === "physics");
+  const mathematics = summaries.find(
+    (program) => program.slug === "mathematics",
+  );
   const spreadsheets = summaries.find(
     (program) => program.slug === "practical-spreadsheets",
   );
@@ -103,6 +114,7 @@ test("publishes five structurally different programs from six publication versio
   assert.ok(computerScience);
   assert.ok(mechanicalEngineering);
   assert.ok(physics);
+  assert.ok(mathematics);
   assert.ok(spreadsheets);
   assert.equal(ee.courseCount, 31);
   assert.equal(ee.availableCourseCount, 37);
@@ -126,6 +138,12 @@ test("publishes five structurally different programs from six publication versio
   assert.equal(physics.resourceCount, 34);
   assert.equal(physics.nominalHours, 4_800);
   assert.equal(physics.latestVersion, "1.0.0");
+  assert.equal(mathematics.courseCount, 30);
+  assert.equal(mathematics.availableCourseCount, 34);
+  assert.equal(mathematics.learningUnitCount, 240);
+  assert.equal(mathematics.resourceCount, 34);
+  assert.equal(mathematics.nominalHours, 4_800);
+  assert.equal(mathematics.latestVersion, "1.0.0");
   assert.equal(spreadsheets.courseCount, 1);
   assert.equal(spreadsheets.availableCourseCount, 1);
   assert.equal(spreadsheets.learningUnitCount, 8);
@@ -557,6 +575,187 @@ test("the Physics publication has complete, coherent, safe research paths", () =
   }
 });
 
+test("the Mathematics publication has complete, coherent pure and applied paths", () => {
+  const bundle = catalogRepository.loadBySlug("mathematics");
+  assert.ok(bundle);
+  assert.equal(bundle.id, mathematicsBundle.id);
+  assert.equal(bundle.programVersion.version, "1.0.0");
+  assert.deepEqual(catalogRepository.listVersions("mathematics"), ["1.0.0"]);
+  assert.deepEqual(validatePublishedProgramBundle(bundle), {
+    valid: true,
+    issues: [],
+  });
+
+  assert.equal(bundle.courseVersions.length, 34);
+  assert.equal(bundle.learningUnits.length, 272);
+  assert.equal(bundle.assessmentVersions.length, 68);
+  assert.equal(bundle.resourceVersions.length, 34);
+  assert.equal(bundle.accessOffers.length, 34);
+  assert.equal(bundle.rights.length, 34);
+  assert.equal(bundle.freshness.length, 34);
+  assert.equal(bundle.programVersion.requirements.length, 7);
+  assert.equal(bundle.calendars[0].periods.length, 6);
+  assert.equal(bundle.calendars[0].milestones.length, 12);
+  assert.equal(bundle.concentrations.length, 3);
+
+  const concentrationRequirement = bundle.programVersion.requirements.find(
+    (requirement) =>
+      requirement.id === mathematicsIdentities.requirementGroupIds.concentration,
+  );
+  assert.ok(concentrationRequirement);
+  assert.equal(concentrationRequirement.options.length, 6);
+  assert.equal(
+    concentrationRequirement.rule.selectionConstraint,
+    "same concentration",
+  );
+  const fixedCourseVersionIds = bundle.programVersion.requirements
+    .filter((requirement) => requirement.id !== concentrationRequirement.id)
+    .flatMap((requirement) =>
+      requirement.options.map((option) => option.courseVersionId),
+    );
+  assert.equal(fixedCourseVersionIds.length, 28);
+  assert.equal(new Set(fixedCourseVersionIds).size, 28);
+
+  for (const concentration of bundle.concentrations) {
+    assert.equal(concentration.courseVersionIds.length, 2);
+    const completed = new Set<CourseVersionId>([
+      ...fixedCourseVersionIds,
+      ...concentration.courseVersionIds,
+    ]);
+    assert.equal(completed.size, 30);
+    assert.equal(evaluateProgramRequirements(bundle, completed).satisfied, true);
+    assert.equal(
+      bundle.programVersion.requirements
+        .flatMap((requirement) => requirement.options)
+        .filter((option) => completed.has(option.courseVersionId))
+        .reduce((total, option) => total + option.credits.value, 0),
+      120,
+    );
+    assert.equal(
+      bundle.courseVersions
+        .filter((course) => completed.has(course.id))
+        .reduce((total, course) => total + course.nominalHours, 0),
+      4_800,
+    );
+    assert.equal(
+      bundle.learningUnits.filter((unit) =>
+        completed.has(unit.courseVersionId),
+      ).length,
+      240,
+    );
+  }
+
+  const mixedConcentrations = new Set<CourseVersionId>([
+    ...fixedCourseVersionIds,
+    bundle.concentrations[0].courseVersionIds[0],
+    bundle.concentrations[1].courseVersionIds[0],
+  ]);
+  assert.equal(
+    evaluateProgramRequirements(bundle, mixedConcentrations).satisfied,
+    false,
+  );
+
+  const placementPeriod = new Map(
+    bundle.schedules[0].placements.map((placement) => [
+      placement.subject.kind === "courseVersion"
+        ? placement.subject.id
+        : "",
+      placement.periodId,
+    ]),
+  );
+  const periodOrder = new Map(
+    bundle.calendars[0].periods.map((period) => [period.id, period.order]),
+  );
+  for (const course of bundle.courseVersions) {
+    assert.equal(
+      bundle.learningUnits.filter(
+        (unit) => unit.courseVersionId === course.id,
+      ).length,
+      8,
+    );
+    assert.equal(course.nominalHours, 160);
+    assert.equal(course.resourceReferences.length, 1);
+    assert.equal(course.gradingPolicy.contributions.length, 2);
+    assert.ok(
+      course.setup.some((step) =>
+        /academic-integrity and responsible-modeling agreement/i.test(step),
+      ),
+    );
+    const courseTerm = periodOrder.get(placementPeriod.get(course.id)!);
+    assert.ok(courseTerm);
+    for (const prerequisite of course.prerequisites) {
+      const prerequisiteTerm = periodOrder.get(
+        placementPeriod.get(prerequisite.courseVersionId)!,
+      );
+      assert.ok(
+        prerequisiteTerm! < courseTerm,
+        `${course.id} must follow ${prerequisite.courseVersionId}`,
+      );
+      assert.equal(prerequisite.concurrentEnrollmentAllowed, undefined);
+    }
+  }
+
+  const mathematicsUrls = bundle.resourceVersions.map(
+    (resource) => resource.canonicalUrl,
+  );
+  assert.equal(new Set(mathematicsUrls).size, 34);
+  assert.ok(mathematicsUrls.every((url) => url.startsWith("https://")));
+  const existingUrls = new Set(
+    catalogRepository
+      .listPrograms()
+      .filter((program) => program.slug !== "mathematics")
+      .flatMap(
+        (program) =>
+          catalogRepository
+            .loadBySlug(program.slug)
+            ?.resourceVersions.map((resource) =>
+              resource.canonicalUrl.replace(/\/$/, ""),
+            ) ?? [],
+      ),
+  );
+  assert.ok(
+    mathematicsUrls.every(
+      (url) => !existingUrls.has(url.replace(/\/$/, "")),
+    ),
+  );
+  assert.ok(
+    bundle.accessOffers.every(
+      (offer) =>
+        offer.type === "free" &&
+        offer.loginRequired === false &&
+        !("price" in offer),
+    ),
+  );
+  assert.ok(
+    bundle.rights.every(
+      (record) =>
+        record.status === "link only" &&
+        record.mayMirror === false &&
+        record.mayAdapt === false,
+    ),
+  );
+  assert.ok(
+    bundle.freshness.every(
+      (record) => record.status === "healthy" && record.httpStatus === 200,
+    ),
+  );
+  assert.equal(
+    bundle.courseVersions.filter((course) => course.safetyNote).length,
+    16,
+  );
+  for (const key of [
+    "introduction-proofs-logic",
+    "mathematics-society-responsible-modeling",
+    "senior-research-thesis",
+  ] as const) {
+    const course = bundle.courseVersions.find(
+      (version) =>
+        version.id === mathematicsIdentities.courses[key].courseVersionId,
+    );
+    assert.ok(course?.safetyNote, `${key} must publish a responsibility boundary`);
+  }
+});
+
 function assertComputerScienceManifestParity(
   bundle: PublishedProgramBundle,
   identities: unknown,
@@ -782,6 +981,98 @@ test("every Physics identity is a unique manifest-owned UUIDv7", () => {
     physicsBundle,
     physicsIdentities,
     physicsCourseSpecs,
+  );
+});
+
+function assertMathematicsManifestParity(
+  bundle: PublishedProgramBundle,
+  identities: typeof mathematicsIdentities,
+  specs: readonly MathematicsCourseSpec[],
+) {
+  const bundleIds = collectBundleEntityIds(bundle);
+  const manifestIds = collectManifestIdentityValues(identities);
+  const uuidV7Identity =
+    /^[a-z]+_[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  assert.ok(bundleIds.every((id) => uuidV7Identity.test(id)));
+  assert.ok(manifestIds.every((id) => uuidV7Identity.test(id)));
+  assert.equal(new Set(bundleIds).size, bundleIds.length);
+  assert.equal(new Set(manifestIds).size, manifestIds.length);
+  assert.equal(
+    new Set(bundleIds.map((id) => id.slice(id.indexOf("_") + 1))).size,
+    bundleIds.length,
+  );
+  assert.deepEqual([...manifestIds].sort(), [...bundleIds].sort());
+
+  assert.deepEqual(
+    Object.keys(identities.courses).sort(),
+    specs.map((spec) => spec.key).sort(),
+  );
+  assert.deepEqual(
+    Object.keys(identities.resources).sort(),
+    specs.map((spec) => spec.key).sort(),
+  );
+  for (const spec of specs) {
+    const topicKeys = spec.topics.map((topic) => topic.key);
+    assert.equal(new Set(topicKeys).size, 8);
+    assert.deepEqual(
+      Object.keys(
+        identities.courses[spec.key as keyof typeof identities.courses]
+          .learningUnitIds,
+      ).sort(),
+      [...topicKeys].sort(),
+    );
+    assert.deepEqual(
+      spec.topics.flatMap((topic) =>
+        topic.assessmentPosition ? [topic.assessmentPosition] : [],
+      ),
+      ["applied", "final"],
+    );
+  }
+
+  for (const course of bundle.courseVersions) {
+    assert.deepEqual(
+      bundle.learningUnits
+        .filter((unit) => unit.courseVersionId === course.id)
+        .sort((left, right) => left.order - right.order)
+        .map((unit) => unit.label),
+      [
+        "Unit 1",
+        "Unit 2",
+        "Unit 3",
+        "Unit 4",
+        "Unit 5",
+        "Unit 6",
+        "Unit 7",
+        "Unit 8",
+      ],
+    );
+  }
+}
+
+test("every Mathematics identity is a unique manifest-owned UUIDv7", () => {
+  assertMathematicsManifestParity(
+    mathematicsBundle,
+    mathematicsIdentities,
+    mathematicsCourseSpecs,
+  );
+});
+
+test("all seven checked-in publication versions form one collision-free catalog", () => {
+  assert.deepEqual(
+    validateCatalogBundles([
+      electricalEngineeringProgram,
+      practicalSpreadsheetsProgram,
+      computerScienceBundleV1,
+      computerScienceBundle,
+      mechanicalEngineeringBundle,
+      physicsBundle,
+      mathematicsBundle,
+    ]),
+    {
+      valid: true,
+      issues: [],
+    },
   );
 });
 
