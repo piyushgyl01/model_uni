@@ -549,7 +549,7 @@ export default function ProgramPage({
             <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
               <h3>Competencies</h3>
               <div className="universal-competency-list" style={{ fontSize: "0.85rem" }}>
-                {competencies.slice(0, 5).map((comp) => (
+                {competencies.map((comp) => (
                   <div key={comp.id} style={{ margin: "6px 0" }}>
                     <strong>{comp.title}</strong> — {comp.domain}
                   </div>
