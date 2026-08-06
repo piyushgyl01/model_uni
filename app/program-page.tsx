@@ -279,9 +279,15 @@ export default function ProgramPage({
           </div>
 
           <div className="program-meta-strip">
-            <span>🗓️ <strong>Duration:</strong> {programVersion.nominalDuration}</span>
             <span>
-              📚 <strong>Path:</strong> {representativePathIds.size} selected from {courseRecords.length} options
+              🗓️ <strong>Duration:</strong> {programVersion.nominalDuration}
+              {calendar?.structure === "terms" && ` · ${periods.length} terms`}
+            </span>
+            <span>
+              📚 <strong>Path:</strong> {representativePathIds.size}
+              {courseRecords.length !== representativePathIds.size
+                ? ` selected from ${courseRecords.length} options`
+                : ""}
             </span>
             <span>⏱️ <strong>Workload:</strong> {representativePathHours} guided hours</span>
             <span>🏷️ <strong>Degree Level:</strong> {programVersion.credentialLabel}</span>
