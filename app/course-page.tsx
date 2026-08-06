@@ -135,71 +135,50 @@ export default function CoursePage({
       <article
         className={`universal-course-resource${compact ? " is-compact" : ""}`}
         key={`${reference.resourceVersionId}-${role ?? "unit"}`}
+        style={{ border: "1px solid #ccc", padding: "10px", margin: "8px 0", background: "#fff" }}
       >
         <header>
-          <span>{role ?? resource?.kind ?? "resource"}</span>
-          {compact ? <h5>
-            <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
-              {version.title} <span aria-hidden="true">↗</span>
-            </a>
-          </h5> : <h3>
-            <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
-              {version.title} <span aria-hidden="true">↗</span>
-            </a>
-          </h3>}
-          <p>
+          <span style={{ fontSize: "0.8rem", color: "#666", textTransform: "uppercase" }}>{role ?? resource?.kind ?? "resource"}</span>
+          {compact ? (
+            <h5 style={{ margin: "2px 0 4px 0" }}>
+              <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
+                <strong>{version.title}</strong> ↗
+              </a>
+            </h5>
+          ) : (
+            <h3 style={{ margin: "4px 0" }}>
+              <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
+                <strong>{version.title}</strong> ↗
+              </a>
+            </h3>
+          )}
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#444" }}>
             {resource?.provider ?? "Unknown provider"}
             {version.authors.length ? ` · ${version.authors.join(", ")}` : ""}
           </p>
         </header>
-        {"note" in reference && reference.note && <p>{reference.note}</p>}
-        <dl className="universal-resource-facts">
+        {"note" in reference && reference.note && <p style={{ fontSize: "0.85rem" }}>{reference.note}</p>}
+        
+        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", fontSize: "0.8rem", fontFamily: "monospace", marginTop: "6px", background: "#f5f5f5", padding: "4px 8px" }}>
           <div>
-            <dt>Access</dt>
-            <dd>
-              {offers.length
-                ? offers
-                    .map(
-                      (offer) =>
-                        `${offer.type} (${offer.region})${
-                          offer.loginRequired ? ", login required" : ""
-                        }`,
-                    )
-                    .join(" · ")
-                : "Not checked"}
-            </dd>
+            <strong>Access:</strong>{" "}
+            {offers.length
+              ? offers.map((o) => `${o.type} (${o.region})`).join(" · ")
+              : "Not checked"}
           </div>
           <div>
-            <dt>Rights</dt>
-            <dd>
-              {rights.length
-                ? rights
-                    .map(
-                      (record) =>
-                        record.licenseIdentifier ?? record.status,
-                    )
-                    .join(" · ")
-                : "Unknown"}
-            </dd>
+            <strong>Rights:</strong>{" "}
+            {rights.length
+              ? rights.map((r) => r.licenseIdentifier ?? r.status).join(" · ")
+              : "Unknown"}
           </div>
           <div>
-            <dt>Freshness</dt>
-            <dd>
-              {freshness.length
-                ? freshness
-                    .map(
-                      (record) =>
-                        `${record.status}${
-                          record.checkedAt
-                            ? `, checked ${formatDate(record.checkedAt)}`
-                            : ""
-                        }`,
-                    )
-                    .join(" · ")
-                : "Not checked"}
-            </dd>
+            <strong>Freshness:</strong>{" "}
+            {freshness.length
+              ? freshness.map((f) => f.status).join(" · ")
+              : "Not checked"}
           </div>
-        </dl>
+        </div>
       </article>
     );
   };
@@ -229,31 +208,31 @@ export default function CoursePage({
         id={unit.id}
         key={unit.id}
         aria-labelledby={`${unit.id}-title`}
+        style={{ border: "1px solid #222", padding: "16px", background: "#ffffff", marginBottom: "15px" }}
       >
-        <header className="universal-unit-heading">
+        <header className="universal-unit-heading" style={{ borderBottom: "1px solid #ddd", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <span>
+            <span style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#666" }}>
               {[
                 `Unit ${unit.order}`,
                 unit.kindLabel ?? unit.kind,
                 ...(unit.label === `Unit ${unit.order}` ? [] : [unit.label]),
               ].join(" · ")}
             </span>
-            <h3 id={`${unit.id}-title`}>{unit.title}</h3>
+            <h3 id={`${unit.id}-title`} style={{ margin: "2px 0 0 0" }}>{unit.title}</h3>
           </div>
-          <strong>{unit.nominalHours} hours</strong>
+          <strong style={{ fontFamily: "monospace" }}>{unit.nominalHours} hours</strong>
         </header>
 
-        <div className="universal-unit-workspace">
-          <section>
-            <span aria-hidden="true">01</span>
-            <h4>What to learn</h4>
-            <p>{unit.topic}</p>
+        <div className="universal-unit-workspace" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>What to learn</h4>
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.topic}</p>
           </section>
-          <section>
-            <span aria-hidden="true">02</span>
-            <h4>Where to learn it</h4>
-            {unit.resourceLocator && <p>{unit.resourceLocator}</p>}
+
+          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>Where to learn it</h4>
+            {unit.resourceLocator && <p style={{ margin: "0 0 6px 0", fontSize: "0.9rem" }}>{unit.resourceLocator}</p>}
             {unitResources.length > 0 ? (
               <div className="universal-unit-resources">
                 {unitResources.map((reference) =>
@@ -262,27 +241,29 @@ export default function CoursePage({
               </div>
             ) : (
               !unit.resourceLocator && (
-                <p>Use the course resources listed above.</p>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>Use course resources.</p>
               )
             )}
           </section>
-          <section>
-            <span aria-hidden="true">03</span>
-            <h4>What to do</h4>
-            <p>{unit.activity}</p>
+
+          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>What to do</h4>
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.activity}</p>
           </section>
-          <section>
-            <span aria-hidden="true">04</span>
-            <h4>Evidence to keep</h4>
-            <p>{unit.evidence}</p>
+
+          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>Evidence to keep</h4>
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.evidence}</p>
             {unit.assessmentKind && (
-              <small>Assessment mode: {unit.assessmentKind}</small>
+              <small style={{ color: "#666", display: "block", marginTop: "4px" }}>
+                Assessment mode: {unit.assessmentKind}
+              </small>
             )}
           </section>
         </div>
 
         {children.length > 0 && (
-          <div className="universal-unit-children">
+          <div className="universal-unit-children" style={{ marginTop: "15px", paddingLeft: "15px", borderLeft: "2px solid #ddd" }}>
             {children.map((child) => renderLearningUnit(child, depth + 1))}
           </div>
         )}
@@ -296,252 +277,138 @@ export default function CoursePage({
         Skip to course content
       </a>
 
+      {/* Course Navigation Bar */}
       <header className="topbar universal-topbar">
         <Link className="brand" href="/" aria-label="Course Atlas home">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <span className="brand-mark" aria-hidden="true" />
           <span>
             <strong>Course Atlas</strong>
-            <small>Executable learning paths</small>
+            <small>Course Syllabus</small>
           </span>
         </Link>
         <nav className="desktop-nav" aria-label="Course sections">
-          <a href="#start">Start</a>
-          <a href="#learning-units">Learning plan</a>
+          <a href="#learning-units">Learning Plan</a>
+          <a href="#course-resources">Course Resources</a>
           <a href="#assessments">Assessments</a>
-          <a href="#course-provenance">Sources</a>
+          <a href="#start">Prerequisites & Setup</a>
         </nav>
         <Link className="header-cta" href={programHref}>
-          Program <span aria-hidden="true">←</span>
+          Degree ←
         </Link>
       </header>
 
       <main id="course-main">
+        {/* Course Header Banner */}
         <section className="hero universal-course-hero" aria-labelledby="course-title">
-          <div className="program-breadcrumb">
-            <Link href="/">Program catalog</Link>
-            <span aria-hidden="true">/</span>
-            <Link href={programHref}>{bundle.programVersion.title}</Link>
-            <span aria-hidden="true">/</span>
-            <span>Course</span>
+          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
+            <Link href="/">Degrees</Link> / <Link href={programHref}>{bundle.programVersion.title}</Link> / <span>Course</span>
           </div>
 
-          <div className="hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow">
-                {course.codes
-                  .map((code) => `${code.namespace} ${code.value}`)
-                  .join(" · ") || course.discipline}
-              </p>
-              <h1 id="course-title">{courseVersion.title}</h1>
-              <p className="hero-lede">{courseVersion.summary}</p>
-              <div className="hero-actions">
-                <a className="button button-primary" href="#start">
-                  Start this course <span aria-hidden="true">↓</span>
-                </a>
-                <a className="button button-quiet" href="#learning-units">
-                  Inspect the syllabus
-                </a>
-              </div>
-            </div>
-
-            <aside className="paper-card universal-course-facts" aria-label="Course facts">
-              <dl>
-                <div>
-                  <dt>Format</dt>
-                  <dd>{courseVersion.format}</dd>
-                </div>
-                <div>
-                  <dt>Guided workload</dt>
-                  <dd>{courseVersion.nominalHours} hours</dd>
-                </div>
-                <div>
-                  <dt>Learning units</dt>
-                  <dd>{orderedUnits.length}</dd>
-                </div>
-                <div>
-                  <dt>Passing score</dt>
-                  <dd>{courseVersion.gradingPolicy.passingPercentage}%</dd>
-                </div>
-                <div>
-                  <dt>Version</dt>
-                  <dd>{courseVersion.version}</dd>
-                </div>
-                <div>
-                  <dt>Published</dt>
-                  <dd>{formatDate(courseVersion.publishedAt)}</dd>
-                </div>
-              </dl>
-            </aside>
-          </div>
-
-          <CourseProgress
-            programVersionId={bundle.programVersion.id}
-            courseVersionId={courseVersion.id}
-            units={orderedUnits.map((unit) => ({
-              id: unit.id,
-              label: unit.label,
-              title: unit.title,
-            }))}
-          />
-        </section>
-
-        <section
-          className="section universal-course-start"
-          id="start"
-          aria-labelledby="start-title"
-        >
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">01</span>
-              <p className="eyebrow">Set up, then take the first action</p>
-              <h2 id="start-title">Start here</h2>
-            </div>
-            <p className="section-intro">{courseVersion.firstAction}</p>
-          </div>
-
-          <div className="universal-course-start-grid">
-            <article className="paper-card">
-              <h3>Set up before learning</h3>
-              {courseVersion.setup.length > 0 ? (
-                <ul className="setup-list">
-                  {courseVersion.setup.map((item) => (
-                    <li key={item}>
-                      <span aria-hidden="true">□</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No special setup is required.</p>
-              )}
-              {courseVersion.safetyNote && (
-                <div className="safety-note" role="note">
-                  <strong>Safety note</strong>
-                  <p>{courseVersion.safetyNote}</p>
-                </div>
-              )}
-            </article>
-
-            <article className="paper-card">
-              <h3>Prerequisites</h3>
-              {prerequisites.length > 0 ? (
-                <ul className="universal-prerequisite-list">
-                  {prerequisites.map(({ prerequisite, version, course: prerequisiteCourse }) => (
-                    <li key={prerequisite.courseVersionId}>
-                      <span>{prerequisite.kind}</span>
-                      {version && prerequisiteCourse ? (
-                        <Link
-                          href={`${programHref}/courses/${prerequisiteCourse.canonicalSlug}`}
-                        >
-                          <strong>{version.title}</strong>
-                        </Link>
-                      ) : (
-                        <strong>{prerequisite.courseVersionId}</strong>
-                      )}
-                      {prerequisite.concurrentEnrollmentAllowed && (
-                        <small>Concurrent enrollment is allowed.</small>
-                      )}
-                      {prerequisite.note && <p>{prerequisite.note}</p>}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No formal prerequisites are published for this course.</p>
-              )}
-            </article>
-
-            <article className="paper-card universal-course-outcomes">
-              <h3>By the end, you should be able to</h3>
-              <ol>
-                {courseVersion.outcomes.map((outcome) => (
-                  <li key={outcome}>{outcome}</li>
-                ))}
-              </ol>
-            </article>
-          </div>
-        </section>
-
-        <section
-          className="section library-section universal-course-routes"
-          id="course-resources"
-          aria-labelledby="course-resources-title"
-        >
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">02</span>
-              <p className="eyebrow">Primary route plus real alternatives</p>
-              <h2 id="course-resources-title">Course resources</h2>
-            </div>
-            <p className="section-intro">
-              Choose a route that is accessible in your region. Access, reuse
-              rights and freshness are reported separately.
+          <div style={{ borderBottom: "2px solid #222", paddingBottom: "15px", marginBottom: "15px" }}>
+            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#555" }}>
+              {course.codes.map((code) => `${code.namespace} ${code.value}`).join(" · ") || course.discipline}
             </p>
+            <h1 id="course-title" style={{ margin: "4px 0 8px 0" }}>{courseVersion.title}</h1>
+            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "#333" }}>{courseVersion.summary}</p>
           </div>
-          {courseVersion.resourceReferences.length > 0 ? (
-            <div className="universal-course-resource-grid">
-              {courseVersion.resourceReferences.map((reference) =>
-                renderResource(reference),
-              )}
-            </div>
-          ) : (
-            <div className="paper-card empty-state">
-              No course-level resources are published. Check the individual
-              learning units for specific sources.
-            </div>
-          )}
+
+          <div className="course-meta-strip">
+            <span>⏱️ <strong>Guided Workload:</strong> {courseVersion.nominalHours} hours</span>
+            <span>📖 <strong>Syllabus:</strong> {orderedUnits.length} learning units</span>
+            <span>🎯 <strong>Passing Score:</strong> {courseVersion.gradingPolicy.passingPercentage}%</span>
+            <span>🏷️ <strong>Format:</strong> {courseVersion.format}</span>
+          </div>
+
+          {/* Interactive Unit Progress Checklist Tracker */}
+          <div style={{ marginTop: "20px" }}>
+            <CourseProgress
+              programVersionId={bundle.programVersion.id}
+              courseVersionId={courseVersion.id}
+              units={orderedUnits.map((unit) => ({
+                id: unit.id,
+                label: unit.label,
+                title: unit.title,
+              }))}
+            />
+          </div>
         </section>
 
+        {/* SECTION 1: Executable Learning Units / Syllabus (FRONT & CENTER) */}
         <section
           className="section universal-learning-plan"
           id="learning-units"
           aria-labelledby="learning-units-title"
+          style={{ marginTop: "35px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">03</span>
-              <p className="eyebrow">An executable syllabus at any length</p>
+              <span className="section-index">01 / Executable Syllabus</span>
               <h2 id="learning-units-title">Learning plan</h2>
             </div>
-            <p className="section-intro">
-              Every unit answers what to learn, where to learn it, what to do and
-              what evidence to keep. There is no fixed week count.
+            <p className="section-intro" style={{ color: "#555" }}>
+              Complete units in sequence. {orderedUnits.length} learning units designed for self-directed study.
             </p>
           </div>
+
           {roots.length > 0 ? (
-            <div className="universal-learning-unit-list">
+            <div className="universal-learning-unit-list" style={{ marginTop: "15px" }}>
               {roots.map((unit) => renderLearningUnit(unit))}
             </div>
           ) : (
-            <div className="paper-card empty-state">
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
               This course version does not contain learning units yet.
             </div>
           )}
         </section>
 
+        {/* SECTION 2: Course Level Open Educational Resources */}
+        <section
+          className="section library-section universal-course-routes"
+          id="course-resources"
+          aria-labelledby="course-resources-title"
+          style={{ marginTop: "40px" }}
+        >
+          <div className="section-heading-row">
+            <div>
+              <span className="section-index">02 / Open Textbooks & Videos</span>
+              <h2 id="course-resources-title">Course resources</h2>
+            </div>
+            <p className="section-intro" style={{ color: "#555" }}>
+              Free educational resources, lecture videos, and open textbooks for this course.
+            </p>
+          </div>
+          {courseVersion.resourceReferences.length > 0 ? (
+            <div className="universal-course-resource-grid" style={{ marginTop: "15px" }}>
+              {courseVersion.resourceReferences.map((reference) =>
+                renderResource(reference),
+              )}
+            </div>
+          ) : (
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+              No course-level resources are published. Check the individual learning units for specific sources.
+            </div>
+          )}
+        </section>
+
+        {/* SECTION 3: Assessments & Grading */}
         <section
           className="section assessments-section universal-course-assessments"
           id="assessments"
           aria-labelledby="assessments-title"
+          style={{ marginTop: "40px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">04</span>
-              <p className="eyebrow">Demonstrate, do not merely consume</p>
+              <span className="section-index">03 / Assignments & Exams</span>
               <h2 id="assessments-title">Assessments and grading</h2>
             </div>
-            <p className="section-intro">
-              Pass at {courseVersion.gradingPolicy.passingPercentage}%. Published
-              weights refer to the final course score. Assessment effort is
-              included in the guided course workload, not added on top of it.
+            <p className="section-intro" style={{ color: "#555" }}>
+              Pass at {courseVersion.gradingPolicy.passingPercentage}%. Demonstrate understanding through projects and exercises.
             </p>
           </div>
 
           {courseAssessmentVersions.length > 0 ? (
-            <div className="assessment-grid universal-assessment-grid">
+            <div className="assessment-grid universal-assessment-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "15px", marginTop: "15px" }}>
               {courseAssessmentVersions.map((assessmentVersion) => {
                 const assessment = assessmentsById.get(
                   assessmentVersion.assessmentId,
@@ -554,119 +421,99 @@ export default function CoursePage({
                     className="assessment-card"
                     id={`assessment-${assessmentVersion.id}`}
                     key={assessmentVersion.id}
+                    style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}
                   >
-                    <header>
-                      <span>{assessment?.kind ?? "assessment"}</span>
-                      <strong>
+                    <header style={{ borderBottom: "1px solid #eee", paddingBottom: "6px" }}>
+                      <span style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#666" }}>{assessment?.kind ?? "assessment"}</span>
+                      <strong style={{ display: "block" }}>
                         {contribution
                           ? `${contribution.weight}% of final score`
                           : "Practice / unweighted"}
                       </strong>
                     </header>
-                    <h3>{assessmentVersion.title}</h3>
-                    <p>{assessmentVersion.instructions}</p>
-                    <dl>
-                      <div>
-                        <dt>Estimated effort</dt>
-                        <dd>{assessmentVersion.estimatedHours} hours</dd>
-                      </div>
-                      <div>
-                        <dt>Maximum score</dt>
-                        <dd>{assessmentVersion.maximumScore}</dd>
-                      </div>
-                      <div>
-                        <dt>Required to pass</dt>
-                        <dd>{contribution?.requiredToPass ? "Yes" : "No"}</dd>
-                      </div>
-                    </dl>
-                    <h4>Submission evidence</h4>
-                    <ul>
+                    <h3 style={{ margin: "6px 0 4px 0" }}>{assessmentVersion.title}</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#444" }}>{assessmentVersion.instructions}</p>
+                    <div style={{ fontSize: "0.85rem", fontFamily: "monospace", margin: "8px 0" }}>
+                      Effort: {assessmentVersion.estimatedHours} hours | Max Score: {assessmentVersion.maximumScore}
+                    </div>
+                    <strong style={{ fontSize: "0.85rem" }}>Submission evidence:</strong>
+                    <ul style={{ paddingLeft: "18px", margin: "4px 0", fontSize: "0.85rem" }}>
                       {assessmentVersion.submissionEvidence.map((evidence) => (
                         <li key={evidence}>{evidence}</li>
                       ))}
                     </ul>
-                    {assessmentVersion.resourceVersionIds.length > 0 && (
-                      <div className="universal-assessment-resources">
-                        {assessmentVersion.resourceVersionIds.map(
-                          (resourceVersionId) =>
-                            renderResource({ resourceVersionId }, true),
-                        )}
-                      </div>
-                    )}
                   </article>
                 );
               })}
             </div>
           ) : (
-            <div className="paper-card empty-state">
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
               No scored assessments are published for this course version.
             </div>
           )}
         </section>
 
+        {/* SECTION 4: Setup & Prerequisites */}
         <section
-          className="section provenance universal-course-provenance"
-          id="course-provenance"
-          aria-labelledby="course-provenance-title"
+          className="section universal-course-start"
+          id="start"
+          aria-labelledby="start-title"
+          style={{ marginTop: "40px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">05</span>
-              <p className="eyebrow">Inspect the editorial trail</p>
-              <h2 id="course-provenance-title">Course provenance</h2>
+              <span className="section-index">04 / Prerequisites & Setup</span>
+              <h2 id="start-title">Start here</h2>
             </div>
-            <p className="section-intro">
-              These sources support the structure and claims in this exact
-              published course version.
-            </p>
+            <p className="section-intro" style={{ color: "#555" }}>{courseVersion.firstAction}</p>
           </div>
 
-          {courseVersion.provenanceEvidenceIds.length > 0 ? (
-            <div className="universal-provenance-list">
-              {courseVersion.provenanceEvidenceIds.map((evidenceId) => {
-                const evidence = bundle.provenance.find(
-                  (candidate) => candidate.id === evidenceId,
-                );
-                return evidence ? (
-                  <article className="paper-card" key={evidence.id}>
-                    <span>{evidence.kind}</span>
-                    <h3>
-                      <a
-                        href={evidence.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {evidence.sourceTitle} <span aria-hidden="true">↗</span>
-                      </a>
-                    </h3>
-                    <p>Retrieved {formatDate(evidence.retrievedAt)}</p>
-                    {evidence.note && <small>{evidence.note}</small>}
-                  </article>
-                ) : null;
-              })}
-            </div>
-          ) : (
-            <div className="paper-card empty-state">
-              No course-specific provenance evidence is published.
-            </div>
-          )}
+          <div className="universal-course-start-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginTop: "15px" }}>
+            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+              <h3>Setup Before Learning</h3>
+              {courseVersion.setup.length > 0 ? (
+                <ul className="setup-list" style={{ paddingLeft: "18px" }}>
+                  {courseVersion.setup.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No special setup is required.</p>
+              )}
+              {courseVersion.safetyNote && (
+                <div className="safety-note" role="note" style={{ marginTop: "10px", padding: "8px", background: "#fff8f8", border: "1px solid #e00" }}>
+                  <strong>Safety note:</strong>
+                  <p style={{ margin: "2px 0 0 0" }}>{courseVersion.safetyNote}</p>
+                </div>
+              )}
+            </article>
+
+            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+              <h3>Prerequisites</h3>
+              {prerequisites.length > 0 ? (
+                <ul className="universal-prerequisite-list" style={{ paddingLeft: "18px" }}>
+                  {prerequisites.map(({ prerequisite, version, course: prerequisiteCourse }) => (
+                    <li key={prerequisite.courseVersionId}>
+                      {version && prerequisiteCourse ? (
+                        <Link href={`${programHref}/courses/${prerequisiteCourse.canonicalSlug}`}>
+                          <strong>{version.title}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{prerequisite.courseVersionId}</strong>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No formal prerequisites are published for this course.</p>
+              )}
+            </article>
+          </div>
         </section>
       </main>
 
-      <footer className="universal-program-footer">
-        <div className="footer-brand">
-          <strong>{courseVersion.title}</strong>
-          <p>
-            Part of{" "}
-            <Link href={programHref}>{bundle.programVersion.title}</Link>.
-          </p>
-        </div>
-        <div className="footer-meta">
-          <span>
-            Course {course.id} · version {courseVersion.version}
-          </span>
-          <Link href={courseHref}>Canonical course URL</Link>
-        </div>
+      <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+        <strong>{courseVersion.title}</strong> — <small>Part of <Link href={programHref}>{bundle.programVersion.title}</Link></small>
       </footer>
     </div>
   );
