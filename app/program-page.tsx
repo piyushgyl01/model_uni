@@ -174,6 +174,7 @@ export default function ProgramPage({
       return {
         label: unit?.kindLabel ?? unit?.kind ?? "Learning unit",
         title: unit ? `${unit.label}: ${unit.title}` : placement.subject.id,
+        note: placement.note ?? unit?.topic ?? unit?.resourceLocator,
         href:
           unit && record
             ? `${courseHref(routeBase, record.course.canonicalSlug)}#${unit.id}`
@@ -354,6 +355,7 @@ export default function ProgramPage({
                                 ) : (
                                   <strong>{subject.title}</strong>
                                 )}
+                                {subject.note && <p style={{ margin: "2px 0", fontSize: "0.8rem", color: "#555" }}>{subject.note}</p>}
                               </li>
                             );
                           })}
