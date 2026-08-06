@@ -5,10 +5,10 @@ import { futureDirections } from "../content/catalog";
 export const dynamic = "force-dynamic";
 
 const homeNav = [
-  ["Programs", "programs"],
-  ["Learning model", "model"],
+  ["Degrees", "programs"],
+  ["How it Works", "model"],
   ["Schools", "schools"],
-  ["Scope", "scope"],
+  ["Notice", "scope"],
 ] as const;
 
 function hoursLabel(hours: number) {
@@ -21,18 +21,18 @@ export default async function Home() {
   const programs = await catalogRepository.listPrograms();
   const schools = Array.from(new Set(programs.map((program) => program.school)));
 
+  const totalCourses = programs.reduce((sum, program) => sum + program.courseCount, 0);
+  const totalUnits = programs.reduce((sum, program) => sum + program.learningUnitCount, 0);
+
   return (
     <div className="catalog-home">
+      {/* Top Navigation */}
       <header className="topbar catalog-topbar">
         <a className="brand" href="#top" aria-label="Course Atlas home">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <span className="brand-mark" aria-hidden="true" />
           <span>
             <strong>Course Atlas</strong>
-            <small>executable learning paths</small>
+            <small>Self-Study University Degrees</small>
           </span>
         </a>
 
@@ -43,206 +43,165 @@ export default async function Home() {
         </nav>
 
         <a className="header-cta" href="#programs">
-          Browse programs <span aria-hidden="true">↓</span>
+          Select a Degree ↓
         </a>
-
-        <details className="mobile-nav">
-          <summary aria-label="Open navigation">Menu</summary>
-          <nav aria-label="Mobile navigation">
-            {homeNav.map(([label, id]) => (
-              <a key={id} href={`#${id}`}>{label}</a>
-            ))}
-          </nav>
-        </details>
       </header>
 
       <main id="top">
+        {/* Simple Hero */}
         <section className="catalog-hero">
-          <div className="catalog-hero-grid" aria-hidden="true" />
           <div className="catalog-hero-copy">
             <p className="eyebrow">
-              <span className="status-dot" />
-              A learning operating system for the open web
+              Free Open Curriculum · Self-Paced University Study
             </p>
-            <h1>Choose an outcome.<br />Get the whole path.</h1>
-            <p>
-              Course Atlas turns free courses, documentation, projects and
-              assessments into complete programs that tell you what to learn,
-              where to learn it, what to do and what evidence to keep.
+            <h1>Choose an outcome.<br />Get the whole degree path.</h1>
+            <p style={{ fontSize: "1.1rem", marginTop: "10px", color: "#333" }}>
+              Study complete university degree programs on your own. We organize free textbooks, MIT & Stanford video lectures, assignments, and exams into step-by-step course sequences you can follow and complete.
             </p>
-            <div className="hero-actions">
-              <Link
-                className="button button-primary"
-                href="/programs/computer-science"
-              >
-                Open Computer Science <span aria-hidden="true">→</span>
+            <div className="hero-actions" style={{ marginTop: "20px" }}>
+              <Link className="button button-primary" href="/programs/computer-science">
+                Start Computer Science Degree →
               </Link>
-              <Link
-                className="button button-quiet"
-                href="/programs/electrical-engineering"
-              >
-                Open Electrical Engineering
+              <Link className="button button-quiet" href="/programs/electrical-engineering">
+                Start Electrical Engineering Degree →
               </Link>
             </div>
           </div>
 
-          <aside className="catalog-manifesto">
-            <span>Course Atlas / Publication model</span>
-            <blockquote>
-              A program is a versioned sequence of competencies, work,
-              assessment and evidence—not a custom webpage.
-            </blockquote>
-            <div>
+          <aside className="catalog-manifesto" style={{ marginTop: "25px" }}>
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", fontSize: "0.95rem" }}>
               <span><strong>{programs.length}</strong> complete programs</span>
-              <span>
-                <strong>{programs.reduce((sum, program) => sum + program.courseCount, 0)}</strong>{" "}
-                courses across minimum paths
-              </span>
-              <span>
-                <strong>
-                  {programs
-                    .reduce(
-                      (sum, program) => sum + program.learningUnitCount,
-                      0,
-                    )
-                    .toLocaleString("en-US")}
-                </strong>{" "}
-                executable learning units
-              </span>
+              <span><strong>{totalCourses}</strong> courses across minimum paths</span>
+              <span><strong>{totalUnits.toLocaleString("en-US")}</strong> executable learning units</span>
             </div>
           </aside>
         </section>
 
-        <section className="catalog-trust-strip" aria-label="Course Atlas model">
+        {/* Universal Engine Banner */}
+        <div className="catalog-trust-strip" aria-label="Course Atlas model">
           <span>One universal renderer</span>
           <i aria-hidden="true">→</i>
           <span>Versioned program publications</span>
           <i aria-hidden="true">→</i>
           <span>Any duration, calendar, field or course count</span>
-        </section>
+        </div>
 
+        {/* Main Degree Selection Table */}
         <section className="catalog-section degree-directory" id="programs">
           <div className="catalog-section-heading">
-            <div>
-              <p className="section-index">01 / Published programs</p>
-              <h2>Different structures.<br />One learning engine.</h2>
-            </div>
-            <p>
-              Five complete three-year disciplinary pathways, spanning
-              computing, engineering and natural science, plus an eight-week
-              spreadsheet sprint are rendered from the same content contract.
-              Adding the next program does not require another custom page.
+            <p className="section-index">01 / Degree Catalog</p>
+            <h2>Select a University Degree Program</h2>
+            <p style={{ color: "#555" }}>
+              Different structures. One learning engine. Choose a degree program below to open its term-by-term curriculum, free learning materials, and progress tracker.
             </p>
           </div>
 
           <div className="degree-card-grid">
             {programs.map((program, index) => (
               <article
-                className={`degree-directory-card ${
-                  index % 2 === 0 ? "degree-teal" : "degree-coral"
-                } is-live`}
+                className={`degree-directory-card ${index % 2 === 0 ? "degree-teal" : "degree-coral"} is-live`}
                 key={program.programId}
               >
                 <div className="degree-card-top">
-                  <span>{String(index + 1).padStart(2, "0")} · {program.school}</span>
-                  <b>Published v{program.latestVersion}</b>
+                  <span>School: {program.school}</span>
+                  <b>v{program.latestVersion}</b>
                 </div>
+
                 <div className="degree-card-title">
-                  <span>{program.credentialLabel}</span>
+                  <span style={{ fontSize: "0.85rem", textTransform: "uppercase", color: "#666", fontWeight: "bold" }}>
+                    {program.credentialLabel}
+                  </span>
                   <h3>{program.title}</h3>
-                  <p>{program.summary}</p>
+                  <p style={{ fontSize: "0.9rem", color: "#444", margin: "6px 0" }}>{program.summary}</p>
                 </div>
+
                 <div className="degree-card-facts">
-                  <span>{program.nominalDuration}</span>
-                  <span>{program.courseCount}-course minimum path</span>
+                  <span>🗓️ <strong>Duration:</strong> {program.nominalDuration}</span>
+                  <span>📚 <strong>Curriculum:</strong> {program.courseCount}-course minimum path</span>
                   {program.availableCourseCount !== program.courseCount && (
-                    <span>{program.availableCourseCount} course options</span>
+                    <span>🔀 <strong>Options:</strong> {program.availableCourseCount} course options</span>
                   )}
-                  <span>{program.learningUnitCount} learning units</span>
-                  <span>{program.resourceCount} reviewed resources</span>
-                  <span>{hoursLabel(program.nominalHours)}</span>
+                  <span>📖 <strong>Units:</strong> {program.learningUnitCount} learning units</span>
+                  <span>🔗 <strong>Free Resources:</strong> {program.resourceCount} reviewed resources</span>
+                  <span>⏱️ <strong>Est. Workload:</strong> {hoursLabel(program.nominalHours)}</span>
                 </div>
-                <Link href={`/programs/${program.slug}`}>
-                  Enter program <span aria-hidden="true">→</span>
-                </Link>
+
+                <div style={{ marginTop: "15px" }}>
+                  <Link className="button button-primary" style={{ width: "100%", textAlign: "center" }} href={`/programs/${program.slug}`}>
+                    Start {program.title} →
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
 
-          <div className="catalog-roadmap">
-            <span>In research—not advertised as published</span>
+          {/* Research Roadmap */}
+          <div className="catalog-roadmap" style={{ marginTop: "35px" }}>
+            <h3 style={{ marginTop: 0 }}>Upcoming Programs in Research</h3>
+            <p style={{ fontSize: "0.85rem", color: "#666" }}>In research—not advertised as published</p>
             {futureDirections.map((direction) => (
-              <article key={direction.title}>
-                <small>{direction.school} · {direction.discipline}</small>
-                <strong>{direction.title}</strong>
-                <p>{direction.description}</p>
-                <small className="direction-status">{direction.status} · {direction.note}</small>
+              <article key={direction.title} style={{ padding: "10px 0", borderTop: "1px solid #e0e0e0" }}>
+                <small style={{ color: "#666" }}>{direction.school} · {direction.discipline}</small>
+                <div style={{ fontWeight: "bold", fontSize: "1rem" }}>{direction.title}</div>
+                <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>{direction.description}</p>
+                <small className="direction-status" style={{ color: "#888" }}>{direction.status} · {direction.note}</small>
               </article>
             ))}
           </div>
         </section>
 
+        {/* How It Works */}
         <section className="catalog-section degree-model" id="model">
           <div className="catalog-section-heading">
-            <div>
-              <p className="section-index">02 / The learning model</p>
-              <h2>The degree is one view.<br />Mastery is the foundation.</h2>
-            </div>
+            <p className="section-index">02 / How Self-Study Works</p>
+            <h2>The degree is one view. Mastery is the foundation.</h2>
             <p>
-              Programs arrange reusable, versioned learning components into a
-              recommended path. Semesters and weeks are projections—not
-              assumptions embedded in every course.
+              Programs arrange reusable, versioned learning components into a recommended path. Semesters and weeks are projections—not assumptions embedded in every course.
             </p>
           </div>
 
           <div className="degree-stack" aria-label="Course Atlas learning model">
             {[
-              ["01", "Competencies", "The abilities a learner is expected to develop"],
-              ["02", "Learning units", "Lessons, practice, laboratories, projects and reviews"],
-              ["03", "Resources", "Exact free routes with access, rights and freshness separated"],
-              ["04", "Assessments", "Course-specific demonstrations instead of one global exam template"],
-              ["05", "Evidence", "Workbooks, code, measurements, reports, portfolios and defenses"],
-              ["06", "Mastery", "Version-aware progress tied to exact units and course versions"],
+              ["01", "Competencies", "Specific abilities & technical skills you acquire"],
+              ["02", "Learning units", "Structured lessons, practice problems, labs, and projects"],
+              ["03", "Resources", "Direct links to free textbooks, MIT OCW, and video lectures"],
+              ["04", "Assessments", "Problem sets and exams to test your understanding"],
+              ["05", "Evidence", "Portfolio projects, code repositories, and lab reports"],
+              ["06", "Mastery", "Track your progress unit-by-unit as you complete courses"],
             ].map(([number, title, note]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <h3>{title}</h3>
-                <p>{note}</p>
+              <article key={number} style={{ padding: "12px", border: "1px solid #ccc", background: "#fff" }}>
+                <span style={{ fontFamily: "monospace", color: "#0000ee", fontWeight: "bold" }}>{number}</span>
+                <h3 style={{ margin: "4px 0" }}>{title}</h3>
+                <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{note}</p>
               </article>
             ))}
           </div>
         </section>
 
+        {/* Schools Index */}
         <section className="catalog-section school-index" id="schools">
           <div className="catalog-section-heading">
-            <div>
-              <p className="section-index">03 / Schools</p>
-              <h2>Organize the catalog.<br />Do not trap the content.</h2>
-            </div>
+            <p className="section-index">03 / Academic Fields</p>
+            <h2>Organize the catalog. Do not trap the content.</h2>
             <p>
-              Schools and disciplines support discovery. Courses retain stable
-              identities so they can later serve multiple programs without
-              being copied into each one.
+              Schools and disciplines support discovery. Courses retain stable identities so they can later serve multiple programs without being copied into each one.
             </p>
           </div>
 
           <div className="school-home-grid">
             {schools.map((school, index) => {
-              const schoolPrograms = programs.filter(
-                (program) => program.school === school,
-              );
+              const schoolPrograms = programs.filter((p) => p.school === school);
               return (
-                <article key={school}>
-                  <span>School {String(index + 1).padStart(2, "0")}</span>
-                  <h3>{school}</h3>
-                  <p>
-                    {schoolPrograms
-                      .map((program) => program.discipline)
-                      .join(" · ")}
+                <article key={school} style={{ padding: "12px", border: "1px solid #ccc", background: "#fff" }}>
+                  <span style={{ fontSize: "0.8rem", color: "#666", fontFamily: "monospace" }}>
+                    School {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <h3 style={{ margin: "4px 0" }}>{school}</h3>
+                  <p style={{ fontSize: "0.85rem", color: "#444" }}>
+                    {schoolPrograms.map((p) => p.discipline).join(" · ")}
                   </p>
-                  <small>
-                    {schoolPrograms.length} complete{" "}
-                    {schoolPrograms.length === 1 ? "program" : "programs"}
+                  <small style={{ color: "#666" }}>
+                    {schoolPrograms.length} complete {schoolPrograms.length === 1 ? "program" : "programs"}
                   </small>
                 </article>
               );
@@ -250,51 +209,40 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="catalog-about" id="scope">
+        {/* Scope & Notice */}
+        <section className="catalog-about" id="scope" style={{ padding: "20px", border: "1px solid #222", background: "#fafafa" }}>
           <p className="section-index">04 / Honest scope</p>
-          <h2>Rebuild the learning.<br />Never fake the credential.</h2>
-          <p>
-            Course Atlas publishes independent study pathways, not enrollment,
-            accreditation, transferable credit, licensure or university-issued
-            degrees. Every program carries its own recognition, workload,
-            provenance and resource-access notices.
+          <h2>Rebuild the learning. Never fake the credential.</h2>
+          <p style={{ fontSize: "0.95rem" }}>
+            Course Atlas publishes independent study pathways, not enrollment, accreditation, transferable credit, licensure or university-issued degrees. Every program carries its own recognition, workload, provenance and resource-access notices.
           </p>
-          <Link href="/programs/electrical-engineering">
-            Inspect the complete engineering publication{" "}
-            <span aria-hidden="true">→</span>
+          <Link className="button button-quiet" href="/programs/electrical-engineering">
+            Inspect the complete engineering publication →
           </Link>
         </section>
       </main>
 
+      {/* Footer */}
       <footer id="catalog-footer">
         <div className="footer-brand">
           <a className="brand" href="#top">
-            <span className="brand-mark" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span>
-              <strong>Course Atlas</strong>
-              <small>executable learning paths</small>
-            </span>
+            <strong>Course Atlas</strong> — <small>Self-Study Degree Catalog</small>
           </a>
-          <p>
-            Programs are immutable publications loaded by one universal engine.
-            Their calendars, courses, assessments and resources remain data.
+          <p style={{ color: "#666", marginTop: "6px" }}>
+            Programs are immutable publications loaded by one universal engine. Their calendars, courses, assessments and resources remain data.
           </p>
         </div>
         <div className="provenance">
-          <span>Published now</span>
-          <div>
-            {programs.map((program) => (
-              <Link key={program.programId} href={`/programs/${program.slug}`}>
-                {program.title} <span aria-hidden="true">→</span>
+          <strong>Available Degrees:</strong>
+          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "8px" }}>
+            {programs.map((p) => (
+              <Link key={p.programId} href={`/programs/${p.slug}`}>
+                {p.title} →
               </Link>
             ))}
           </div>
         </div>
-        <div className="footer-meta">
+        <div className="footer-meta" style={{ marginTop: "20px" }}>
           <span>Course Atlas · Universal program catalog</span>
           <span>What to learn · Where · Work · Evidence</span>
         </div>
