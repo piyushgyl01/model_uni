@@ -271,7 +271,7 @@ export default function ProgramPage({
 
           <div style={{ borderBottom: "2px solid #222", paddingBottom: "15px", marginBottom: "20px" }}>
             <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#555" }}>
-              {program.kind} · Independent-study pathway v{programVersion.version}
+              {program.kind} · Published curriculum v{programVersion.version}
             </p>
             <h1 id="program-title" style={{ margin: "6px 0 10px 0" }}>{programVersion.title}</h1>
             <p className="hero-lede" style={{ fontSize: "1.05rem", color: "#333" }}>{programVersion.summary}</p>
