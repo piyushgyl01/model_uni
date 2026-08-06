@@ -561,13 +561,38 @@ export default function ProgramPage({
           </div>
         </section>
 
-        {/* SECTION 6: Resource Library & Provenance */}
         <section className="section library-section universal-resource-library" id="resources" style={{ marginTop: "40px" }}>
-          <h3>Resource & Permissions Notice</h3>
+          <span className="section-index">06 / Resource Library</span>
+          <h2 id="resources-title">Resource library</h2>
           <p style={{ fontSize: "0.85rem", color: "#555" }}>
             Access is not the same as permission. All listed courses and learning units link directly to free open educational resources.
           </p>
+          <div className="universal-resource-list" style={{ marginTop: "10px", fontSize: "0.85rem" }}>
+            {[...resourceVersionsById.values()].map((version) => (
+              <div key={version.id} style={{ margin: "4px 0" }}>
+                <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
+                  <strong>{version.title}</strong>
+                </a>
+              </div>
+            ))}
+          </div>
         </section>
+
+        {bundle.provenance.length > 0 && (
+          <section className="section provenance universal-provenance" id="provenance" style={{ marginTop: "40px" }}>
+            <span className="section-index">07 / Provenance</span>
+            <h2 id="provenance-title">Sources and provenance</h2>
+            <div className="universal-provenance-list" style={{ marginTop: "10px", fontSize: "0.85rem" }}>
+              {bundle.provenance.map((evidence) => (
+                <div key={evidence.id} style={{ margin: "6px 0" }}>
+                  <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">
+                    <strong>{evidence.sourceTitle}</strong> ↗
+                  </a>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
