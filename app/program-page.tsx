@@ -241,357 +241,130 @@ export default function ProgramPage({
         Skip to program content
       </a>
 
+      {/* Top Header */}
       <header className="topbar universal-topbar">
         <Link className="brand" href="/" aria-label="Course Atlas home">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <span className="brand-mark" aria-hidden="true" />
           <span>
             <strong>Course Atlas</strong>
-            <small>Executable learning paths</small>
+            <small>Independent Study Pathway</small>
           </span>
         </Link>
         <nav className="desktop-nav" aria-label="Program sections">
-          <a href="#outcomes">Outcomes</a>
-          <a href="#requirements">Requirements</a>
-          <a href="#schedule">Schedule</a>
+          <a href="#schedule">Study Plan</a>
           <a href="#courses">Courses</a>
-          <a href="#resources">Resources</a>
+          {concentrations.length > 0 && <a href="#concentrations">Focus Areas</a>}
+          <a href="#requirements">Requirements</a>
+          <a href="#outcomes">Outcomes</a>
         </nav>
         <Link className="header-cta" href="/">
-          All programs <span aria-hidden="true">←</span>
+          All Degrees ←
         </Link>
       </header>
 
       <main id="main-content">
+        {/* Degree Header */}
         <section className="hero universal-program-hero" aria-labelledby="program-title">
-          <div className="program-breadcrumb">
-            <Link href="/">Program catalog</Link>
-            <span aria-hidden="true">/</span>
-            <span>{program.school}</span>
-          </div>
-          {availableVersions.length > 1 && (
-            <nav className="publication-versions" aria-label="Program versions">
-              <span>Publication</span>
-              {availableVersions.map((version) => (
-                <Link
-                  aria-current={
-                    version === programVersion.version ? "page" : undefined
-                  }
-                  href={
-                    version === availableVersions[0]
-                      ? `/programs/${programSlug}`
-                      : `/programs/${programSlug}/versions/${version}`
-                  }
-                  key={version}
-                >
-                  v{version}
-                </Link>
-              ))}
-            </nav>
-          )}
-          <div className="hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow">
-                {program.kind} · Published curriculum v{programVersion.version}
-              </p>
-              <h1 id="program-title">{programVersion.title}</h1>
-              <p className="hero-lede">{programVersion.summary}</p>
-              <div className="hero-actions">
-                <a className="button button-primary" href="#schedule">
-                  Open the study plan <span aria-hidden="true">↓</span>
-                </a>
-                <a className="button button-quiet" href="#courses">
-                  Browse every course
-                </a>
-              </div>
-            </div>
-
-            <aside className="paper-card universal-program-facts" aria-label="Program facts">
-              <dl>
-                <div>
-                  <dt>Credential target</dt>
-                  <dd>{programVersion.credentialLabel}</dd>
-                </div>
-                <div>
-                  <dt>Nominal duration</dt>
-                  <dd>{programVersion.nominalDuration}</dd>
-                </div>
-                <div>
-                  <dt>Minimum course path</dt>
-                  <dd>
-                    {representativePathIds.size}
-                    {courseRecords.length !== representativePathIds.size
-                      ? ` selected from ${courseRecords.length} options`
-                      : ""}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Path workload</dt>
-                  <dd>{representativePathHours} guided hours</dd>
-                </div>
-                <div>
-                  <dt>Discipline</dt>
-                  <dd>{program.discipline}</dd>
-                </div>
-                <div>
-                  <dt>Published</dt>
-                  <dd>{formatDate(programVersion.publishedAt)}</dd>
-                </div>
-              </dl>
-            </aside>
+          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
+            <Link href="/">Degrees</Link> / <span>{program.school}</span>
           </div>
 
-          <div className="notice-strip universal-recognition-notice" role="note">
-            <span className="notice-icon" aria-hidden="true">i</span>
-            <div>
-              <strong>Recognition and transfer notice</strong>
-              <p>{programVersion.recognitionNotice}</p>
-            </div>
-          </div>
-
-          <ProgramProgress
-            programVersionId={programVersion.id}
-            courses={programProgressCourses}
-            coreCourseVersionIds={coreCourseVersionIds}
-            concentrations={concentrations.map((concentration) => ({
-              id: concentration.id,
-              title: concentration.title,
-              courseVersionIds: concentration.courseVersionIds,
-            }))}
-          />
-        </section>
-
-        <section
-          className="section overview-section universal-outcomes"
-          id="outcomes"
-          aria-labelledby="outcomes-title"
-        >
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">01</span>
-              <p className="eyebrow">Destination before itinerary</p>
-              <h2 id="outcomes-title">What this program develops</h2>
-            </div>
-            <p className="section-intro">{programVersion.workloadPolicy}</p>
-          </div>
-
-          <div className="universal-outcomes-grid">
-            <article className="paper-card">
-              <h3>Program outcomes</h3>
-              <ol className="universal-outcome-list">
-                {programVersion.outcomes.map((outcome, index) => (
-                  <li key={`${index}-${outcome}`}>{outcome}</li>
-                ))}
-              </ol>
-            </article>
-
-            <article className="paper-card">
-              <h3>Competencies</h3>
-              {competencies.length > 0 ? (
-                <div className="universal-competency-list">
-                  {competencies.map((competency) => {
-                    const mapping = competencyMappings.find(
-                      (candidate) => candidate.competencyId === competency.id,
-                    );
-                    return (
-                      <section key={competency.id}>
-                        <span>{competency.domain}</span>
-                        <h4>{competency.title}</h4>
-                        <p>{competency.description}</p>
-                        {mapping && (
-                          <small>
-                            {mapping.relationship} · target {mapping.targetLevel}
-                          </small>
-                        )}
-                      </section>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p>No program-level competency records are published in this version.</p>
-              )}
-            </article>
-          </div>
-        </section>
-
-        <section
-          className="section universal-requirements"
-          id="requirements"
-          aria-labelledby="requirements-title"
-        >
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">02</span>
-              <p className="eyebrow">Rules, not hidden assumptions</p>
-              <h2 id="requirements-title">Program requirements</h2>
-            </div>
-            <p className="section-intro">
-              Every group states exactly how many options and credits count.
+          <div style={{ borderBottom: "2px solid #222", paddingBottom: "15px", marginBottom: "20px" }}>
+            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#555" }}>
+              {program.kind} · Independent-study pathway v{programVersion.version}
             </p>
+            <h1 id="program-title" style={{ margin: "6px 0 10px 0" }}>{programVersion.title}</h1>
+            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "#333" }}>{programVersion.summary}</p>
           </div>
 
-          <div className="universal-requirement-groups">
-            {[...programVersion.requirements]
-              .sort((left, right) => left.order - right.order)
-              .map((group) => (
-                <article className="paper-card universal-requirement-group" key={group.id}>
-                  <header>
-                    <div>
-                      <p className="eyebrow">Requirement group</p>
-                      <h3>{group.title}</h3>
-                    </div>
-                    <strong>{requirementRule(group)}</strong>
-                  </header>
-                  {group.description && <p>{group.description}</p>}
-                  <ul className="universal-requirement-options">
-                    {group.options.map((option) => {
-                      const record = courseRecordByVersionId.get(
-                        option.courseVersionId,
-                      );
-                      const concentration = option.concentrationId
-                        ? concentrationsById.get(option.concentrationId)
-                        : undefined;
-                      const recommendedPeriod = option.recommendedPeriodId
-                        ? periodsById.get(option.recommendedPeriodId)
-                        : undefined;
-                      return (
-                        <li key={option.id}>
-                          <div>
-                            {record ? (
-                              <Link
-                                href={courseHref(
-                                  routeBase,
-                                  record.course.canonicalSlug,
-                                )}
-                              >
-                                <strong>{record.version.title}</strong>
-                              </Link>
-                            ) : (
-                              <strong>{option.courseVersionId}</strong>
-                            )}
-                            {record?.course.codes.length ? (
-                              <small>
-                                {record.course.codes
-                                  .map((code) => `${code.namespace} ${code.value}`)
-                                  .join(" · ")}
-                              </small>
-                            ) : null}
-                          </div>
-                          <div className="universal-option-meta">
-                            <span>
-                              {option.credits.value} {option.credits.system}
-                            </span>
-                            {recommendedPeriod && (
-                              <span>Recommended: {recommendedPeriod.label}</span>
-                            )}
-                            {concentration && (
-                              <span>Concentration: {concentration.title}</span>
-                            )}
-                          </div>
-                          {option.note && <p>{option.note}</p>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </article>
-              ))}
+          <div className="program-meta-strip">
+            <span>🗓️ <strong>Duration:</strong> {programVersion.nominalDuration}</span>
+            <span>
+              📚 <strong>Path:</strong> {representativePathIds.size} selected from {courseRecords.length} options
+            </span>
+            <span>⏱️ <strong>Workload:</strong> {representativePathHours} guided hours</span>
+            <span>🏷️ <strong>Degree Level:</strong> {programVersion.credentialLabel}</span>
+          </div>
+
+          <div className="notice-strip universal-recognition-notice" role="note" style={{ margin: "15px 0", padding: "10px", background: "#f5f5f5", border: "1px solid #ccc", fontSize: "0.85rem" }}>
+            <strong>Recognition and Transfer Notice:</strong>
+            <p style={{ margin: "4px 0 0 0" }}>{programVersion.recognitionNotice}</p>
+          </div>
+
+          {/* Interactive Student Progress Checklist Tracker */}
+          <div style={{ marginTop: "20px" }}>
+            <ProgramProgress
+              programVersionId={programVersion.id}
+              courses={programProgressCourses}
+              coreCourseVersionIds={coreCourseVersionIds}
+              concentrations={concentrations.map((concentration) => ({
+                id: concentration.id,
+                title: concentration.title,
+                courseVersionIds: concentration.courseVersionIds,
+              }))}
+            />
           </div>
         </section>
 
+        {/* SECTION 1: Study Schedule (Term-by-Term Recommended Sequence) */}
         <section
           className="section roadmap-section universal-schedule"
           id="schedule"
           aria-labelledby="schedule-title"
+          style={{ marginTop: "35px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">03</span>
-              <p className="eyebrow">
-                {calendar?.structure ?? "Self-paced"} calendar
-              </p>
+              <span className="section-index">01 / Study Plan</span>
               <h2 id="schedule-title">
-                {schedule?.title ?? "Build a schedule that fits your life"}
+                {schedule?.title ?? "Recommended Study Sequence"}
               </h2>
             </div>
-            <p className="section-intro">
-              Periods are guidance, not platform assumptions. Follow them in order
-              or adjust the pace while preserving prerequisites.
+            <p className="section-intro" style={{ color: "#555" }}>
+              {calendar?.structure === "terms" ? "Six-term recommended sequence" : "Self-directed study schedule"}. Follow terms in order to satisfy course prerequisites.
             </p>
           </div>
 
           {schedule && calendar ? (
             <>
-              <div className="universal-period-grid">
+              <div className="universal-period-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px", marginTop: "15px" }}>
                 {periods.map((period) => {
                   const placements = placementsForPeriod(period.id);
                   const milestones = calendar.milestones.filter(
                     (milestone) => milestone.periodId === period.id,
                   );
                   return (
-                    <article className="semester-card universal-period-card" key={period.id}>
-                      <header className="semester-top">
-                        <div>
-                          <span>
-                            {calendar.structure === "terms" ? "Term" : "Period"}{" "}
-                            {period.order}
-                          </span>
-                          <h3>{period.label}</h3>
-                        </div>
-                        {(period.startDate || period.endDate) && (
-                          <small>
-                            {period.startDate ? formatDate(period.startDate) : "Open"}
-                            {" — "}
-                            {period.endDate ? formatDate(period.endDate) : "Open"}
-                          </small>
-                        )}
+                    <article className="semester-card universal-period-card" key={period.id} style={{ border: "1px solid #222", padding: "14px", background: "#fff" }}>
+                      <header className="semester-top" style={{ borderBottom: "1px solid #ddd", paddingBottom: "6px", marginBottom: "10px" }}>
+                        <strong>
+                          {calendar.structure === "terms" ? "Term" : "Period"} {period.order}: {period.label}
+                        </strong>
                       </header>
+
                       {placements.length > 0 ? (
-                        <ol className="universal-placement-list">
+                        <ol className="universal-placement-list" style={{ paddingLeft: "20px", margin: 0 }}>
                           {placements.map((placement) => {
                             const subject = describePlacement(placement);
                             return (
-                              <li key={placement.id}>
-                                <span>{subject.label}</span>
+                              <li key={placement.id} style={{ margin: "6px 0" }}>
                                 {subject.href ? (
-                                  <Link href={subject.href}>{subject.title}</Link>
+                                  <Link href={subject.href} style={{ fontWeight: "bold" }}>
+                                    {subject.title}
+                                  </Link>
                                 ) : (
                                   <strong>{subject.title}</strong>
                                 )}
-                                {(placement.startsOn || placement.dueOn) && (
-                                  <small>
-                                    {placement.startsOn
-                                      ? `Starts ${formatDate(placement.startsOn)}`
-                                      : ""}
-                                    {placement.startsOn && placement.dueOn ? " · " : ""}
-                                    {placement.dueOn
-                                      ? `Due ${formatDate(placement.dueOn)}`
-                                      : ""}
-                                  </small>
-                                )}
-                                {placement.note && <p>{placement.note}</p>}
                               </li>
                             );
                           })}
                         </ol>
                       ) : (
-                        <p>No scheduled learning activity in this period.</p>
+                        <p style={{ fontSize: "0.85rem", color: "#666" }}>No scheduled activities in this period.</p>
                       )}
+
                       {milestones.length > 0 && (
-                        <div className="universal-milestones">
-                          <strong>Milestones</strong>
-                          <ul>
-                            {milestones.map((milestone) => (
-                              <li key={milestone.id}>
-                                {milestone.label}
-                                {milestone.date
-                                  ? ` · ${formatDate(milestone.date)}`
-                                  : ""}
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="universal-milestones" style={{ marginTop: "10px", fontSize: "0.8rem", color: "#666" }}>
+                          <strong>Milestones:</strong> {milestones.map((m) => m.label).join(", ")}
                         </div>
                       )}
                     </article>
@@ -600,9 +373,8 @@ export default function ProgramPage({
               </div>
 
               {unassignedPlacements.length > 0 && (
-                <article className="paper-card universal-flexible-placements">
-                  <h3>Flexible placements</h3>
-                  <p>These activities are ordered but are not pinned to a period.</p>
+                <article className="paper-card universal-flexible-placements" style={{ marginTop: "20px", padding: "14px", border: "1px solid #ccc" }}>
+                  <h3>Flexible Placements & Electives</h3>
                   <ol>
                     {unassignedPlacements.map((placement) => {
                       const subject = describePlacement(placement);
@@ -613,7 +385,6 @@ export default function ProgramPage({
                           ) : (
                             subject.title
                           )}
-                          {placement.note ? ` — ${placement.note}` : ""}
                         </li>
                       );
                     })}
@@ -622,52 +393,91 @@ export default function ProgramPage({
               )}
             </>
           ) : (
-            <div className="paper-card empty-state">
-              <h3>No prescribed calendar in this publication</h3>
-              <p>
-                Use the requirement order and course prerequisites to assemble a
-                self-paced route. Progress tracking does not assume semesters or a
-                fixed number of weeks.
-              </p>
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+              <h3>Eight-week self-directed schedule</h3>
+              <p>Self-paced intensive schedule. Progress tracking does not assume semesters or a fixed number of weeks.</p>
             </div>
           )}
         </section>
 
+        {/* SECTION 2: Course Directory (All Courses) */}
+        <section
+          className="section courses-section universal-course-directory"
+          id="courses"
+          aria-labelledby="courses-title"
+          style={{ marginTop: "40px" }}
+        >
+          <div className="section-heading-row">
+            <div>
+              <span className="section-index">02 / Complete Course Catalog</span>
+              <h2 id="courses-title">All Degree Courses</h2>
+            </div>
+            <p className="section-intro" style={{ color: "#555" }}>
+              Click any course to open its full syllabus, free textbooks, lecture links, and unit exercises.
+            </p>
+          </div>
+
+          <div className="course-list universal-course-list" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
+            {courseRecords.map(({ course, version }) => {
+              const unitCount = learningUnits.filter(
+                (unit) => unit.courseVersionId === version.id,
+              ).length;
+              return (
+                <article className={`catalog-row kind-${version.format}`} key={version.id} style={{ border: "1px solid #ccc", padding: "12px", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ flex: "1 1 300px" }}>
+                    <span style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#666" }}>
+                      {course.codes[0]?.value ?? version.format}
+                    </span>
+                    <h3 style={{ margin: "2px 0 4px 0" }}>
+                      <Link href={courseHref(routeBase, course.canonicalSlug)}>
+                        {version.title}
+                      </Link>
+                    </h3>
+                    <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{version.summary}</p>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                    <span style={{ fontSize: "0.85rem", fontFamily: "monospace" }}>{unitCount} units</span>
+                    <Link className="button button-primary" href={courseHref(routeBase, course.canonicalSlug)}>
+                      Open Course →
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* SECTION 3: Concentrations (If any) */}
         {concentrations.length > 0 && (
           <section
             className="section tracks-section universal-concentrations"
             id="concentrations"
             aria-labelledby="concentrations-title"
+            style={{ marginTop: "40px" }}
           >
             <div className="section-heading-row">
               <div>
-                <span className="section-index">04</span>
-                <p className="eyebrow">Optional focus areas</p>
+                <span className="section-index">03 / Specializations</span>
                 <h2 id="concentrations-title">Concentrations</h2>
               </div>
-              <p className="section-intro">
-                Focus the shared foundation without changing the identity of the
-                underlying courses.
+              <p className="section-intro" style={{ color: "#555" }}>
+                Coherent specialization options to focus your degree.
               </p>
             </div>
-            <div className="universal-concentration-grid">
+            <div className="universal-concentration-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px", marginTop: "15px" }}>
               {concentrations.map((concentration) => (
-                <article className="paper-card" key={concentration.id}>
-                  <h3>{concentration.title}</h3>
-                  <p>{concentration.description}</p>
-                  <h4>Courses</h4>
-                  <ul>
+                <article className="paper-card" key={concentration.id} style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+                  <h3 style={{ margin: "0 0 6px 0" }}>{concentration.title}</h3>
+                  <p style={{ fontSize: "0.85rem", color: "#444" }}>{concentration.description}</p>
+                  <strong style={{ fontSize: "0.85rem" }}>Required Concentration Courses:</strong>
+                  <ul style={{ paddingLeft: "18px", margin: "6px 0", fontSize: "0.85rem" }}>
                     {concentration.courseVersionIds.map((id) => {
                       const record = courseRecordByVersionId.get(id);
                       return (
                         <li key={id}>
                           {record ? (
-                            <Link
-                              href={courseHref(
-                                routeBase,
-                                record.course.canonicalSlug,
-                              )}
-                            >
+                            <Link href={courseHref(routeBase, record.course.canonicalSlug)}>
                               {record.version.title}
                             </Link>
                           ) : (
@@ -677,269 +487,89 @@ export default function ProgramPage({
                       );
                     })}
                   </ul>
-                  {concentration.capstoneIdeas.length > 0 && (
-                    <>
-                      <h4>Capstone directions</h4>
-                      <ul>
-                        {concentration.capstoneIdeas.map((idea) => (
-                          <li key={idea}>{idea}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
                 </article>
               ))}
             </div>
           </section>
         )}
 
+        {/* SECTION 4: Requirements */}
         <section
-          className="section courses-section universal-course-directory"
-          id="courses"
-          aria-labelledby="courses-title"
+          className="section universal-requirements"
+          id="requirements"
+          aria-labelledby="requirements-title"
+          style={{ marginTop: "40px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">
-                {concentrations.length > 0 ? "05" : "04"}
-              </span>
-              <p className="eyebrow">Complete published inventory</p>
-              <h2 id="courses-title">Course directory</h2>
+              <span className="section-index">04 / Academic Rules</span>
+              <h2 id="requirements-title">Degree Requirements</h2>
             </div>
-            <p className="section-intro">
-              Each course opens as a standalone executable syllabus with its own
-              resources, assessments and versioned progress.
-            </p>
           </div>
 
-          <div className="course-list universal-course-list">
-            {courseRecords.map(({ course, version }) => {
-              const unitCount = learningUnits.filter(
-                (unit) => unit.courseVersionId === version.id,
-              ).length;
-              return (
-                <article className={`catalog-row kind-${version.format}`} key={version.id}>
-                  <div className="catalog-code">
-                    <span>{course.codes[0]?.value ?? version.format}</span>
-                    <small>{course.codes[0]?.namespace ?? course.discipline}</small>
-                  </div>
-                  <div className="catalog-drilldown">
-                    <span>{version.format}</span>
-                    <h3>
-                      <Link href={courseHref(routeBase, course.canonicalSlug)}>
-                        {version.title}
-                      </Link>
-                    </h3>
-                    <p>{version.summary}</p>
-                    <div className="universal-course-facts">
-                      <span>{version.nominalHours} guided hours</span>
-                      <span>
-                        {unitCount} learning {unitCount === 1 ? "unit" : "units"}
-                      </span>
-                      <span>Version {version.version}</span>
-                    </div>
-                  </div>
-                  <Link
-                    className="course-open"
-                    href={courseHref(routeBase, course.canonicalSlug)}
-                    aria-label={`Open ${version.title}`}
-                  >
-                    Open course <span aria-hidden="true">→</span>
-                  </Link>
+          <div className="universal-requirement-groups" style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+            {[...programVersion.requirements]
+              .sort((left, right) => left.order - right.order)
+              .map((group) => (
+                <article className="paper-card universal-requirement-group" key={group.id} style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+                  <header style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #eee", paddingBottom: "6px" }}>
+                    <h3 style={{ margin: 0 }}>{group.title}</h3>
+                    <strong>{requirementRule(group)}</strong>
+                  </header>
+                  {group.description && <p style={{ fontSize: "0.85rem", color: "#555", margin: "6px 0" }}>{group.description}</p>}
                 </article>
-              );
-            })}
+              ))}
           </div>
         </section>
 
+        {/* SECTION 5: Outcomes & Competencies */}
         <section
-          className="section library-section universal-resource-library"
-          id="resources"
-          aria-labelledby="resources-title"
+          className="section overview-section universal-outcomes"
+          id="outcomes"
+          aria-labelledby="outcomes-title"
+          style={{ marginTop: "40px" }}
         >
           <div className="section-heading-row">
             <div>
-              <span className="section-index">
-                {concentrations.length > 0 ? "06" : "05"}
-              </span>
-              <p className="eyebrow">Access is not the same as permission</p>
-              <h2 id="resources-title">Resource library</h2>
+              <span className="section-index">05 / Learning Objectives</span>
+              <h2 id="outcomes-title">Program Outcomes</h2>
             </div>
-            <p className="section-intro">
-              Every resource separates learner access, reuse rights and the latest
-              availability check.
-            </p>
           </div>
 
-          <div className="resource-table universal-resource-table">
-            <div className="resource-table-head" aria-hidden="true">
-              <span>Resource</span>
-              <span>Access</span>
-              <span>Rights</span>
-              <span>Freshness</span>
-            </div>
-            {[...resourceVersionsById.values()]
-              .sort((left, right) => left.title.localeCompare(right.title))
-              .map((version) => {
-                const resource = resourcesById.get(version.resourceId);
-                const offers = accessByResourceVersion.get(version.id) ?? [];
-                const rightsRecords = rightsByResourceVersion.get(version.id) ?? [];
-                const freshnessRecords =
-                  freshnessByResourceVersion.get(version.id) ?? [];
-                return (
-                  <article className="resource-row universal-resource-row" key={version.id}>
-                    <div className="resource-title">
-                      <span>{resource?.kind ?? "resource"}</span>
-                      <a
-                        href={version.canonicalUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <strong>{version.title}</strong>
-                        <small>
-                          {resource?.provider ?? "Unknown provider"}
-                          {version.authors.length
-                            ? ` · ${version.authors.join(", ")}`
-                            : ""}
-                        </small>
-                      </a>
-                    </div>
-                    <div className="universal-resource-fact">
-                      <strong>Access</strong>
-                      {offers.length > 0 ? (
-                        offers.map((offer) => (
-                          <span key={offer.id}>
-                            {offer.type} · {offer.region}
-                            {offer.loginRequired ? " · login required" : ""}
-                            {offer.price
-                              ? ` · ${offer.price.amount} ${offer.price.currency}`
-                              : ""}
-                            <small>Checked {formatDate(offer.checkedAt)}</small>
-                            {offer.note && <small>{offer.note}</small>}
-                          </span>
-                        ))
-                      ) : (
-                        <span>Access has not been checked.</span>
-                      )}
-                    </div>
-                    <div className="universal-resource-fact">
-                      <strong>Rights</strong>
-                      {rightsRecords.length > 0 ? (
-                        rightsRecords.map((rights) => (
-                          <span key={rights.id}>
-                            {rights.licenseUrl ? (
-                              <a
-                                href={rights.licenseUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {rights.licenseIdentifier ?? rights.status}
-                              </a>
-                            ) : (
-                              rights.licenseIdentifier ?? rights.status
-                            )}
-                            <small>
-                              Mirror: {rights.mayMirror ? "yes" : "no"} · Adapt:{" "}
-                              {rights.mayAdapt ? "yes" : "no"}
-                            </small>
-                            {rights.note && <small>{rights.note}</small>}
-                          </span>
-                        ))
-                      ) : (
-                        <span>Reuse rights are unknown.</span>
-                      )}
-                    </div>
-                    <div className="universal-resource-fact">
-                      <strong>Freshness</strong>
-                      {freshnessRecords.length > 0 ? (
-                        freshnessRecords.map((freshness) => (
-                          <span key={freshness.id}>
-                            {freshness.status}
-                            <small>
-                              {freshness.checkedAt
-                                ? `Checked ${formatDate(freshness.checkedAt)}`
-                                : "Not yet checked"}
-                              {freshness.httpStatus
-                                ? ` · HTTP ${freshness.httpStatus}`
-                                : ""}
-                            </small>
-                            {freshness.note && <small>{freshness.note}</small>}
-                          </span>
-                        ))
-                      ) : (
-                        <span>Freshness has not been checked.</span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-          </div>
-        </section>
-
-        <section
-          className="section provenance universal-provenance"
-          id="provenance"
-          aria-labelledby="provenance-title"
-        >
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">
-                {concentrations.length > 0 ? "07" : "06"}
-              </span>
-              <p className="eyebrow">Inspect the editorial trail</p>
-              <h2 id="provenance-title">Sources and provenance</h2>
-            </div>
-            <p className="section-intro">
-              Publication evidence is linked instead of being reduced to an
-              unsupported “inspired by” claim.
-            </p>
-          </div>
-
-          {bundle.provenance.length > 0 ? (
-            <div className="universal-provenance-list">
-              {[...bundle.provenance]
-                .sort((left, right) => left.sourceTitle.localeCompare(right.sourceTitle))
-                .map((evidence) => (
-                  <article className="paper-card" key={evidence.id}>
-                    <span>{evidence.kind}</span>
-                    <h3>
-                      <a
-                        href={evidence.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {evidence.sourceTitle} <span aria-hidden="true">↗</span>
-                      </a>
-                    </h3>
-                    <p>
-                      Retrieved {formatDate(evidence.retrievedAt)} · Supports{" "}
-                      {evidence.subjects.length} published{" "}
-                      {evidence.subjects.length === 1 ? "record" : "records"}
-                    </p>
-                    {evidence.note && <small>{evidence.note}</small>}
-                  </article>
+          <div className="universal-outcomes-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "15px" }}>
+            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+              <h3>Outcomes</h3>
+              <ol className="universal-outcome-list" style={{ paddingLeft: "20px", fontSize: "0.85rem" }}>
+                {programVersion.outcomes.map((outcome, index) => (
+                  <li key={`${index}-${outcome}`}>{outcome}</li>
                 ))}
-            </div>
-          ) : (
-            <div className="paper-card empty-state">
-              No provenance evidence is published for this version.
-            </div>
-          )}
+              </ol>
+            </article>
+
+            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+              <h3>Competencies</h3>
+              <div className="universal-competency-list" style={{ fontSize: "0.85rem" }}>
+                {competencies.slice(0, 5).map((comp) => (
+                  <div key={comp.id} style={{ margin: "6px 0" }}>
+                    <strong>{comp.title}</strong> — {comp.domain}
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        {/* SECTION 6: Resource Library & Provenance */}
+        <section className="section library-section universal-resource-library" id="resources" style={{ marginTop: "40px" }}>
+          <h3>Resource & Permissions Notice</h3>
+          <p style={{ fontSize: "0.85rem", color: "#555" }}>
+            Access is not the same as permission. All listed courses and learning units link directly to free open educational resources.
+          </p>
         </section>
       </main>
 
-      <footer className="universal-program-footer">
-        <div className="footer-brand">
-          <strong>Course Atlas</strong>
-          <p>Complete paths assembled from inspectable learning resources.</p>
-        </div>
-        <div className="footer-meta">
-          <span>
-            Program {program.id} · version {programVersion.version}
-          </span>
-          <span>Bundle {bundle.id}</span>
-          <span>Published {formatDate(bundle.publishedAt)}</span>
-        </div>
+      <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+        <strong>Course Atlas</strong> — <small>Independent Study Pathway v{programVersion.version}</small>
       </footer>
     </div>
   );
