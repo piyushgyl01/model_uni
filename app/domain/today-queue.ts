@@ -6,6 +6,7 @@ import type {
   PublishedProgramBundle,
 } from "./catalog";
 import type { EnrollmentConfig, StoredProgramProgress } from "../progress-storage";
+import { evaluateAllCoursePrerequisites } from "./prerequisite-evaluator";
 
 export interface TodayStudyBlock {
   readonly unitId: LearningUnitId;
@@ -155,10 +156,15 @@ export function calculateTodayQueue(
     }
   }
 
-  // Identify active period / current position
+  // Evaluate prerequisites for all courses
+  const prereqEvaluations = evaluateAllCoursePrerequisites(bundle, progress);
+
+  // Identify active period / current position from uncompleted & unlocked units
   let currentPeriodLabel = "Term 1";
   const uncompletedUnits = allUnitsInOrder.filter(
-    (item) => !completedUnitIdsSet.has(item.unit.id),
+    (item) =>
+      !completedUnitIdsSet.has(item.unit.id) &&
+      (prereqEvaluations.get(item.courseVersion.id)?.isUnlocked ?? true),
   );
 
   if (uncompletedUnits.length > 0) {

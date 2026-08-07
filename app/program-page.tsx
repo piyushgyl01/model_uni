@@ -446,6 +446,19 @@ export default function ProgramPage({
                       </Link>
                     </h3>
                     <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{version.summary}</p>
+                    {version.prerequisites && version.prerequisites.length > 0 && (
+                      <p style={{ fontSize: "0.8rem", color: "#666", marginTop: "4px", margin: 0 }}>
+                        📌 <strong>Prerequisites:</strong>{" "}
+                        {version.prerequisites
+                          .map((prereq) => {
+                            const prereqCv = courseVersions.find(
+                              (cv) => cv.id === prereq.courseVersionId,
+                            );
+                            return prereqCv ? `${prereqCv.title} (${prereq.kind})` : prereq.courseVersionId;
+                          })
+                          .join(", ")}
+                      </p>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>

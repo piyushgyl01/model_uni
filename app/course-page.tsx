@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CourseProgress from "./course-progress";
+import { PrerequisiteLockBanner } from "./prerequisite-lock-banner";
 import type {
   CourseResourceReference,
   LearningUnit,
@@ -298,6 +299,9 @@ export default function CoursePage({
       </header>
 
       <main id="course-main">
+        {/* Prerequisite Lock Warning Banner if required prerequisites are unfulfilled */}
+        <PrerequisiteLockBanner bundle={bundle} courseVersionId={courseVersion.id} />
+
         {/* Course Header Banner */}
         <section className="hero universal-course-hero" aria-labelledby="course-title">
           <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
