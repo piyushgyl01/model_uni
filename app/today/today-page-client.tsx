@@ -10,9 +10,11 @@ interface TodayPageClientProps {
 }
 
 export function TodayPageClient({ bundles }: TodayPageClientProps) {
+  const [mounted, setMounted] = useState(false);
   const [enrolledProgramVersionIds, setEnrolledProgramVersionIds] = useState<string[]>([]);
 
   useEffect(() => {
+    setMounted(true);
     const updateEnrolled = () => {
       const store = readProgressStore();
       const enrolled = Object.entries(store.programs ?? {})
@@ -34,7 +36,7 @@ export function TodayPageClient({ bundles }: TodayPageClientProps) {
   );
 
   // If learner is enrolled in 1 or more programs, display their today dashboard(s)
-  if (enrolledBundles.length > 0) {
+  if (mounted && enrolledBundles.length > 0) {
     return (
       <div>
         {enrolledBundles.map((bundle) => (

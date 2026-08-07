@@ -5,11 +5,13 @@ import Link from "next/link";
 import { readProgressStore } from "./progress-storage";
 
 export function ActiveEnrollmentBanner() {
+  const [mounted, setMounted] = useState(false);
   const [activePrograms, setActivePrograms] = useState<
     { versionId: string; pace: number }[]
   >([]);
 
   useEffect(() => {
+    setMounted(true);
     const update = () => {
       const store = readProgressStore();
       const enrolled = Object.entries(store.programs ?? {})
@@ -29,7 +31,7 @@ export function ActiveEnrollmentBanner() {
     };
   }, []);
 
-  if (activePrograms.length === 0) return null;
+  if (!mounted || activePrograms.length === 0) return null;
 
   return (
     <div

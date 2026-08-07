@@ -18,10 +18,10 @@ interface TodayDashboardProps {
 export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
   const programVersionId = bundle.programVersion.id;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [queue, setQueue] = useState<TodayQueueResult>(() => {
-    const stored = getStoredProgram(programVersionId);
-    return calculateTodayQueue(bundle, stored);
-  });
+  const [mounted, setMounted] = useState(false);
+  const [queue, setQueue] = useState<TodayQueueResult>(() =>
+    calculateTodayQueue(bundle, undefined),
+  );
 
   const refreshQueue = () => {
     const stored = getStoredProgram(programVersionId);
@@ -29,6 +29,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
   };
 
   useEffect(() => {
+    setMounted(true);
     refreshQueue();
     const handleProgressChange = () => refreshQueue();
     window.addEventListener(PROGRESS_EVENT, handleProgressChange);
@@ -71,7 +72,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
     window.dispatchEvent(new Event(PROGRESS_EVENT));
   };
 
-  if (!queue.isEnrolled) {
+  if (!mounted || !queue.isEnrolled) {
     return (
       <div
         style={{
