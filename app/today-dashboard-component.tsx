@@ -8,6 +8,7 @@ import {
   getStoredProgram,
   PROGRESS_EVENT,
   readLocalCourseUnits,
+  readLocalUnitEvidence,
   writeLocalCourseUnits,
 } from "./progress-storage";
 
@@ -230,37 +231,58 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        {queue.blocks.map((block, index) => (
-          <div
-            key={block.unitId}
-            style={{
-              border: block.completed ? "1px solid #aaa" : "2px solid #000",
-              background: block.completed ? "#f9f9f9" : "#fff",
-              padding: "0.85rem",
-              opacity: block.completed ? 0.75 : 1,
-            }}
-          >
+        {queue.blocks.map((block, index) => {
+          const evidence = readLocalUnitEvidence(
+            programVersionId,
+            block.courseVersionId as any,
+            block.unitId,
+          );
+          return (
             <div
+              key={block.unitId}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "0.5rem",
-                flexWrap: "wrap",
+                border: block.completed ? "1px solid #aaa" : "2px solid #000",
+                background: block.completed ? "#f9f9f9" : "#fff",
+                padding: "0.85rem",
+                opacity: block.completed ? 0.75 : 1,
               }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#555" }}>
-                  Block {index + 1} of {queue.blocks.length} · {block.courseTitle} ({block.periodLabel})
-                </div>
-                <h4 style={{ margin: "0.2rem 0 0.4rem", fontSize: "1.1rem" }}>
-                  <a
-                    href={`/programs/${bundle.program.canonicalSlug}/courses/${block.courseSlug}`}
-                    style={{ textDecoration: block.completed ? "line-through" : "underline" }}
-                  >
-                    Unit {block.unitOrder}: {block.unitTitle}
-                  </a>
-                </h4>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "0.5rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#555" }}>
+                    Block {index + 1} of {queue.blocks.length} · {block.courseTitle} ({block.periodLabel})
+                  </div>
+                  <h4 style={{ margin: "0.2rem 0 0.4rem", fontSize: "1.1rem" }}>
+                    <a
+                      href={`/programs/${bundle.program.canonicalSlug}/courses/${block.courseSlug}`}
+                      style={{ textDecoration: block.completed ? "line-through" : "underline" }}
+                    >
+                      Unit {block.unitOrder}: {block.unitTitle}
+                    </a>
+                    {evidence?.textOrUrl && (
+                      <span
+                        style={{
+                          marginLeft: "0.5rem",
+                          fontSize: "0.75rem",
+                          padding: "0.1rem 0.4rem",
+                          background: "#e6ffe6",
+                          color: "#006600",
+                          border: "1px solid #008800",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        📎 Proof Attached
+                      </span>
+                    )}
+                  </h4>
                 <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
                   <strong>Topic:</strong> {block.unitTopic} · ⏱️ ~{block.estimatedHours} hrs ({block.unitKind})
                 </div>
@@ -295,7 +317,8 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
               </label>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
 
       <EnrollmentModal

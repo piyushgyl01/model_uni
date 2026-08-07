@@ -14,8 +14,15 @@ import type {
 
 export const PROGRESS_EVENT = "course-atlas-progress-v2:changed";
 
+export interface StoredUnitEvidence {
+  readonly unitId: string;
+  readonly textOrUrl: string;
+  readonly updatedAt: string;
+}
+
 export interface StoredCourseProgress {
   readonly completedUnitIds?: readonly string[];
+  readonly unitEvidences?: Readonly<Record<string, StoredUnitEvidence>>;
   readonly updatedAt?: string;
   readonly pendingSync?: boolean;
 }
@@ -139,10 +146,51 @@ export function writeLocalCourseUnits(
   const program = { ...(programs[programVersionId] ?? {}) };
   const courses = { ...(program.courses ?? {}) };
   courses[courseVersionId] = {
+    ...courses[courseVersionId],
     completedUnitIds: [...completedUnitIds],
     updatedAt: new Date().toISOString(),
     pendingSync,
   };
+  programs[programVersionId] = { ...program, courses };
+  return writeProgressStore({ ...current, programs });
+}
+
+export function readLocalUnitEvidence(
+  programVersionId: ProgramVersionId,
+  courseVersionId: CourseVersionId,
+  unitId: string,
+): StoredUnitEvidence | undefined {
+  const course = getStoredProgram(programVersionId)?.courses?.[courseVersionId];
+  return course?.unitEvidences?.[unitId];
+}
+
+export function writeLocalUnitEvidence(
+  programVersionId: ProgramVersionId,
+  courseVersionId: CourseVersionId,
+  unitId: string,
+  textOrUrl: string,
+  pendingSync: boolean,
+) {
+  const current = readProgressStore();
+  const programs = { ...(current.programs ?? {}) };
+  const program = { ...(programs[programVersionId] ?? {}) };
+  const courses = { ...(program.courses ?? {}) };
+  const course = { ...(courses[courseVersionId] ?? {}) };
+  const unitEvidences = { ...(course.unitEvidences ?? {}) };
+
+  unitEvidences[unitId] = {
+    unitId,
+    textOrUrl,
+    updatedAt: new Date().toISOString(),
+  };
+
+  courses[courseVersionId] = {
+    ...course,
+    unitEvidences,
+    updatedAt: new Date().toISOString(),
+    pendingSync,
+  };
+
   programs[programVersionId] = { ...program, courses };
   return writeProgressStore({ ...current, programs });
 }
