@@ -476,6 +476,20 @@ export default function ProgramProgress({
               );
             })}
           </div>
+
+          <div style={{ marginTop: "0.65rem", textAlign: "right" }}>
+            <a
+              href="/transcript"
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+                color: "#0000ee",
+                textDecoration: "underline",
+              }}
+            >
+              View Official Academic Transcript & Portfolio →
+            </a>
+          </div>
         </div>
       )}
 
