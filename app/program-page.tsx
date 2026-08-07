@@ -302,6 +302,7 @@ export default function ProgramPage({
           {/* Interactive Student Progress Checklist Tracker */}
           <div style={{ marginTop: "20px" }}>
             <ProgramProgress
+              bundle={bundle}
               programVersionId={programVersion.id}
               courses={programProgressCourses}
               coreCourseVersionIds={coreCourseVersionIds}

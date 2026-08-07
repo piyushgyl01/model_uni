@@ -5,7 +5,9 @@ import type {
   CourseVersionId,
   LearningUnitId,
   ProgramVersionId,
+  PublishedProgramBundle,
 } from "./domain/catalog";
+import { evaluateProgramRequirements } from "./domain/validation";
 import {
   PROGRESS_STORAGE_NAMESPACE,
   type AuthenticatedProgressResponse,
@@ -47,6 +49,7 @@ export interface ProgramProgressProps {
     readonly title: string;
     readonly courseVersionIds: readonly CourseVersionId[];
   }[];
+  readonly bundle?: PublishedProgramBundle;
 }
 
 function localCompletedByCourse(
@@ -70,6 +73,7 @@ export default function ProgramProgress({
   courses,
   coreCourseVersionIds,
   concentrations,
+  bundle,
 }: ProgramProgressProps) {
   const [completedByCourse, setCompletedByCourse] = useState<
     Record<string, readonly LearningUnitId[]>
@@ -303,6 +307,22 @@ export default function ProgramProgress({
     return { totalUnits, completedUnits, completedCourses };
   }, [activeCourses, completedByCourse]);
 
+  const completedCourseVersionIds = useMemo(() => {
+    const set = new Set<CourseVersionId>();
+    for (const course of courses) {
+      const completed = completedByCourse[course.courseVersionId] ?? [];
+      if (course.unitIds.length > 0 && completed.length >= course.unitIds.length) {
+        set.add(course.courseVersionId);
+      }
+    }
+    return set;
+  }, [courses, completedByCourse]);
+
+  const requirementEvaluation = useMemo(() => {
+    if (!bundle) return undefined;
+    return evaluateProgramRequirements(bundle, completedCourseVersionIds);
+  }, [bundle, completedCourseVersionIds]);
+
   const percentage =
     totals.totalUnits > 0
       ? Math.round((totals.completedUnits / totals.totalUnits) * 100)
@@ -369,7 +389,7 @@ export default function ProgramProgress({
       />
 
       <div className="progress-label">
-        <span id="program-progress-title">Your progress in this version</span>
+        <span id="program-progress-title">Overall Degree Progress</span>
         <strong>{percentage}%</strong>
       </div>
       <div
@@ -386,10 +406,84 @@ export default function ProgramProgress({
         {totals.completedUnits} of {totals.totalUnits} learning units ·{" "}
         {totals.completedCourses} of {activeCourses.length} courses completed
       </p>
+
+      {/* REQUIREMENT-AWARE DEGREE STATUS BREAKDOWN */}
+      {bundle && requirementEvaluation && (
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "0.85rem",
+            border: "1px solid #000",
+            background: requirementEvaluation.satisfied ? "#e6ffe6" : "#f9f9f9",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <strong style={{ fontSize: "0.95rem" }}>
+              {requirementEvaluation.satisfied
+                ? "🎓 Degree Requirements Satisfied!"
+                : "📊 Degree Requirement Status"}
+            </strong>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                padding: "0.15rem 0.4rem",
+                background: requirementEvaluation.satisfied ? "#008800" : "#555",
+                color: "#fff",
+                fontWeight: "bold",
+              }}
+            >
+              {requirementEvaluation.satisfied ? "AUDIT PASSED ✓" : "IN PROGRESS"}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {bundle.programVersion.requirements.map((group) => {
+              const groupEval = requirementEvaluation.groups.find(
+                (g) => g.requirementGroupId === group.id,
+              );
+              const isSatisfied = groupEval?.satisfied ?? false;
+              const selectedCount = groupEval?.selectedCourseVersionIds.length ?? 0;
+
+              return (
+                <div
+                  key={group.id}
+                  style={{
+                    border: "1px solid #ddd",
+                    background: "#fff",
+                    padding: "0.5rem 0.65rem",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <strong>{group.title}</strong>
+                    <span style={{ color: isSatisfied ? "#008800" : "#cc0000", fontWeight: "bold" }}>
+                      {isSatisfied ? "✓ Satisfied" : `${selectedCount} / ${group.rule.minSelections} Courses`}
+                    </span>
+                  </div>
+                  {groupEval && groupEval.reasons.length > 0 && (
+                    <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.2rem" }}>
+                      {groupEval.reasons.join(" ")}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {concentrations.length > 0 && (
         <fieldset
           className="universal-progress-concentrations"
           disabled={controlsDisabled}
+          style={{ marginTop: "1rem" }}
         >
           <legend>Progress pathway</legend>
           {concentrations.map((concentration) => (
@@ -405,9 +499,8 @@ export default function ProgramProgress({
           ))}
         </fieldset>
       )}
-      <small>
-        This activity meter does not override requirement or elective rules.
-        Progress is pinned to program version {programVersionId}.
+      <small style={{ marginTop: "0.5rem", display: "block" }}>
+        Requirement audit evaluated live against published catalog contract v{programVersionId}.
       </small>
     </aside>
   );
