@@ -40,7 +40,7 @@ export default async function Home() {
         </a>
 
         <nav className="desktop-nav" aria-label="Homepage navigation">
-          <Link href="/today">Today's Queue</Link>
+          <Link href="/today">Today&apos;s Queue</Link>
           <Link href="/transcript">Transcript & Portfolio</Link>
           {homeNav.slice(1).map(([label, id]) => (
             <a key={id} href={`#${id}`}>{label}</a>

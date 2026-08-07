@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PublishedProgramBundle } from "./domain/catalog";
+import type { CourseVersionId, LearningUnitId, PublishedProgramBundle } from "./domain/catalog";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
 import { TermProgressWidget } from "./term-progress-widget";
 import {
-  getStoredProgram,
   PROGRESS_EVENT,
   readLocalCourseUnits,
   readLocalUnitEvidence,
+  readProgressStore,
   writeLocalCourseUnits,
 } from "./progress-storage";
 
@@ -25,13 +25,13 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
     calculateTodayQueue(bundle, undefined),
   );
 
-  const refreshQueue = () => {
-    const stored = getStoredProgram(programVersionId);
-    setQueue(calculateTodayQueue(bundle, stored));
-  };
-
   useEffect(() => {
-    setMounted(true);
+    const refreshQueue = () => {
+      const stored = readProgressStore().programs?.[programVersionId];
+      setQueue(calculateTodayQueue(bundle, stored));
+      setMounted(true);
+    };
+
     refreshQueue();
     const handleProgressChange = () => refreshQueue();
     window.addEventListener(PROGRESS_EVENT, handleProgressChange);
@@ -54,7 +54,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
     const currentCompleted = readLocalCourseUnits(
       programVersionId,
-      courseVersionId as any,
+      courseVersionId as CourseVersionId,
       allowedUnitIds,
     );
 
@@ -67,31 +67,40 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
     writeLocalCourseUnits(
       programVersionId,
-      courseVersionId as any,
-      nextCompleted as any,
+      courseVersionId as CourseVersionId,
+      nextCompleted as readonly LearningUnitId[],
       true,
     );
     window.dispatchEvent(new Event(PROGRESS_EVENT));
   };
 
-  if (!mounted || !queue.isEnrolled) {
+  if (!mounted) return null;
+
+  if (!queue || !queue.isEnrolled) {
     return (
       <div
         style={{
           border: "2px solid #000",
-          background: "#fff9e6",
+          background: "#fff",
           padding: "1.25rem",
-          marginBottom: "2rem",
-          boxShadow: "3px 3px 0px #000",
+          marginBottom: "1.5rem",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}
+        >
           <div>
             <h2 style={{ margin: "0 0 0.4rem 0", fontSize: "1.2rem" }}>
               ⚡ Start Studying {bundle.programVersion.title}
             </h2>
             <p style={{ margin: 0, fontSize: "0.95rem" }}>
-              Enroll to generate your daily <strong>"What do I do today?"</strong> study queue based on your weekly pace.
+              Enroll to generate your daily <strong>&quot;What do I do today?&quot;</strong> study queue based on your weekly pace.
             </p>
           </div>
           <button
@@ -197,7 +206,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
           <strong>~{queue.dailyTargetHours} hrs / day</strong>
         </div>
         <div>
-          <div style={{ fontSize: "0.8rem", color: "#555" }}>Today's Progress</div>
+          <div style={{ fontSize: "0.8rem", color: "#555" }}>Today&apos;s Progress</div>
           <strong style={{ color: allBlocksDone ? "#008800" : "#000" }}>
             {queue.completedBlocksToday} / {queue.totalBlocksToday} Blocks Completed
           </strong>
@@ -231,14 +240,14 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
       {/* Study Blocks List */}
       <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
-        📅 Today's Study Tasks ({queue.blocks.length} Units)
+        📅 Today&apos;s Study Tasks ({queue.blocks.length} Units)
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {queue.blocks.map((block, index) => {
           const evidence = readLocalUnitEvidence(
             programVersionId,
-            block.courseVersionId as any,
+            block.courseVersionId as CourseVersionId,
             block.unitId,
           );
           return (

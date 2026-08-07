@@ -50,29 +50,28 @@ export function PrerequisiteLockBanner({
     readonly CoursePrerequisiteDetail[]
   >([]);
 
-  const checkStatus = () => {
-    const store = readProgressStore().programs?.[bundle.programVersion.id];
-    const completedIds = getCompletedCourseVersionIds(bundle, store);
-    const bypassedIds = readBypassedSet();
-    const evalResult = evaluateCoursePrerequisites(
-      bundle,
-      courseVersionId,
-      completedIds,
-      bypassedIds,
-    );
-
-    if (!evalResult.isUnlocked && evalResult.missingRequired.length > 0) {
-      setMissingPrereqs(evalResult.missingRequired);
-    } else {
-      setMissingPrereqs([]);
-    }
-  };
-
   useEffect(() => {
-    setMounted(true);
-    checkStatus();
+    const update = () => {
+      const store = readProgressStore().programs?.[bundle.programVersion.id];
+      const completedIds = getCompletedCourseVersionIds(bundle, store);
+      const bypassedIds = readBypassedSet();
+      const evalResult = evaluateCoursePrerequisites(
+        bundle,
+        courseVersionId,
+        completedIds,
+        bypassedIds,
+      );
 
-    const handleEvent = () => checkStatus();
+      if (!evalResult.isUnlocked && evalResult.missingRequired.length > 0) {
+        setMissingPrereqs(evalResult.missingRequired);
+      } else {
+        setMissingPrereqs([]);
+      }
+      setMounted(true);
+    };
+
+    update();
+    const handleEvent = () => update();
     window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
     return () => {
       window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);

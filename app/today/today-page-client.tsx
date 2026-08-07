@@ -14,13 +14,13 @@ export function TodayPageClient({ bundles }: TodayPageClientProps) {
   const [enrolledProgramVersionIds, setEnrolledProgramVersionIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setMounted(true);
     const updateEnrolled = () => {
       const store = readProgressStore();
       const enrolled = Object.entries(store.programs ?? {})
         .filter(([, program]) => program.enrollment?.status === "enrolled")
         .map(([versionId]) => versionId);
       setEnrolledProgramVersionIds(enrolled);
+      setMounted(true);
     };
 
     updateEnrolled();

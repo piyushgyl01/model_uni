@@ -1136,7 +1136,7 @@ export const trackCoursePlans: Record<
       primaryResource: "Computation Structures",
       alternatives: ["RISC-V ISA Specifications", "Verilator", "Build a Modern Computer from First Principles"],
       setup: [
-        "Reuse the TRK401 RTL flow; add instruction/reference-model tests, performance workloads, and reproducible synthesis.",
+        "Reuse the digital systems RTL flow; add instruction/reference-model tests, performance workloads, and reproducible synthesis.",
         "Choose a small RISC-V core extension or accelerator architecture that can be fully verified in simulation.",
       ],
       firstAction:
@@ -1202,7 +1202,7 @@ export const trackCoursePlans: Record<
       primaryResource: "Webots User Guide",
       alternatives: ["ROS 2 Documentation", "Feedback Systems: An Introduction for Scientists and Engineers", "SciPy"],
       setup: [
-        "Reuse the TRK401 Webots/ROS 2 workspace; add maps, planners, controllers, scenario tests, and safety monitors.",
+        "Reuse the robotics Webots/ROS 2 workspace; add maps, planners, controllers, scenario tests, and safety monitors.",
         "Choose a mobile or manipulator robot whose complete mission can be evaluated in simulation.",
       ],
       firstAction:

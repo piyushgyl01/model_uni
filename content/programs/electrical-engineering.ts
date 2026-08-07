@@ -621,7 +621,7 @@ export const electricalEngineeringProgram = assertValidPublishedProgramBundle({
     competencyIds: competencyDefinitions.map((competency) => competency.id),
     provenanceEvidenceIds: curriculumEvidence.map((evidence) => evidence.id),
     changelog:
-      "First generic publication. Replaces TRK401/TRK402 placeholders with eight real course versions and separates course content from semester placement.",
+      "First generic publication. Replaces specialization placeholders with eight real course versions and separates course content from semester placement.",
   },
   courses: artifacts.map((artifact) => artifact.course),
   courseVersions: artifacts.map((artifact) => artifact.version),

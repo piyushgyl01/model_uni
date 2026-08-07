@@ -39,13 +39,15 @@ export function EnrollmentModal({
   useEffect(() => {
     if (isOpen) {
       const current = getStoredEnrollment(programVersionId);
-      if (current) {
-        setStartDate(current.startDate);
-        setPaceHours(current.paceHoursPerWeek);
-        setIsCurrentlyEnrolled(current.status === "enrolled");
-      } else {
-        setIsCurrentlyEnrolled(false);
-      }
+      queueMicrotask(() => {
+        if (current) {
+          setStartDate(current.startDate);
+          setPaceHours(current.paceHoursPerWeek);
+          setIsCurrentlyEnrolled(current.status === "enrolled");
+        } else {
+          setIsCurrentlyEnrolled(false);
+        }
+      });
     }
   }, [isOpen, programVersionId]);
 

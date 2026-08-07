@@ -11,7 +11,6 @@ export function ActiveEnrollmentBanner() {
   >([]);
 
   useEffect(() => {
-    setMounted(true);
     const update = () => {
       const store = readProgressStore();
       const enrolled = Object.entries(store.programs ?? {})
@@ -21,6 +20,7 @@ export function ActiveEnrollmentBanner() {
           pace: program.enrollment?.paceHoursPerWeek ?? 40,
         }));
       setActivePrograms(enrolled);
+      setMounted(true);
     };
 
     update();
@@ -68,7 +68,7 @@ export function ActiveEnrollmentBanner() {
           textDecoration: "none",
         }}
       >
-        Open Today's Study Queue →
+        Open Today&apos;s Study Queue →
       </Link>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type {
-  CourseVersionId,
   ProgramRequirementEvaluation,
   PublishedProgramBundle,
 } from "../domain/catalog";
@@ -12,7 +11,6 @@ import {
 } from "../domain/prerequisite-evaluator";
 import {
   readProgressStore,
-  type StoredCourseProgress,
   type StoredProgramProgress,
 } from "../progress-storage";
 
@@ -25,33 +23,32 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   const [selectedProgramVersionId, setSelectedProgramVersionId] = useState<string>("");
   const [store, setStore] = useState<Record<string, StoredProgramProgress>>({});
 
-  const refreshStore = () => {
-    const current = readProgressStore();
-    const programs = current.programs ?? {};
-    setStore(programs);
-
-    if (!selectedProgramVersionId) {
-      const enrolledId = Object.keys(programs).find(
-        (id) => programs[id]?.enrollment?.status === "enrolled",
-      );
-      if (enrolledId) {
-        setSelectedProgramVersionId(enrolledId);
-      } else if (bundles.length > 0) {
-        setSelectedProgramVersionId(bundles[0].programVersion.id);
-      }
-    }
-  };
-
   useEffect(() => {
-    setMounted(true);
-    refreshStore();
+    const refreshStore = () => {
+      const current = readProgressStore();
+      const programs = current.programs ?? {};
+      setStore(programs);
 
+      if (!selectedProgramVersionId) {
+        const enrolledId = Object.keys(programs).find(
+          (id) => programs[id]?.enrollment?.status === "enrolled",
+        );
+        if (enrolledId) {
+          setSelectedProgramVersionId(enrolledId);
+        } else if (bundles.length > 0) {
+          setSelectedProgramVersionId(bundles[0].programVersion.id);
+        }
+      }
+      setMounted(true);
+    };
+
+    refreshStore();
     const handleEvent = () => refreshStore();
     window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
     return () => {
       window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
     };
-  }, [bundles]);
+  }, [bundles, selectedProgramVersionId]);
 
   if (!mounted) {
     return (
@@ -74,9 +71,6 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   const requirementEvaluation: ProgramRequirementEvaluation =
     evaluateProgramRequirements(activeBundle, completedIds);
 
-  const courseVersionMap = new Map(
-    activeBundle.courseVersions.map((cv) => [cv.id, cv]),
-  );
   const courseMap = new Map(activeBundle.courses.map((c) => [c.id, c]));
 
   // Collect course progress rows

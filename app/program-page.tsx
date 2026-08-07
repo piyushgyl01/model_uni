@@ -67,6 +67,13 @@ export default function ProgramPage({
   routeBase = `/programs/${bundle.program.canonicalSlug}`,
   availableVersions = [bundle.programVersion.version],
 }: ProgramPageProps) {
+  const clientBundle = {
+    ...bundle,
+    programVersion: {
+      ...bundle.programVersion,
+      changelog: undefined,
+    },
+  };
   const {
     program,
     programVersion,
@@ -303,7 +310,7 @@ export default function ProgramPage({
           {/* Interactive Student Progress Checklist Tracker */}
           <div style={{ marginTop: "20px" }}>
             <ProgramProgress
-              bundle={bundle}
+              bundle={clientBundle}
               programVersionId={programVersion.id}
               courses={programProgressCourses}
               coreCourseVersionIds={coreCourseVersionIds}
@@ -317,7 +324,7 @@ export default function ProgramPage({
         </section>
 
         {/* TODAY'S STUDY QUEUE & ENROLLMENT DASHBOARD */}
-        <TodayDashboardComponent bundle={bundle} />
+        <TodayDashboardComponent bundle={clientBundle} />
 
         {/* SECTION 1: Study Schedule (Term-by-Term Recommended Sequence) */}
         <section
@@ -326,7 +333,7 @@ export default function ProgramPage({
           aria-labelledby="schedule-title"
           style={{ marginTop: "35px" }}
         >
-          <TermProgressWidget bundle={bundle} />
+          <TermProgressWidget bundle={clientBundle} />
 
           <div className="section-heading-row">
             <div>

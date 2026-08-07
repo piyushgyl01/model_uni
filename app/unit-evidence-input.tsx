@@ -28,35 +28,34 @@ export function UnitEvidenceInput({
   const [savedTime, setSavedTime] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  const loadCurrentStatus = () => {
-    const evidence = readLocalUnitEvidence(
-      programVersionId,
-      courseVersionId,
-      unitId,
-    );
-    if (evidence) {
-      setEvidenceText(evidence.textOrUrl);
-      setSavedTime(evidence.updatedAt);
-    }
-
-    const completedUnits = readLocalCourseUnits(
-      programVersionId,
-      courseVersionId,
-      allowedUnitIds,
-    );
-    setIsCompleted(completedUnits.includes(unitId));
-  };
-
   useEffect(() => {
-    setMounted(true);
-    loadCurrentStatus();
+    const update = () => {
+      const evidence = readLocalUnitEvidence(
+        programVersionId,
+        courseVersionId,
+        unitId,
+      );
+      if (evidence) {
+        setEvidenceText(evidence.textOrUrl);
+        setSavedTime(evidence.updatedAt);
+      }
 
-    const handleEvent = () => loadCurrentStatus();
+      const completedUnits = readLocalCourseUnits(
+        programVersionId,
+        courseVersionId,
+        allowedUnitIds,
+      );
+      setIsCompleted(completedUnits.includes(unitId));
+      setMounted(true);
+    };
+
+    update();
+    const handleEvent = () => update();
     window.addEventListener(PROGRESS_EVENT, handleEvent);
     return () => {
       window.removeEventListener(PROGRESS_EVENT, handleEvent);
     };
-  }, [programVersionId, courseVersionId, unitId]);
+  }, [allowedUnitIds, courseVersionId, programVersionId, unitId]);
 
   if (!mounted) {
     return (

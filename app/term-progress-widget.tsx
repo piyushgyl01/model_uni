@@ -14,18 +14,17 @@ export function TermProgressWidget({ bundle }: TermProgressWidgetProps) {
   const [mounted, setMounted] = useState(false);
   const [evalResult, setEvalResult] = useState<TermProgressEvaluation | null>(null);
 
-  const calculateStatus = () => {
-    const store = readProgressStore().programs?.[bundle.programVersion.id];
-    const completedIds = getCompletedCourseVersionIds(bundle, store);
-    const result = evaluateTermProgress(bundle, completedIds);
-    setEvalResult(result);
-  };
-
   useEffect(() => {
-    setMounted(true);
-    calculateStatus();
+    const update = () => {
+      const store = readProgressStore().programs?.[bundle.programVersion.id];
+      const completedIds = getCompletedCourseVersionIds(bundle, store);
+      const result = evaluateTermProgress(bundle, completedIds);
+      setEvalResult(result);
+      setMounted(true);
+    };
 
-    const handleEvent = () => calculateStatus();
+    update();
+    const handleEvent = () => update();
     window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
     return () => {
       window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
@@ -38,7 +37,6 @@ export function TermProgressWidget({ bundle }: TermProgressWidgetProps) {
 
   const {
     totalTerms,
-    activeTermNumber,
     activeTermLabel,
     activeTermProgress,
     nextTermProgress,
