@@ -8,6 +8,7 @@ import type {
   SemanticVersion,
 } from "./domain/catalog";
 import ProgramProgress from "./program-progress";
+import { TermProgressWidget } from "./term-progress-widget";
 import { TodayDashboardComponent } from "./today-dashboard-component";
 
 export interface ProgramPageProps {
@@ -325,6 +326,8 @@ export default function ProgramPage({
           aria-labelledby="schedule-title"
           style={{ marginTop: "35px" }}
         >
+          <TermProgressWidget bundle={bundle} />
+
           <div className="section-heading-row">
             <div>
               <span className="section-index">01 / Study Plan</span>

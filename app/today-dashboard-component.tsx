@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { PublishedProgramBundle } from "./domain/catalog";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
+import { TermProgressWidget } from "./term-progress-widget";
 import {
   getStoredProgram,
   PROGRESS_EVENT,
@@ -175,6 +176,9 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
           ⚙️ Manage Pace ({queue.enrollment?.paceHoursPerWeek ?? 40} hrs/wk)
         </button>
       </div>
+
+      {/* TERM PROGRESS VIEW ("In Term X of Y") */}
+      <TermProgressWidget bundle={bundle} />
 
       {/* Metrics Row */}
       <div
