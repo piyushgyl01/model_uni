@@ -2,9 +2,12 @@ import Link from "next/link";
 import { getRuntimeCatalogRepository } from "./catalog/cloudflare-catalog";
 import { futureDirections } from "../content/catalog";
 
+import { ActiveEnrollmentBanner } from "./active-enrollment-banner";
+
 export const dynamic = "force-dynamic";
 
 const homeNav = [
+  ["Today's Queue", "today"],
   ["Degrees", "programs"],
   ["How it Works", "model"],
   ["Schools", "schools"],
@@ -37,7 +40,8 @@ export default async function Home() {
         </a>
 
         <nav className="desktop-nav" aria-label="Homepage navigation">
-          {homeNav.map(([label, id]) => (
+          <Link href="/today">Today's Queue</Link>
+          {homeNav.slice(1).map(([label, id]) => (
             <a key={id} href={`#${id}`}>{label}</a>
           ))}
         </nav>
@@ -48,6 +52,11 @@ export default async function Home() {
       </header>
 
       <main id="top">
+        {/* Active Enrollment Banner if enrolled */}
+        <div style={{ maxWidth: "1100px", margin: "1rem auto 0", padding: "0 1rem" }}>
+          <ActiveEnrollmentBanner />
+        </div>
+
         {/* Simple Hero */}
         <section className="catalog-hero">
           <div className="catalog-hero-copy">

@@ -20,10 +20,18 @@ export interface StoredCourseProgress {
   readonly pendingSync?: boolean;
 }
 
+export interface EnrollmentConfig {
+  readonly startDate: string;
+  readonly paceHoursPerWeek: number;
+  readonly enrolledAt: string;
+  readonly status: "enrolled" | "paused";
+}
+
 export interface StoredProgramProgress {
   readonly courses?: Readonly<Record<string, StoredCourseProgress>>;
   readonly selectedConcentrationId?: string;
   readonly concentrationPendingSync?: boolean;
+  readonly enrollment?: EnrollmentConfig;
 }
 
 export interface ProgressStore {
@@ -152,6 +160,33 @@ export function writeLocalConcentration(
     selectedConcentrationId,
     concentrationPendingSync: pendingSync,
   };
+  return writeProgressStore({ ...current, programs });
+}
+
+export function getStoredEnrollment(programVersionId: ProgramVersionId) {
+  return getStoredProgram(programVersionId)?.enrollment;
+}
+
+export function writeLocalEnrollment(
+  programVersionId: ProgramVersionId,
+  enrollment: EnrollmentConfig,
+) {
+  const current = readProgressStore();
+  const programs = { ...(current.programs ?? {}) };
+  const program = { ...(programs[programVersionId] ?? {}) };
+  programs[programVersionId] = {
+    ...program,
+    enrollment,
+  };
+  return writeProgressStore({ ...current, programs });
+}
+
+export function cancelLocalEnrollment(programVersionId: ProgramVersionId) {
+  const current = readProgressStore();
+  const programs = { ...(current.programs ?? {}) };
+  const program = { ...(programs[programVersionId] ?? {}) };
+  const { enrollment, ...restProgram } = program;
+  programs[programVersionId] = restProgram;
   return writeProgressStore({ ...current, programs });
 }
 

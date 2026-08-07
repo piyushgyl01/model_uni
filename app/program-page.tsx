@@ -8,6 +8,7 @@ import type {
   SemanticVersion,
 } from "./domain/catalog";
 import ProgramProgress from "./program-progress";
+import { TodayDashboardComponent } from "./today-dashboard-component";
 
 export interface ProgramPageProps {
   readonly bundle: PublishedProgramBundle;
@@ -312,6 +313,9 @@ export default function ProgramPage({
             />
           </div>
         </section>
+
+        {/* TODAY'S STUDY QUEUE & ENROLLMENT DASHBOARD */}
+        <TodayDashboardComponent bundle={bundle} />
 
         {/* SECTION 1: Study Schedule (Term-by-Term Recommended Sequence) */}
         <section
