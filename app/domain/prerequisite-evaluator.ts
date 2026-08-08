@@ -4,6 +4,7 @@ import type {
   PublishedProgramBundle,
 } from "./catalog";
 import type { StoredProgramProgress } from "../progress-storage";
+import { resolveLearnerPath } from "./learner-path";
 
 export interface CoursePrerequisiteDetail {
   readonly courseVersionId: CourseVersionId;
@@ -30,20 +31,34 @@ export function getCompletedCourseVersionIds(
   const completedIds = new Set<CourseVersionId>();
   if (!progress?.courses) return completedIds;
 
+  const selectedConcentrationId = bundle.concentrations.find(
+    (concentration) => concentration.id === progress.selectedConcentrationId,
+  )?.id;
+  const learnerPath = resolveLearnerPath(bundle, { selectedConcentrationId });
+
   // Build map of total units per course version
-  const totalUnitsByCourseVersion = new Map<CourseVersionId, number>();
-  for (const unit of bundle.learningUnits) {
-    const current = totalUnitsByCourseVersion.get(unit.courseVersionId) ?? 0;
-    totalUnitsByCourseVersion.set(unit.courseVersionId, current + 1);
+  const unitIdsByCourseVersion = new Map<CourseVersionId, Set<string>>();
+  for (const unit of learnerPath.learningUnits) {
+    const current =
+      unitIdsByCourseVersion.get(unit.courseVersionId) ?? new Set<string>();
+    current.add(unit.id);
+    unitIdsByCourseVersion.set(unit.courseVersionId, current);
   }
 
   for (const [courseVersionId, courseProgress] of Object.entries(progress.courses)) {
     const cvId = courseVersionId as CourseVersionId;
+    if (!learnerPath.selectedCourseVersionIdSet.has(cvId)) continue;
     const completedUnits = courseProgress.completedUnitIds ?? [];
-    const totalUnits = totalUnitsByCourseVersion.get(cvId) ?? 1;
+    const allowedUnitIds = unitIdsByCourseVersion.get(cvId) ?? new Set();
+    const completedUnitIds = new Set(
+      completedUnits.filter((unitId) => allowedUnitIds.has(unitId)),
+    );
 
     // A course is completed if all its learning units are marked done
-    if (completedUnits.length >= totalUnits && totalUnits > 0) {
+    if (
+      allowedUnitIds.size > 0 &&
+      completedUnitIds.size === allowedUnitIds.size
+    ) {
       completedIds.add(cvId);
     }
   }
@@ -141,8 +156,12 @@ export function evaluateAllCoursePrerequisites(
 ): Map<CourseVersionId, CoursePrerequisiteEvaluation> {
   const completedIds = getCompletedCourseVersionIds(bundle, progress);
   const evaluationMap = new Map<CourseVersionId, CoursePrerequisiteEvaluation>();
+  const selectedConcentrationId = bundle.concentrations.find(
+    (concentration) => concentration.id === progress?.selectedConcentrationId,
+  )?.id;
+  const learnerPath = resolveLearnerPath(bundle, { selectedConcentrationId });
 
-  for (const cv of bundle.courseVersions) {
+  for (const cv of learnerPath.courseVersions) {
     const evalResult = evaluateCoursePrerequisites(
       bundle,
       cv.id,

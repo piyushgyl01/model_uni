@@ -9,6 +9,7 @@ import { evaluateProgramRequirements } from "../domain/validation";
 import {
   getCompletedCourseVersionIds,
 } from "../domain/prerequisite-evaluator";
+import { resolveLearnerPath } from "../domain/learner-path";
 import {
   readProgressStore,
   type StoredProgramProgress,
@@ -67,6 +68,13 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   }
 
   const programProgress = store[activeBundle.programVersion.id];
+  const selectedConcentrationId = activeBundle.concentrations.find(
+    (concentration) =>
+      concentration.id === programProgress?.selectedConcentrationId,
+  )?.id;
+  const learnerPath = resolveLearnerPath(activeBundle, {
+    selectedConcentrationId,
+  });
   const completedIds = getCompletedCourseVersionIds(activeBundle, programProgress);
   const requirementEvaluation: ProgramRequirementEvaluation =
     evaluateProgramRequirements(activeBundle, completedIds);
@@ -74,13 +82,18 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   const courseMap = new Map(activeBundle.courses.map((c) => [c.id, c]));
 
   // Collect course progress rows
-  const courseRows = activeBundle.courseVersions.map((cv) => {
+  const courseRows = learnerPath.courseVersions.map((cv) => {
     const courseObj = courseMap.get(cv.courseId);
-    const unitsInCourse = activeBundle.learningUnits.filter(
+    const unitsInCourse = learnerPath.learningUnits.filter(
       (u) => u.courseVersionId === cv.id,
     );
     const courseProgress = programProgress?.courses?.[cv.id];
-    const completedUnitsCount = courseProgress?.completedUnitIds?.length ?? 0;
+    const unitIdsInCourse = new Set(unitsInCourse.map((unit) => unit.id));
+    const completedUnitsCount = new Set(
+      (courseProgress?.completedUnitIds ?? []).filter((unitId) =>
+        unitIdsInCourse.has(unitId as (typeof unitsInCourse)[number]["id"]),
+      ),
+    ).size;
     const isCompleted = completedIds.has(cv.id);
 
     return {
@@ -99,7 +112,7 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   });
 
   const completedCoursesCount = courseRows.filter((c) => c.isCompleted).length;
-  const totalUnitsInDegree = activeBundle.learningUnits.length;
+  const totalUnitsInDegree = learnerPath.learningUnits.length;
   const completedUnitsInDegree = courseRows.reduce(
     (sum, c) => sum + c.completedUnits,
     0,

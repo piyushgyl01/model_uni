@@ -1,14 +1,13 @@
 import Link from "next/link";
 import type {
-  CalendarPeriodId,
   PublishedProgramBundle,
   RequirementGroup,
   ResourceVersionId,
-  SchedulePlacement,
   SemanticVersion,
 } from "./domain/catalog";
+import { resolveLearnerPath } from "./domain/learner-path";
 import ProgramProgress from "./program-progress";
-import { TermProgressWidget } from "./term-progress-widget";
+import ProgramStudyPlan from "./program-study-plan";
 import { TodayDashboardComponent } from "./today-dashboard-component";
 
 export interface ProgramPageProps {
@@ -73,6 +72,13 @@ export default function ProgramPage({
       ...bundle.programVersion,
       changelog: undefined,
     },
+    // Learner widgets need identities, prerequisites, hours, and schedule
+    // data—not classroom setup prose. Keep that prose server-rendered on the
+    // course page and out of this already-large client payload.
+    courseVersions: bundle.courseVersions.map((courseVersion) => ({
+      ...courseVersion,
+      setup: [],
+    })),
   };
   const {
     program,
@@ -82,13 +88,6 @@ export default function ProgramPage({
   } = bundle;
   const programSlug = program.canonicalSlug;
   const coursesById = new Map(bundle.courses.map((course) => [course.id, course]));
-  const unitsById = new Map(learningUnits.map((unit) => [unit.id, unit]));
-  const assessmentVersionsById = new Map(
-    bundle.assessmentVersions.map((assessment) => [assessment.id, assessment]),
-  );
-  const assessmentsById = new Map(
-    bundle.assessments.map((assessment) => [assessment.id, assessment]),
-  );
   const concentrationsById = new Map(
     bundle.concentrations.map((concentration) => [
       concentration.id,
@@ -101,12 +100,6 @@ export default function ProgramPage({
       (concentration): concentration is NonNullable<typeof concentration> =>
         Boolean(concentration),
     );
-  const periodsById = new Map(
-    bundle.calendars.flatMap((calendar) =>
-      calendar.periods.map((period) => [period.id, period] as const),
-    ),
-  );
-
   const courseRecords = courseVersions
     .map((version) => {
       const course = coursesById.get(version.courseId);
@@ -131,13 +124,11 @@ export default function ProgramPage({
   const coreCourseVersionIds = courseRecords
     .map(({ version }) => version.id)
     .filter((id) => !concentrationCourseIds.has(id));
-  const representativePathIds = new Set([
-    ...coreCourseVersionIds,
-    ...(concentrations[0]?.courseVersionIds ?? []),
-  ]);
-  const representativePathHours = courseVersions
-    .filter((version) => representativePathIds.has(version.id))
-    .reduce((total, version) => total + version.nominalHours, 0);
+  const representativePath = resolveLearnerPath(bundle);
+  const representativePathIds = representativePath.selectedCourseVersionIdSet;
+  const representativePathHours = representativePath.totals.nominalHours;
+  const representativeCalendar = representativePath.calendar;
+  const representativePeriods = [...(representativeCalendar?.periods ?? [])];
 
   const competencies = programVersion.competencyIds
     .map((id) => bundle.competencies.find((competency) => competency.id === id))
@@ -149,75 +140,6 @@ export default function ProgramPage({
       mapping.subject.kind === "programVersion" &&
       mapping.subject.id === programVersion.id,
   );
-
-  const schedule =
-    bundle.schedules.find(
-      (candidate) => candidate.id === programVersion.defaultScheduleId,
-    ) ??
-    bundle.schedules.find(
-      (candidate) => candidate.programVersionId === programVersion.id,
-    );
-  const calendar = schedule
-    ? bundle.calendars.find((candidate) => candidate.id === schedule.calendarId)
-    : undefined;
-  const periods = [...(calendar?.periods ?? [])].sort(
-    (left, right) => left.order - right.order,
-  );
-
-  const describePlacement = (placement: SchedulePlacement) => {
-    if (placement.subject.kind === "courseVersion") {
-      const record = courseRecordByVersionId.get(placement.subject.id);
-      if (!record) return { label: "Course", title: placement.subject.id };
-      return {
-        label: record.version.format,
-        title: record.version.title,
-        href: courseHref(routeBase, record.course.canonicalSlug),
-      };
-    }
-
-    if (placement.subject.kind === "learningUnit") {
-      const unit = unitsById.get(placement.subject.id);
-      const record = unit
-        ? courseRecordByVersionId.get(unit.courseVersionId)
-        : undefined;
-      return {
-        label: unit?.kindLabel ?? unit?.kind ?? "Learning unit",
-        title: unit ? `${unit.label}: ${unit.title}` : placement.subject.id,
-        note: placement.note ?? unit?.topic ?? unit?.resourceLocator,
-        href:
-          unit && record
-            ? `${courseHref(routeBase, record.course.canonicalSlug)}#${unit.id}`
-            : undefined,
-      };
-    }
-
-    const assessmentVersion = assessmentVersionsById.get(placement.subject.id);
-    const assessment = assessmentVersion
-      ? assessmentsById.get(assessmentVersion.assessmentId)
-      : undefined;
-    const record = assessmentVersion
-      ? courseRecordByVersionId.get(assessmentVersion.courseVersionId)
-      : undefined;
-    return {
-      label: assessment?.kind ?? "Assessment",
-      title: assessmentVersion?.title ?? placement.subject.id,
-      href:
-        assessmentVersion && record
-          ? `${courseHref(
-              routeBase,
-              record.course.canonicalSlug,
-            )}#assessment-${assessmentVersion.id}`
-          : undefined,
-    };
-  };
-
-  const placementsForPeriod = (periodId: CalendarPeriodId) =>
-    [...(schedule?.placements ?? [])]
-      .filter((placement) => placement.periodId === periodId)
-      .sort((left, right) => left.order - right.order);
-  const unassignedPlacements = [...(schedule?.placements ?? [])]
-    .filter((placement) => !placement.periodId)
-    .sort((left, right) => left.order - right.order);
 
   const resourceVersionsById = new Map(
     bundle.resourceVersions.map((resource) => [resource.id, resource]),
@@ -290,7 +212,8 @@ export default function ProgramPage({
           <div className="program-meta-strip">
             <span>
               🗓️ <strong>Duration:</strong> {programVersion.nominalDuration}
-              {calendar?.structure === "terms" && ` · ${periods.length} terms`}
+              {representativeCalendar?.structure === "terms" &&
+                ` · ${representativePeriods.length} terms`}
             </span>
             <span>
               📚 <strong>Path:</strong> {representativePathIds.size}
@@ -327,101 +250,7 @@ export default function ProgramPage({
         <TodayDashboardComponent bundle={clientBundle} />
 
         {/* SECTION 1: Study Schedule (Term-by-Term Recommended Sequence) */}
-        <section
-          className="section roadmap-section universal-schedule"
-          id="schedule"
-          aria-labelledby="schedule-title"
-          style={{ marginTop: "35px" }}
-        >
-          <TermProgressWidget bundle={clientBundle} />
-
-          <div className="section-heading-row">
-            <div>
-              <span className="section-index">01 / Study Plan</span>
-              <h2 id="schedule-title">
-                {schedule?.title ?? "Recommended Study Sequence"}
-              </h2>
-            </div>
-            <p className="section-intro" style={{ color: "#555" }}>
-              {calendar?.structure === "terms" ? "Six-term recommended sequence" : "Self-directed study schedule"}. Follow terms in order to satisfy course prerequisites.
-            </p>
-          </div>
-
-          {schedule && calendar ? (
-            <>
-              <div className="universal-period-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px", marginTop: "15px" }}>
-                {periods.map((period) => {
-                  const placements = placementsForPeriod(period.id);
-                  const milestones = calendar.milestones.filter(
-                    (milestone) => milestone.periodId === period.id,
-                  );
-                  return (
-                    <article className="semester-card universal-period-card" key={period.id} style={{ border: "1px solid #222", padding: "14px", background: "#fff" }}>
-                      <header className="semester-top" style={{ borderBottom: "1px solid #ddd", paddingBottom: "6px", marginBottom: "10px" }}>
-                        <strong>
-                          {calendar.structure === "terms" ? "Term" : "Period"} {period.order}: {period.label}
-                        </strong>
-                      </header>
-
-                      {placements.length > 0 ? (
-                        <ol className="universal-placement-list" style={{ paddingLeft: "20px", margin: 0 }}>
-                          {placements.map((placement) => {
-                            const subject = describePlacement(placement);
-                            return (
-                              <li key={placement.id} style={{ margin: "6px 0" }}>
-                                {subject.href ? (
-                                  <Link href={subject.href} style={{ fontWeight: "bold" }}>
-                                    {subject.title}
-                                  </Link>
-                                ) : (
-                                  <strong>{subject.title}</strong>
-                                )}
-                                {subject.note && <p style={{ margin: "2px 0", fontSize: "0.8rem", color: "#555" }}>{subject.note}</p>}
-                              </li>
-                            );
-                          })}
-                        </ol>
-                      ) : (
-                        <p style={{ fontSize: "0.85rem", color: "#666" }}>No scheduled activities in this period.</p>
-                      )}
-
-                      {milestones.length > 0 && (
-                        <div className="universal-milestones" style={{ marginTop: "10px", fontSize: "0.8rem", color: "#666" }}>
-                          <strong>Milestones:</strong> {milestones.map((m) => m.label).join(", ")}
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-
-              {unassignedPlacements.length > 0 && (
-                <article className="paper-card universal-flexible-placements" style={{ marginTop: "20px", padding: "14px", border: "1px solid #ccc" }}>
-                  <h3>Flexible Placements & Electives</h3>
-                  <ol>
-                    {unassignedPlacements.map((placement) => {
-                      const subject = describePlacement(placement);
-                      return (
-                        <li key={placement.id}>
-                          {subject.href ? (
-                            <Link href={subject.href}>{subject.title}</Link>
-                          ) : (
-                            subject.title
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </article>
-              )}
-            </>
-          ) : (
-            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
-              <h3>Eight-week self-directed schedule</h3>
-              <p>Self-paced intensive schedule. Progress tracking does not assume semesters or a fixed number of weeks.</p>
-            </div>
-          )}
-        </section>
+        <ProgramStudyPlan bundle={clientBundle} routeBase={routeBase} />
 
         {/* SECTION 2: Course Directory (All Courses) */}
         <section

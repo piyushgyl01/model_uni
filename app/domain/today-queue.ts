@@ -6,6 +6,7 @@ import type {
   PublishedProgramBundle,
 } from "./catalog";
 import type { EnrollmentConfig, StoredProgramProgress } from "../progress-storage";
+import { resolveLearnerPath } from "./learner-path";
 import { evaluateAllCoursePrerequisites } from "./prerequisite-evaluator";
 
 export interface TodayStudyBlock {
@@ -46,27 +47,37 @@ export function calculateTodayQueue(
   const isEnrolled = enrollment?.status === "enrolled";
   const paceHoursPerWeek = enrollment?.paceHoursPerWeek ?? 40;
   const dailyTargetHours = Math.round((paceHoursPerWeek / 7) * 10) / 10;
+  const learnerPath = resolveLearnerPath(bundle, {
+    selectedConcentrationId: progress?.selectedConcentrationId,
+  });
+  const pathUnitIdsByCourseVersion = new Map<CourseVersionId, Set<string>>();
+  for (const unit of learnerPath.learningUnits) {
+    const allowed =
+      pathUnitIdsByCourseVersion.get(unit.courseVersionId) ?? new Set<string>();
+    allowed.add(unit.id);
+    pathUnitIdsByCourseVersion.set(unit.courseVersionId, allowed);
+  }
 
-  // Build a set of all completed unit IDs for this program
+  // Progress outside the selected path remains stored, but it must not affect
+  // this path's totals, current position, or daily assignments.
   const completedUnitIdsSet = new Set<string>();
-  let totalCompletedUnitsCount = 0;
 
   if (progress?.courses) {
-    for (const courseProgress of Object.values(progress.courses)) {
+    for (const [courseVersionId, courseProgress] of Object.entries(
+      progress.courses,
+    )) {
+      const allowedUnitIds = pathUnitIdsByCourseVersion.get(
+        courseVersionId as CourseVersionId,
+      );
+      if (!allowedUnitIds) continue;
       if (Array.isArray(courseProgress.completedUnitIds)) {
         for (const unitId of courseProgress.completedUnitIds) {
-          completedUnitIdsSet.add(unitId);
-          totalCompletedUnitsCount++;
+          if (allowedUnitIds.has(unitId)) completedUnitIdsSet.add(unitId);
         }
       }
     }
   }
-
-  // Maps for courseVersions, courses, units
-  const courseVersionMap = new Map<CourseVersionId, PublishedCourseVersion>();
-  for (const cv of bundle.courseVersions) {
-    courseVersionMap.set(cv.id, cv);
-  }
+  const totalCompletedUnitsCount = completedUnitIdsSet.size;
 
   const courseMap = new Map<string, (typeof bundle.courses)[number]>();
   for (const c of bundle.courses) {
@@ -74,8 +85,7 @@ export function calculateTodayQueue(
   }
 
   // Map calendar periods
-  const calendar = bundle.calendars?.[0];
-  const schedule = bundle.schedules?.[0];
+  const calendar = learnerPath.calendar;
   const periodMap = new Map<string, string>();
 
   if (calendar?.periods) {
@@ -84,39 +94,12 @@ export function calculateTodayQueue(
     }
   }
 
-  // Gather courses in recommended sequence order
-  const orderedCourseVersions: PublishedCourseVersion[] = [];
-  const visitedCourseIds = new Set<CourseVersionId>();
-
-  if (schedule?.placements && schedule.placements.length > 0) {
-    const sortedPlacements = [...schedule.placements].sort(
-      (a, b) => a.order - b.order,
-    );
-    for (const placement of sortedPlacements) {
-      if (placement.subject.kind === "courseVersion") {
-        const cv = courseVersionMap.get(placement.subject.id);
-        if (cv && !visitedCourseIds.has(cv.id)) {
-          visitedCourseIds.add(cv.id);
-          orderedCourseVersions.push(cv);
-        }
-      }
-    }
-  }
-
-  // Add any remaining courses from requirement groups
-  for (const group of bundle.programVersion.requirements) {
-    for (const option of group.options) {
-      const cv = courseVersionMap.get(option.courseVersionId);
-      if (cv && !visitedCourseIds.has(cv.id)) {
-        visitedCourseIds.add(cv.id);
-        orderedCourseVersions.push(cv);
-      }
-    }
-  }
+  const orderedCourseVersions: readonly PublishedCourseVersion[] =
+    learnerPath.courseVersions;
 
   // Group units by course version
   const unitsByCourseVersion = new Map<CourseVersionId, LearningUnit[]>();
-  for (const unit of bundle.learningUnits) {
+  for (const unit of learnerPath.learningUnits) {
     const list = unitsByCourseVersion.get(unit.courseVersionId) ?? [];
     list.push(unit);
     unitsByCourseVersion.set(unit.courseVersionId, list);
@@ -139,20 +122,25 @@ export function calculateTodayQueue(
   for (const cv of orderedCourseVersions) {
     // Determine period label
     let periodLabel = "General Sequence";
-    if (schedule?.placements) {
-      const placement = schedule.placements.find(
-        (p) => p.subject.kind === "courseVersion" && p.subject.id === cv.id,
-      );
-      if (placement?.periodId && periodMap.has(placement.periodId)) {
-        periodLabel = periodMap.get(placement.periodId) ?? periodLabel;
-      }
+    const coursePeriodId = learnerPath.coursePeriodIdByCourseVersionId.get(
+      cv.id,
+    );
+    if (coursePeriodId && periodMap.has(coursePeriodId)) {
+      periodLabel = periodMap.get(coursePeriodId) ?? periodLabel;
     }
 
     const units = unitsByCourseVersion.get(cv.id) ?? [];
     totalUnitsCount += units.length;
 
     for (const unit of units) {
-      allUnitsInOrder.push({ unit, courseVersion: cv, periodLabel });
+      const unitPeriodId =
+        learnerPath.learningUnitPeriodIdByLearningUnitId.get(unit.id);
+      allUnitsInOrder.push({
+        unit,
+        courseVersion: cv,
+        periodLabel:
+          (unitPeriodId && periodMap.get(unitPeriodId)) ?? periodLabel,
+      });
     }
   }
 
@@ -212,7 +200,10 @@ export function calculateTodayQueue(
   }
 
   const completedBlocksToday = todayBlocks.filter((b) => b.completed).length;
-  const remainingUnitsCount = totalUnitsCount - totalCompletedUnitsCount;
+  const remainingUnitsCount = Math.max(
+    0,
+    totalUnitsCount - totalCompletedUnitsCount,
+  );
   const avgHoursPerUnit = 2;
   const estimatedHoursRemaining = remainingUnitsCount * avgHoursPerUnit;
   const estimatedWeeksRemaining = Math.max(

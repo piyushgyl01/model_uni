@@ -18,7 +18,11 @@ export function TermProgressWidget({ bundle }: TermProgressWidgetProps) {
     const update = () => {
       const store = readProgressStore().programs?.[bundle.programVersion.id];
       const completedIds = getCompletedCourseVersionIds(bundle, store);
-      const result = evaluateTermProgress(bundle, completedIds);
+      const result = evaluateTermProgress(
+        bundle,
+        completedIds,
+        store?.selectedConcentrationId,
+      );
       setEvalResult(result);
       setMounted(true);
     };

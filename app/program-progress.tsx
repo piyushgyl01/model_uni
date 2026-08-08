@@ -7,6 +7,7 @@ import type {
   ProgramVersionId,
   PublishedProgramBundle,
 } from "./domain/catalog";
+import { resolveLearnerPath } from "./domain/learner-path";
 import { evaluateProgramRequirements } from "./domain/validation";
 import {
   PROGRESS_STORAGE_NAMESPACE,
@@ -270,6 +271,14 @@ export default function ProgramProgress({
   }, [refreshFromCloud, refreshFromLocal]);
 
   const activeCourses = useMemo(() => {
+    if (bundle) {
+      const learnerPath = resolveLearnerPath(bundle, {
+        selectedConcentrationId,
+      });
+      return courses.filter((course) =>
+        learnerPath.selectedCourseVersionIdSet.has(course.courseVersionId),
+      );
+    }
     if (concentrations.length === 0) return courses;
     const selected =
       concentrations.find(
@@ -281,6 +290,7 @@ export default function ProgramProgress({
     ]);
     return courses.filter((course) => activeIds.has(course.courseVersionId));
   }, [
+    bundle,
     concentrations,
     coreCourseVersionIds,
     courses,
@@ -293,15 +303,27 @@ export default function ProgramProgress({
       0,
     );
     const completedUnits = activeCourses.reduce(
-      (sum, course) =>
-        sum + (completedByCourse[course.courseVersionId]?.length ?? 0),
+      (sum, course) => {
+        const allowed = new Set(course.unitIds);
+        const completed = new Set(
+          (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
+            allowed.has(unitId),
+          ),
+        );
+        return sum + completed.size;
+      },
       0,
     );
     const completedCourses = activeCourses.filter(
-      (course) =>
-        course.unitIds.length > 0 &&
-        (completedByCourse[course.courseVersionId]?.length ?? 0) ===
-          course.unitIds.length,
+      (course) => {
+        const allowed = new Set(course.unitIds);
+        const completed = new Set(
+          (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
+            allowed.has(unitId),
+          ),
+        );
+        return course.unitIds.length > 0 && completed.size === allowed.size;
+      },
     ).length;
 
     return { totalUnits, completedUnits, completedCourses };
@@ -309,14 +331,19 @@ export default function ProgramProgress({
 
   const completedCourseVersionIds = useMemo(() => {
     const set = new Set<CourseVersionId>();
-    for (const course of courses) {
-      const completed = completedByCourse[course.courseVersionId] ?? [];
-      if (course.unitIds.length > 0 && completed.length >= course.unitIds.length) {
+    for (const course of activeCourses) {
+      const allowed = new Set(course.unitIds);
+      const completed = new Set(
+        (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
+          allowed.has(unitId),
+        ),
+      );
+      if (course.unitIds.length > 0 && completed.size === allowed.size) {
         set.add(course.courseVersionId);
       }
     }
     return set;
-  }, [courses, completedByCourse]);
+  }, [activeCourses, completedByCourse]);
 
   const requirementEvaluation = useMemo(() => {
     if (!bundle) return undefined;

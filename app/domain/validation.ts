@@ -908,7 +908,34 @@ export function validatePublishedProgramBundle(
       );
     }
   });
+  const exposedConcentrationIds = new Set(
+    bundle.programVersion.concentrationIds,
+  );
+  if (
+    exposedConcentrationIds.size !==
+    bundle.programVersion.concentrationIds.length
+  ) {
+    add(
+      "invalid_value",
+      "programVersion.concentrationIds",
+      "Exposed concentration identities must be unique.",
+    );
+  }
+  const coherentRequirementGroups =
+    bundle.programVersion.requirements.filter(
+      (group) => group.rule.selectionConstraint === "same concentration",
+    );
   bundle.concentrations.forEach((concentration, concentrationIndex) => {
+    if (
+      coherentRequirementGroups.length > 0 &&
+      !exposedConcentrationIds.has(concentration.id)
+    ) {
+      add(
+        "ambiguous_requirement",
+        `concentrations[${concentrationIndex}].id`,
+        "Concentration is present in the publication but is not exposed by the program version.",
+      );
+    }
     concentration.courseVersionIds.forEach((id, courseIndex) => {
       if (!courseVersionIds.has(id)) {
         add(
@@ -918,6 +945,60 @@ export function validatePublishedProgramBundle(
         );
       }
     });
+
+    if (!exposedConcentrationIds.has(concentration.id)) return;
+    const coherentOptionCourseIds = new Set<CourseVersionId>();
+    coherentRequirementGroups.forEach((group) => {
+      const groupIndex = bundle.programVersion.requirements.indexOf(group);
+      const eligible = group.options.filter(
+        (option) => option.concentrationId === concentration.id,
+      );
+      eligible.forEach((option) =>
+        coherentOptionCourseIds.add(option.courseVersionId),
+      );
+      const limit = Math.min(
+        group.rule.maxSelections ?? eligible.length,
+        eligible.length,
+      );
+      const minimumCredits = group.rule.minCredits;
+      const attainableCredits = minimumCredits
+        ? eligible
+            .filter(
+              (option) =>
+                option.credits.system === minimumCredits.system,
+            )
+            .sort((left, right) => right.credits.value - left.credits.value)
+            .slice(0, limit)
+            .reduce((total, option) => total + option.credits.value, 0)
+        : 0;
+      if (
+        limit < group.rule.minSelections ||
+        (minimumCredits && attainableCredits < minimumCredits.value)
+      ) {
+        add(
+          "unsatisfiable_requirement",
+          `programVersion.requirements[${groupIndex}].options`,
+          `${concentration.title} cannot satisfy the coherent requirement.`,
+        );
+      }
+    });
+
+    if (coherentRequirementGroups.length > 0) {
+      const listedCourseIds = new Set(concentration.courseVersionIds);
+      const missing = [...coherentOptionCourseIds].filter(
+        (id) => !listedCourseIds.has(id),
+      );
+      const unrelated = [...listedCourseIds].filter(
+        (id) => !coherentOptionCourseIds.has(id),
+      );
+      if (missing.length > 0 || unrelated.length > 0) {
+        add(
+          "ambiguous_requirement",
+          `concentrations[${concentrationIndex}].courseVersionIds`,
+          "Concentration courses must exactly match its coherent requirement options.",
+        );
+      }
+    }
   });
   bundle.programVersion.competencyIds.forEach((id, index) =>
     competencyReference(id, `programVersion.competencyIds[${index}]`),

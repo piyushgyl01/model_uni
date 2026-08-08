@@ -7,6 +7,7 @@ import {
   validateCatalogBundles,
   validatePublishedProgramBundle,
 } from "../domain/validation";
+import { resolveLearnerPath } from "../domain/learner-path";
 import type {
   CatalogProgramSummary,
   CatalogRepository,
@@ -32,6 +33,28 @@ function deepFreeze<Value>(value: Value): Value {
   return value;
 }
 
+function learnerPathProblems(bundle: PublishedProgramBundle) {
+  const concentrationIds =
+    bundle.programVersion.concentrationIds.length > 0
+      ? bundle.programVersion.concentrationIds
+      : [undefined];
+  return concentrationIds.flatMap((selectedConcentrationId) => {
+    const learnerPath = resolveLearnerPath(bundle, {
+      selectedConcentrationId,
+    });
+    if (learnerPath.isResolved) return [];
+    const label = selectedConcentrationId
+      ? `concentration ${selectedConcentrationId}`
+      : "default pathway";
+    return learnerPath.diagnostics
+      .filter((diagnostic) => diagnostic.severity === "error")
+      .map(
+        (diagnostic) =>
+          `programVersion.requirements (${label}): ${diagnostic.message}`,
+      );
+  });
+}
+
 export class CatalogValidationError extends Error {
   constructor(readonly problems: readonly string[]) {
     super(`Catalog registration failed:\n${problems.join("\n")}`);
@@ -54,6 +77,10 @@ export class StaticCatalogRepository implements CatalogRepository {
           result.issues.map((issue) => `${issue.path}: ${issue.message}`),
         );
       }
+      const pathProblems = initialBundles.flatMap(learnerPathProblems);
+      if (pathProblems.length > 0) {
+        throw new CatalogValidationError(pathProblems);
+      }
       initialBundles.forEach((bundle) => this.store(bundle));
     }
   }
@@ -64,6 +91,10 @@ export class StaticCatalogRepository implements CatalogRepository {
       throw new CatalogValidationError(
         bundleResult.issues.map((issue) => `${issue.path}: ${issue.message}`),
       );
+    }
+    const pathProblems = learnerPathProblems(bundle);
+    if (pathProblems.length > 0) {
+      throw new CatalogValidationError(pathProblems);
     }
 
     const catalogResult = validateCatalogBundles([...this.bundles, bundle]);
@@ -150,54 +181,14 @@ export class StaticCatalogRepository implements CatalogRepository {
   }
 
   private toSummary(bundle: PublishedProgramBundle): CatalogProgramSummary {
-    const courseVersionById = new Map(
-      bundle.courseVersions.map((version) => [version.id, version]),
-    );
-    const requiredCourseVersionIds = new Set(
-      bundle.programVersion.requirements.flatMap((group) => {
-        if (group.rule.selectionConstraint === "same concentration") {
-          const byConcentration = new Map<string, typeof group.options>();
-          for (const option of group.options) {
-            const key = option.concentrationId ?? "unassigned";
-            byConcentration.set(key, [
-              ...(byConcentration.get(key) ?? []),
-              option,
-            ]);
-          }
-          return [...byConcentration.values()]
-            .filter((options) => options.length >= group.rule.minSelections)
-            .sort((left, right) => {
-              const hours = (options: typeof group.options) =>
-                options
-                  .slice(0, group.rule.minSelections)
-                  .reduce(
-                    (total, option) =>
-                      total +
-                      (courseVersionById.get(option.courseVersionId)
-                        ?.nominalHours ?? 0),
-                    0,
-                  );
-              return hours(left) - hours(right);
-            })[0]
-            ?.slice(0, group.rule.minSelections)
-            .map((option) => option.courseVersionId) ?? [];
-        }
-        return [...group.options]
-          .sort(
-            (left, right) =>
-              (courseVersionById.get(left.courseVersionId)?.nominalHours ?? 0) -
-              (courseVersionById.get(right.courseVersionId)?.nominalHours ?? 0),
-          )
-          .slice(0, group.rule.minSelections)
-          .map((option) => option.courseVersionId);
-      }),
-    );
-    const nominalHours = bundle.courseVersions
-      .filter((version) => requiredCourseVersionIds.has(version.id))
-      .reduce((total, version) => total + version.nominalHours, 0);
-    const learningUnitCount = bundle.learningUnits.filter((unit) =>
-      requiredCourseVersionIds.has(unit.courseVersionId),
-    ).length;
+    const learnerPath = resolveLearnerPath(bundle);
+    if (!learnerPath.isResolved) {
+      throw new CatalogValidationError(
+        learnerPath.diagnostics
+          .filter((diagnostic) => diagnostic.severity === "error")
+          .map((diagnostic) => diagnostic.message),
+      );
+    }
 
     return {
       programId: bundle.program.id,
@@ -211,11 +202,11 @@ export class StaticCatalogRepository implements CatalogRepository {
       nominalDuration: bundle.programVersion.nominalDuration,
       latestVersion: bundle.programVersion.version,
       publishedAt: bundle.programVersion.publishedAt,
-      courseCount: requiredCourseVersionIds.size,
+      courseCount: learnerPath.totals.courseCount,
       availableCourseCount: bundle.courseVersions.length,
-      learningUnitCount,
+      learningUnitCount: learnerPath.totals.learningUnitCount,
       resourceCount: bundle.resourceVersions.length,
-      nominalHours,
+      nominalHours: learnerPath.totals.nominalHours,
     };
   }
 }

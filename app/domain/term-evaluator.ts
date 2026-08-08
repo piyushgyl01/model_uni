@@ -2,6 +2,7 @@ import type {
   CourseVersionId,
   PublishedProgramBundle,
 } from "./catalog";
+import { resolveLearnerPath } from "./learner-path";
 
 export interface TermPeriodDetail {
   readonly periodId: string;
@@ -27,37 +28,38 @@ export interface TermProgressEvaluation {
 export function evaluateTermProgress(
   bundle: PublishedProgramBundle,
   completedCourseVersionIds: ReadonlySet<CourseVersionId>,
+  selectedConcentrationId?: string,
 ): TermProgressEvaluation {
-  const programVersion = bundle.programVersion;
-  const schedule =
-    bundle.schedules.find((s) => s.id === programVersion.defaultScheduleId) ??
-    bundle.schedules.find((s) => s.programVersionId === programVersion.id) ??
-    bundle.schedules[0];
-
-  const calendar = schedule
-    ? bundle.calendars.find((c) => c.id === schedule.calendarId) ?? bundle.calendars[0]
-    : bundle.calendars[0];
+  const learnerPath = resolveLearnerPath(bundle, {
+    selectedConcentrationId,
+  });
+  const calendar = learnerPath.calendar;
 
   const sortedPeriods = calendar
     ? [...calendar.periods].sort((a, b) => a.order - b.order)
     : [];
 
-  const placementsByPeriod = new Map<string, Set<CourseVersionId>>();
-  if (schedule) {
-    for (const placement of schedule.placements) {
-      if (placement.periodId && placement.subject.kind === "courseVersion") {
-        const set = placementsByPeriod.get(placement.periodId) ?? new Set();
-        set.add(placement.subject.id);
-        placementsByPeriod.set(placement.periodId, set);
-      }
-    }
+  const courseVersionIdsByPeriod = new Map<string, Set<CourseVersionId>>();
+  for (const courseVersion of learnerPath.courseVersions) {
+    const periodId = learnerPath.coursePeriodIdByCourseVersionId.get(
+      courseVersion.id,
+    );
+    if (!periodId) continue;
+    const set = courseVersionIdsByPeriod.get(periodId) ?? new Set();
+    set.add(courseVersion.id);
+    courseVersionIdsByPeriod.set(periodId, set);
   }
 
-  const courseVersionMap = new Map(bundle.courseVersions.map((cv) => [cv.id, cv]));
+  const courseVersionMap = new Map(
+    learnerPath.courseVersions.map((courseVersion) => [
+      courseVersion.id,
+      courseVersion,
+    ]),
+  );
 
-  // If no placements found, fallback to chunking courses into terms (approx 5 courses/term)
   const periodDetails: TermPeriodDetail[] = sortedPeriods.map((period) => {
-    const placedCourseIds = placementsByPeriod.get(period.id) ?? new Set();
+    const placedCourseIds =
+      courseVersionIdsByPeriod.get(period.id) ?? new Set();
     const courseVersions = Array.from(placedCourseIds)
       .map((id) => courseVersionMap.get(id))
       .filter(Boolean);
@@ -98,7 +100,8 @@ export function evaluateTermProgress(
   };
 
   const nextTermProgress = periodDetails[effectiveActiveIndex + 1];
-  const allTermsSatisfied = periodDetails.every((p) => p.isCompleted);
+  const allTermsSatisfied =
+    periodDetails.length > 0 && periodDetails.every((p) => p.isCompleted);
 
   return {
     totalTerms,
