@@ -23,6 +23,11 @@ import type {
   LearningUnitId,
   PublishedProgramBundle,
 } from "../app/domain/catalog";
+import {
+  catalogProgramSupersessions,
+  catalogRepository,
+} from "../content/catalog";
+import { catalogPublicationLock } from "../content/manifests/catalog-publication-lock";
 import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
@@ -294,6 +299,183 @@ test("large degree bundles are reconstructed from bounded UTF-8 chunks", async (
     canonicalJson(electricalEngineeringProgram),
   );
   assert.equal(reconstructed.learningUnits.length, 592);
+});
+
+test("an existing EE deployment upgrades without rewriting its publication or learner progress", async (t) => {
+  const { database, miniflare } = await createTestDatabase();
+  t.after(() => miniflare.dispose());
+
+  await seedPublishedProgramBundles(database, [electricalEngineeringProgram]);
+  const eeLock = catalogPublicationLock.find(
+    (record) => record.bundleId === electricalEngineeringProgram.id,
+  );
+  assert.ok(eeLock);
+
+  const publicationBefore = await database
+    .prepare(
+      `SELECT *
+       FROM catalog_bundles
+       WHERE id = ?`,
+    )
+    .bind(electricalEngineeringProgram.id)
+    .first<Record<string, unknown>>();
+  assert.equal(publicationBefore?.payload_hash, eeLock.canonicalSha256);
+
+  const chunksBefore = await database
+    .prepare(
+      `SELECT chunk_index, payload_chunk
+       FROM catalog_bundle_payload_chunks
+       WHERE bundle_id = ?
+       ORDER BY chunk_index`,
+    )
+    .bind(electricalEngineeringProgram.id)
+    .all<{ chunk_index: number; payload_chunk: string }>();
+  assert.ok((chunksBefore.results?.length ?? 0) > 1);
+
+  const progress = new D1LearnerProgressRepository(database);
+  const learner = await progress.resolveLearner({
+    provider: "chatgpt",
+    subject: "ee-upgrade-test@example.com",
+    email: "ee-upgrade-test@example.com",
+    displayName: "EE Upgrade Learner",
+  });
+  const firstUnit = electricalEngineeringProgram.learningUnits[0];
+  const secondCourseUnit = electricalEngineeringProgram.learningUnits.find(
+    (unit) => unit.courseVersionId !== firstUnit?.courseVersionId,
+  );
+  const selectedConcentrationId =
+    electricalEngineeringProgram.concentrations[0]?.id;
+  assert.ok(firstUnit);
+  assert.ok(secondCourseUnit);
+  assert.ok(selectedConcentrationId);
+  await progress.importLocalProgress({
+    learnerId: learner.learnerId,
+    clientImportId: "ee-release-upgrade-fixture",
+    storageNamespace: "course-atlas-progress-v2",
+    disposition: "merged",
+    programs: [
+      {
+        programVersionId: electricalEngineeringProgram.programVersion.id,
+        selectedConcentrationId,
+        courses: [
+          {
+            courseVersionId: firstUnit.courseVersionId,
+            completedUnitIds: [firstUnit.id],
+          },
+          {
+            courseVersionId: secondCourseUnit.courseVersionId,
+            completedUnitIds: [secondCourseUnit.id],
+          },
+        ],
+      },
+    ],
+  });
+
+  async function snapshotLearnerState() {
+    const rows = async (table: string, orderBy: string) =>
+      (
+        await database
+          .prepare(
+            `SELECT * FROM ${table}
+             WHERE learner_id = ?
+             ORDER BY ${orderBy}`,
+          )
+          .bind(learner.learnerId)
+          .all<Record<string, unknown>>()
+      ).results ?? [];
+    return {
+      learners:
+        (
+          await database
+            .prepare("SELECT * FROM learners WHERE id = ?")
+            .bind(learner.learnerId)
+            .all<Record<string, unknown>>()
+        ).results ?? [],
+      accounts: await rows("learner_accounts", "id"),
+      programs: await rows(
+        "learner_program_progress",
+        "program_version_id",
+      ),
+      units: await rows(
+        "learner_unit_completions",
+        "program_version_id, course_version_id, learning_unit_id",
+      ),
+      imports: await rows("learner_progress_imports", "client_import_id"),
+    };
+  }
+  const learnerStateBefore = await snapshotLearnerState();
+
+  const runtimeRepository = await createRuntimeCatalogRepository({
+    database,
+    staticRepository: catalogRepository,
+    programSupersessions: catalogProgramSupersessions,
+  });
+  const programSummaries = await runtimeRepository.listPrograms();
+  assert.equal(programSummaries.length, 6);
+  let publicationCount = 0;
+  for (const program of programSummaries) {
+    publicationCount += (
+      await runtimeRepository.listVersions(program.slug)
+    ).length;
+  }
+  assert.equal(publicationCount, catalogPublicationLock.length);
+
+  const publicationAfter = await database
+    .prepare(
+      `SELECT *
+       FROM catalog_bundles
+       WHERE id = ?`,
+    )
+    .bind(electricalEngineeringProgram.id)
+    .first<Record<string, unknown>>();
+  const chunksAfter = await database
+    .prepare(
+      `SELECT chunk_index, payload_chunk
+       FROM catalog_bundle_payload_chunks
+       WHERE bundle_id = ?
+       ORDER BY chunk_index`,
+    )
+    .bind(electricalEngineeringProgram.id)
+    .all<{ chunk_index: number; payload_chunk: string }>();
+  assert.deepEqual(publicationAfter, publicationBefore);
+  assert.deepEqual(chunksAfter.results, chunksBefore.results);
+  assert.deepEqual(await snapshotLearnerState(), learnerStateBefore);
+
+  const reconstructed = await runtimeRepository.loadByProgramId(
+    electricalEngineeringProgram.program.id,
+    electricalEngineeringProgram.programVersion.version,
+  );
+  assert.ok(reconstructed);
+  assert.equal(
+    canonicalJson(reconstructed),
+    canonicalJson(electricalEngineeringProgram),
+  );
+  const learnerProgress = await progress.loadProgress(
+    learner.learnerId,
+    electricalEngineeringProgram.programVersion.id,
+  );
+  assert.equal(
+    learnerProgress.selectedConcentrationId,
+    selectedConcentrationId,
+  );
+  assert.deepEqual(
+    learnerProgress.courses[firstUnit.courseVersionId].completedUnitIds,
+    [firstUnit.id],
+  );
+  assert.deepEqual(
+    learnerProgress.courses[secondCourseUnit.courseVersionId]
+      .completedUnitIds,
+    [secondCourseUnit.id],
+  );
+
+  const bundleCount = await database
+    .prepare("SELECT COUNT(*) AS count FROM catalog_bundles")
+    .first<{ count: number }>();
+  assert.equal(bundleCount?.count, catalogPublicationLock.length);
+  const foreignKeyProblems = await database
+    .prepare("PRAGMA foreign_key_check")
+    .all();
+  assert.deepEqual(foreignKeyProblems.results ?? [], []);
 });
 
 test("Mechanical Engineering survives a complete D1 seed and reconstruction", async (t) => {
