@@ -10,7 +10,9 @@ import {
   getCompletedCourseVersionIds,
 } from "../domain/prerequisite-evaluator";
 import { resolveLearnerPath } from "../domain/learner-path";
+import { syncStoredProgram } from "../progress-sync-client";
 import {
+  PROGRESS_EVENT,
   readProgressStore,
   type StoredProgramProgress,
 } from "../progress-storage";
@@ -25,7 +27,9 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   const [store, setStore] = useState<Record<string, StoredProgramProgress>>({});
 
   useEffect(() => {
+    let active = true;
     const refreshStore = () => {
+      if (!active) return;
       const current = readProgressStore();
       const programs = current.programs ?? {};
       setStore(programs);
@@ -43,11 +47,25 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
       setMounted(true);
     };
 
+    const hydrateSuppliedPrograms = async () => {
+      await Promise.all(
+        bundles.map((bundle) =>
+          syncStoredProgram(bundle.programVersion.id),
+        ),
+      );
+      refreshStore();
+    };
+
     refreshStore();
+    void hydrateSuppliedPrograms();
     const handleEvent = () => refreshStore();
-    window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
+    const handleReconnect = () => void hydrateSuppliedPrograms();
+    window.addEventListener(PROGRESS_EVENT, handleEvent);
+    window.addEventListener("online", handleReconnect);
     return () => {
-      window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
+      active = false;
+      window.removeEventListener(PROGRESS_EVENT, handleEvent);
+      window.removeEventListener("online", handleReconnect);
     };
   }, [bundles, selectedProgramVersionId]);
 

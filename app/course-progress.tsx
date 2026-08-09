@@ -1,34 +1,26 @@
 "use client";
 
-// Anonymous/offline cache namespace: course-atlas-progress-v2.
+// Anonymous/offline cache namespace: course-atlas-progress-v3.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   CourseVersionId,
   LearningUnitId,
   ProgramVersionId,
 } from "./domain/catalog";
-import {
-  PROGRESS_STORAGE_NAMESPACE,
-  type AuthenticatedProgressResponse,
-} from "./learner-progress-contract";
+import { PROGRESS_STORAGE_NAMESPACE } from "./learner-progress-contract";
 import {
   connectionFromResponse,
   importLocalProgress,
-  loadCloudProgress,
-  patchCloudProgress,
+  syncStoredProgram,
   type ProgressConnection,
   type ProgressSaveState,
+  type StoredProgramSyncResult,
 } from "./progress-sync-client";
 import ProgressSyncStatus from "./progress-sync-status";
 import {
-  ensureClientImportId,
-  hasMeaningfulLocalProgress,
   makeImportRequest,
-  pendingUpdatesForProgram,
   PROGRESS_EVENT,
   readLocalCourseUnits,
-  readProgressStore,
-  replaceLocalProgramFromCloud,
   writeLocalCourseUnits,
 } from "./progress-storage";
 
@@ -74,81 +66,44 @@ export default function CourseProgress({
     );
   }, [allowedUnitIds, courseVersionId, programVersionId]);
 
-  const adoptCloudProgress = useCallback(
-    (response: AuthenticatedProgressResponse) => {
-      const cloudUnits =
-        response.progress.courses[courseVersionId]?.completedUnitIds ?? [];
-      setCompletedUnitIds(
-        cloudUnits.filter((unitId) => allowedUnitIds.has(unitId)),
-      );
-      replaceLocalProgramFromCloud(response.progress);
-      setConnection(connectionFromResponse(response));
-      setNeedsImportDecision(false);
-    },
-    [allowedUnitIds, courseVersionId],
-  );
-
-  const refreshFromCloud = useCallback(async () => {
-    const clientImportId = ensureClientImportId();
-    const localBeforeCloud = readProgressStore();
-    const response = await loadCloudProgress(
-      programVersionId,
-      clientImportId,
-    );
-    setConnection(connectionFromResponse(response));
-
-    if (!response.authenticated) {
-      setNeedsImportDecision(false);
-      setSaveState("idle");
-      return;
-    }
-
-    if (!response.importReceipt) {
-      if (hasMeaningfulLocalProgress(localBeforeCloud)) {
-        const cloudUnits =
-          response.progress.courses[courseVersionId]?.completedUnitIds ?? [];
-        setCompletedUnitIds(
-          cloudUnits.filter((unitId) => allowedUnitIds.has(unitId)),
-        );
-        setNeedsImportDecision(true);
+  const applySyncResult = useCallback(
+    (result: StoredProgramSyncResult, afterWrite = false) => {
+      refreshFromLocal();
+      if (result.kind === "offline") {
+        setConnection({ kind: "offline" });
+        setNeedsImportDecision(false);
+        setSaveState("device-only");
         return;
       }
 
-      await importLocalProgress(
-        makeImportRequest(programVersionId, "cloud"),
-      );
-      const confirmed = await loadCloudProgress(
-        programVersionId,
-        clientImportId,
-      );
-      if (confirmed.authenticated) adoptCloudProgress(confirmed);
-      return;
-    }
+      setConnection(connectionFromResponse(result.response));
+      if (result.kind === "needs-import") {
+        setNeedsImportDecision(true);
+        setSaveState("idle");
+        return;
+      }
 
-    const pending = pendingUpdatesForProgram(programVersionId);
-    if (
-      pending.courseUpdates.length > 0 ||
-      pending.concentrationUpdate
-    ) {
-      const saved = await patchCloudProgress({
-        programVersionId,
-        clientImportId,
-        courseUpdates: pending.courseUpdates,
-        concentrationUpdate: pending.concentrationUpdate,
-      });
-      adoptCloudProgress(saved);
-      setSaveState("saved");
-      return;
-    }
+      setNeedsImportDecision(false);
+      if (result.kind === "anonymous") {
+        setSaveState(afterWrite ? "device-only" : "idle");
+        return;
+      }
+      setSaveState(
+        afterWrite || result.drainedMutations > 0 ? "saved" : "idle",
+      );
+    },
+    [refreshFromLocal],
+  );
 
-    adoptCloudProgress(response);
-    setSaveState("idle");
-  }, [
-    adoptCloudProgress,
-    allowedUnitIds,
-    courseVersionId,
-    programVersionId,
-  ]);
+  const refreshFromCloud = useCallback(
+    async (afterWrite = false) => {
+      applySyncResult(
+        await syncStoredProgram(programVersionId),
+        afterWrite,
+      );
+    },
+    [applySyncResult, programVersionId],
+  );
 
   useEffect(() => {
     let active = true;
@@ -205,36 +160,19 @@ export default function CourseProgress({
       .filter((unitId) => next.includes(unitId));
     setCompletedUnitIds(clean);
 
-    if (connection.kind !== "signed-in") {
-      const cached = writeLocalCourseUnits(
-        programVersionId,
-        courseVersionId,
-        clean,
-        true,
-      );
-      setSaveState(cached ? "device-only" : "error");
-      return;
-    }
-
-    const clientImportId = ensureClientImportId();
     const cached = writeLocalCourseUnits(
       programVersionId,
       courseVersionId,
       clean,
       true,
     );
-    setSaveState("saving");
-    try {
-      const response = await patchCloudProgress({
-        programVersionId,
-        clientImportId,
-        courseUpdates: [{ courseVersionId, completedUnitIds: clean }],
-      });
-      adoptCloudProgress(response);
-      setSaveState("saved");
-    } catch {
-      setSaveState(cached ? "device-only" : "error");
+    if (!cached) {
+      setSaveState("error");
+      return;
     }
+    refreshFromLocal();
+    setSaveState(connection.kind === "signed-in" ? "saving" : "device-only");
+    await refreshFromCloud(true);
   };
 
   const toggle = (unitId: LearningUnitId) => {
@@ -251,13 +189,7 @@ export default function CourseProgress({
     try {
       const request = makeImportRequest(programVersionId, disposition);
       await importLocalProgress(request);
-      const response = await loadCloudProgress(
-        programVersionId,
-        request.clientImportId,
-      );
-      if (!response.authenticated) throw new Error("Sign-in ended.");
-      adoptCloudProgress(response);
-      setSaveState("saved");
+      await refreshFromCloud(true);
     } catch {
       setSaveState("error");
     } finally {

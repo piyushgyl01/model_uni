@@ -6,6 +6,8 @@ import {
 } from "./chatgpt-auth";
 import { getRuntimeLearnerProgressRepository } from "./catalog/cloudflare-catalog";
 import {
+  LearnerProgressMutationConflictError,
+  LearnerProgressRevisionConflictError,
   LearnerProgressValidationError,
   ProgressImportConflictError,
   type D1LearnerProgressRepository,
@@ -86,6 +88,58 @@ export function requireObject(
   return value as Record<string, unknown>;
 }
 
+export function rejectUnknownKeys(
+  object: Readonly<Record<string, unknown>>,
+  allowedKeys: readonly string[],
+  label: string,
+) {
+  const allowed = new Set(allowedKeys);
+  const unknown = Object.keys(object).filter((key) => !allowed.has(key));
+  if (unknown.length > 0) {
+    throw new ProgressRequestError(
+      400,
+      `${label} contains unsupported field(s): ${unknown.join(", ")}.`,
+    );
+  }
+}
+
+export function requireBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") {
+    throw new ProgressRequestError(400, `${label} must be a boolean.`);
+  }
+  return value;
+}
+
+export function requireFiniteNumber(
+  value: unknown,
+  label: string,
+  options: {
+    readonly minimum?: number;
+    readonly maximum?: number;
+    readonly integer?: boolean;
+  } = {},
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ProgressRequestError(400, `${label} must be a finite number.`);
+  }
+  if (options.integer && !Number.isInteger(value)) {
+    throw new ProgressRequestError(400, `${label} must be an integer.`);
+  }
+  if (options.minimum !== undefined && value < options.minimum) {
+    throw new ProgressRequestError(
+      400,
+      `${label} must be at least ${options.minimum}.`,
+    );
+  }
+  if (options.maximum !== undefined && value > options.maximum) {
+    throw new ProgressRequestError(
+      400,
+      `${label} must be at most ${options.maximum}.`,
+    );
+  }
+  return value;
+}
+
 export function requireString(
   value: unknown,
   label: string,
@@ -101,6 +155,33 @@ export function requireString(
     throw new ProgressRequestError(400, `${label} has an invalid format.`);
   }
   return value;
+}
+
+export function requireIsoDate(value: unknown, label: string) {
+  const date = requireString(value, label, {
+    maxLength: 10,
+    pattern: /^\d{4}-\d{2}-\d{2}$/,
+  });
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsed.valueOf()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  ) {
+    throw new ProgressRequestError(400, `${label} must be a valid ISO date.`);
+  }
+  return date;
+}
+
+export function requireIsoDateTime(value: unknown, label: string) {
+  const dateTime = requireString(value, label, { maxLength: 80 });
+  const parsed = new Date(dateTime);
+  if (Number.isNaN(parsed.valueOf())) {
+    throw new ProgressRequestError(
+      400,
+      `${label} must be a valid ISO date-time.`,
+    );
+  }
+  return dateTime;
 }
 
 export function requirePrefixedId(value: unknown, label: string) {
@@ -166,6 +247,7 @@ export async function authenticatedProgressPayload(
   programVersionId: ProgramVersionId,
   clientImportId: string,
   returnTo: string,
+  acknowledgedMutationId?: string,
 ): Promise<AuthenticatedProgressResponse> {
   const [progress, receipt] = await Promise.all([
     context.repository.loadProgress(
@@ -179,14 +261,25 @@ export async function authenticatedProgressPayload(
   ]);
   return {
     authenticated: true,
+    ownerKey: context.learner.accountId,
     user: { displayName: context.user.displayName },
     signOutPath: chatGPTSignOutPath(returnTo),
     progress: {
       programVersionId: progress.programVersionId,
+      revision: progress.revision,
+      enrollment: progress.enrollment,
       selectedConcentrationId: progress.selectedConcentrationId,
+      requirementSelections: progress.requirementSelections,
       courses: progress.courses,
+      unitEvidences: progress.unitEvidences,
+      assessmentAttempts: progress.assessmentAttempts,
+      scheduleEntries: progress.scheduleEntries,
+      prerequisiteWaivers: progress.prerequisiteWaivers,
+      history: progress.history,
+      updatedAt: progress.updatedAt,
     },
     importReceipt: receipt ? publicReceipt(receipt) : null,
+    ...(acknowledgedMutationId ? { acknowledgedMutationId } : {}),
   };
 }
 
@@ -205,6 +298,23 @@ export function progressErrorResponse(error: unknown) {
       {
         error:
           "This device import was already confirmed with different data. Refresh before trying again.",
+      },
+      { status: 409 },
+    );
+  }
+  if (error instanceof LearnerProgressMutationConflictError) {
+    return noStoreJson(
+      {
+        error:
+          "This mutation ID was already used for different learner data. Refresh before trying again.",
+      },
+      { status: 409 },
+    );
+  }
+  if (error instanceof LearnerProgressRevisionConflictError) {
+    return noStoreJson(
+      {
+        error: "Learner progress changed on another device. Refresh and retry.",
       },
       { status: 409 },
     );

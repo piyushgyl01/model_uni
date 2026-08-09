@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { PublishedProgramBundle } from "./domain/catalog";
 import { getCompletedCourseVersionIds } from "./domain/prerequisite-evaluator";
 import { evaluateTermProgress, type TermProgressEvaluation } from "./domain/term-evaluator";
-import { readProgressStore } from "./progress-storage";
+import { PROGRESS_EVENT, readProgressStore } from "./progress-storage";
 
 interface TermProgressWidgetProps {
   readonly bundle: PublishedProgramBundle;
@@ -29,9 +29,9 @@ export function TermProgressWidget({ bundle }: TermProgressWidgetProps) {
 
     update();
     const handleEvent = () => update();
-    window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
+    window.addEventListener(PROGRESS_EVENT, handleEvent);
     return () => {
-      window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
+      window.removeEventListener(PROGRESS_EVENT, handleEvent);
     };
   }, [bundle]);
 

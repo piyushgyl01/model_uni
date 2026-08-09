@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CourseVersionId, LearningUnitId, PublishedProgramBundle } from "./domain/catalog";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
+import { syncStoredProgram } from "./progress-sync-client";
 import { TermProgressWidget } from "./term-progress-widget";
 import {
   PROGRESS_EVENT,
@@ -33,10 +34,14 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
     };
 
     refreshQueue();
+    void syncStoredProgram(programVersionId);
     const handleProgressChange = () => refreshQueue();
+    const handleReconnect = () => void syncStoredProgram(programVersionId);
     window.addEventListener(PROGRESS_EVENT, handleProgressChange);
+    window.addEventListener("online", handleReconnect);
     return () => {
       window.removeEventListener(PROGRESS_EVENT, handleProgressChange);
+      window.removeEventListener("online", handleReconnect);
     };
   }, [bundle, programVersionId]);
 
@@ -65,13 +70,14 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
       nextCompleted = [...currentCompleted, unitId];
     }
 
-    writeLocalCourseUnits(
+    const cached = writeLocalCourseUnits(
       programVersionId,
       courseVersionId as CourseVersionId,
       nextCompleted as readonly LearningUnitId[],
       true,
     );
     window.dispatchEvent(new Event(PROGRESS_EVENT));
+    if (cached) void syncStoredProgram(programVersionId);
   };
 
   if (!mounted) return null;

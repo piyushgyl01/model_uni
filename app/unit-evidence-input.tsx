@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CourseVersionId, LearningUnitId, ProgramVersionId } from "./domain/catalog";
+import { syncStoredProgram } from "./progress-sync-client";
 import {
   PROGRESS_EVENT,
   readLocalCourseUnits,
@@ -35,10 +36,8 @@ export function UnitEvidenceInput({
         courseVersionId,
         unitId,
       );
-      if (evidence) {
-        setEvidenceText(evidence.textOrUrl);
-        setSavedTime(evidence.updatedAt);
-      }
+      setEvidenceText(evidence?.textOrUrl ?? "");
+      setSavedTime(evidence?.updatedAt ?? null);
 
       const completedUnits = readLocalCourseUnits(
         programVersionId,
@@ -66,16 +65,18 @@ export function UnitEvidenceInput({
   }
 
   const handleSave = (andComplete = false) => {
-    if (!evidenceText.trim() && !andComplete) return;
+    const submittedEvidence = evidenceText.trim();
+    if (!submittedEvidence) return;
 
-    writeLocalUnitEvidence(
+    const evidenceSaved = writeLocalUnitEvidence(
       programVersionId,
       courseVersionId,
       unitId,
-      evidenceText.trim(),
+      submittedEvidence,
       true,
     );
 
+    let completionSaved = false;
     if (andComplete && !isCompleted) {
       const currentCompleted = readLocalCourseUnits(
         programVersionId,
@@ -83,7 +84,7 @@ export function UnitEvidenceInput({
         allowedUnitIds,
       );
       const nextCompleted = [...currentCompleted, unitId];
-      writeLocalCourseUnits(
+      completionSaved = writeLocalCourseUnits(
         programVersionId,
         courseVersionId,
         nextCompleted,
@@ -92,6 +93,9 @@ export function UnitEvidenceInput({
     }
 
     window.dispatchEvent(new Event(PROGRESS_EVENT));
+    if (evidenceSaved || completionSaved) {
+      void syncStoredProgram(programVersionId);
+    }
   };
 
   return (

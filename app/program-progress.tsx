@@ -9,29 +9,21 @@ import type {
 } from "./domain/catalog";
 import { resolveLearnerPath } from "./domain/learner-path";
 import { evaluateProgramRequirements } from "./domain/validation";
-import {
-  PROGRESS_STORAGE_NAMESPACE,
-  type AuthenticatedProgressResponse,
-} from "./learner-progress-contract";
+import { PROGRESS_STORAGE_NAMESPACE } from "./learner-progress-contract";
 import {
   connectionFromResponse,
   importLocalProgress,
-  loadCloudProgress,
-  patchCloudProgress,
+  syncStoredProgram,
   type ProgressConnection,
   type ProgressSaveState,
+  type StoredProgramSyncResult,
 } from "./progress-sync-client";
 import ProgressSyncStatus from "./progress-sync-status";
 import {
-  ensureClientImportId,
   getStoredProgram,
-  hasMeaningfulLocalProgress,
   makeImportRequest,
-  pendingUpdatesForProgram,
   PROGRESS_EVENT,
   readLocalCourseUnits,
-  readProgressStore,
-  replaceLocalProgramFromCloud,
   writeLocalConcentration,
 } from "./progress-storage";
 
@@ -94,144 +86,54 @@ export default function ProgramProgress({
     setCompletedByCourse(localCompletedByCourse(programVersionId, courses));
     const storedConcentration =
       getStoredProgram(programVersionId)?.selectedConcentrationId;
-    if (
+    setSelectedConcentrationId(
       storedConcentration &&
-      concentrations.some(
-        (concentration) => concentration.id === storedConcentration,
-      )
-    ) {
-      setSelectedConcentrationId(storedConcentration);
-    }
+        concentrations.some(
+          (concentration) => concentration.id === storedConcentration,
+        )
+        ? storedConcentration
+        : concentrations[0]?.id ?? "",
+    );
   }, [concentrations, courses, programVersionId]);
 
-  const validUnitsByCourse = useMemo(
-    () =>
-      new Map(
-        courses.map((course) => [
-          course.courseVersionId,
-          new Set<string>(course.unitIds),
-        ]),
-      ),
-    [courses],
-  );
-
-  const adoptCloudProgress = useCallback(
-    (response: AuthenticatedProgressResponse) => {
-      setCompletedByCourse(
-        Object.fromEntries(
-          courses.map((course) => {
-            const allowed = validUnitsByCourse.get(course.courseVersionId);
-            const completed =
-              response.progress.courses[course.courseVersionId]
-                ?.completedUnitIds ?? [];
-            return [
-              course.courseVersionId,
-              completed.filter((unitId) => allowed?.has(unitId)),
-            ];
-          }),
-        ),
-      );
-      const cloudConcentration = response.progress.selectedConcentrationId;
-      setSelectedConcentrationId(
-        cloudConcentration &&
-          concentrations.some(
-            (concentration) => concentration.id === cloudConcentration,
-          )
-          ? cloudConcentration
-          : concentrations[0]?.id ?? "",
-      );
-      replaceLocalProgramFromCloud(response.progress);
-      setConnection(connectionFromResponse(response));
-      setNeedsImportDecision(false);
-    },
-    [concentrations, courses, validUnitsByCourse],
-  );
-
-  const showCloudWithoutReplacingLocal = useCallback(
-    (response: AuthenticatedProgressResponse) => {
-      setCompletedByCourse(
-        Object.fromEntries(
-          courses.map((course) => {
-            const allowed = validUnitsByCourse.get(course.courseVersionId);
-            const completed =
-              response.progress.courses[course.courseVersionId]
-                ?.completedUnitIds ?? [];
-            return [
-              course.courseVersionId,
-              completed.filter((unitId) => allowed?.has(unitId)),
-            ];
-          }),
-        ),
-      );
-      const cloudConcentration = response.progress.selectedConcentrationId;
-      setSelectedConcentrationId(
-        cloudConcentration &&
-          concentrations.some(
-            (concentration) => concentration.id === cloudConcentration,
-          )
-          ? cloudConcentration
-          : concentrations[0]?.id ?? "",
-      );
-    },
-    [concentrations, courses, validUnitsByCourse],
-  );
-
-  const refreshFromCloud = useCallback(async () => {
-    const clientImportId = ensureClientImportId();
-    const localBeforeCloud = readProgressStore();
-    const response = await loadCloudProgress(
-      programVersionId,
-      clientImportId,
-    );
-    setConnection(connectionFromResponse(response));
-
-    if (!response.authenticated) {
-      setNeedsImportDecision(false);
-      setSaveState("idle");
-      return;
-    }
-
-    if (!response.importReceipt) {
-      if (hasMeaningfulLocalProgress(localBeforeCloud)) {
-        showCloudWithoutReplacingLocal(response);
-        setNeedsImportDecision(true);
+  const applySyncResult = useCallback(
+    (result: StoredProgramSyncResult, afterWrite = false) => {
+      refreshFromLocal();
+      if (result.kind === "offline") {
+        setConnection({ kind: "offline" });
+        setNeedsImportDecision(false);
+        setSaveState("device-only");
         return;
       }
 
-      await importLocalProgress(
-        makeImportRequest(programVersionId, "cloud"),
-      );
-      const confirmed = await loadCloudProgress(
-        programVersionId,
-        clientImportId,
-      );
-      if (confirmed.authenticated) adoptCloudProgress(confirmed);
-      return;
-    }
+      setConnection(connectionFromResponse(result.response));
+      if (result.kind === "needs-import") {
+        setNeedsImportDecision(true);
+        setSaveState("idle");
+        return;
+      }
 
-    const pending = pendingUpdatesForProgram(programVersionId);
-    if (
-      pending.courseUpdates.length > 0 ||
-      pending.concentrationUpdate
-    ) {
-      const saved = await patchCloudProgress({
-        programVersionId,
-        clientImportId,
-        courseUpdates: pending.courseUpdates,
-        concentrationUpdate: pending.concentrationUpdate,
-      });
-      adoptCloudProgress(saved);
-      setSaveState("saved");
-      return;
-    }
+      setNeedsImportDecision(false);
+      if (result.kind === "anonymous") {
+        setSaveState(afterWrite ? "device-only" : "idle");
+        return;
+      }
+      setSaveState(
+        afterWrite || result.drainedMutations > 0 ? "saved" : "idle",
+      );
+    },
+    [refreshFromLocal],
+  );
 
-    adoptCloudProgress(response);
-    setSaveState("idle");
-  }, [
-    adoptCloudProgress,
-    programVersionId,
-    showCloudWithoutReplacingLocal,
-  ]);
+  const refreshFromCloud = useCallback(
+    async (afterWrite = false) => {
+      applySyncResult(
+        await syncStoredProgram(programVersionId),
+        afterWrite,
+      );
+    },
+    [applySyncResult, programVersionId],
+  );
 
   useEffect(() => {
     let active = true;
@@ -357,26 +259,14 @@ export default function ProgramProgress({
 
   const chooseConcentration = async (id: string) => {
     setSelectedConcentrationId(id);
-    if (connection.kind !== "signed-in") {
-      const cached = writeLocalConcentration(programVersionId, id, true);
-      setSaveState(cached ? "device-only" : "error");
+    const cached = writeLocalConcentration(programVersionId, id, true);
+    if (!cached) {
+      setSaveState("error");
       return;
     }
-
-    const clientImportId = ensureClientImportId();
-    const cached = writeLocalConcentration(programVersionId, id, true);
-    setSaveState("saving");
-    try {
-      const response = await patchCloudProgress({
-        programVersionId,
-        clientImportId,
-        concentrationUpdate: { selectedConcentrationId: id },
-      });
-      adoptCloudProgress(response);
-      setSaveState("saved");
-    } catch {
-      setSaveState(cached ? "device-only" : "error");
-    }
+    refreshFromLocal();
+    setSaveState(connection.kind === "signed-in" ? "saving" : "device-only");
+    await refreshFromCloud(true);
   };
 
   const resolveImport = async (disposition: "merged" | "cloud") => {
@@ -385,13 +275,7 @@ export default function ProgramProgress({
     try {
       const request = makeImportRequest(programVersionId, disposition);
       await importLocalProgress(request);
-      const response = await loadCloudProgress(
-        programVersionId,
-        request.clientImportId,
-      );
-      if (!response.authenticated) throw new Error("Sign-in ended.");
-      adoptCloudProgress(response);
-      setSaveState("saved");
+      await refreshFromCloud(true);
     } catch {
       setSaveState("error");
     } finally {

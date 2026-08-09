@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { Miniflare } from "miniflare";
 import { canonicalJson } from "../app/catalog/canonical-json";
 import { compareCatalogBundleShadows } from "../app/catalog/catalog-shadow";
-import type { D1DatabaseLike } from "../app/catalog/d1-contract";
+import {
+  d1All,
+  d1Batch,
+  type D1DatabaseLike,
+} from "../app/catalog/d1-contract";
+import { initializeCatalogRuntimeSchema } from "../app/catalog/d1-runtime-schema";
 import {
   CatalogDataError,
   CatalogSeedConflictError,
@@ -35,12 +40,152 @@ import { mechanicalEngineeringBundle } from "../content/programs/mechanical-engi
 import { physicsBundle } from "../content/programs/physics";
 import { mathematicsBundle } from "../content/programs/mathematics";
 
-const migrationUrls = [
-  new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url),
-  new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url),
-  new URL("../drizzle/0002_pale_nextwave.sql", import.meta.url),
-  new URL("../drizzle/0003_dazzling_paladin.sql", import.meta.url),
-];
+const migrationDirectoryUrl = new URL("../drizzle/", import.meta.url);
+let migrationUrlsPromise: Promise<readonly URL[]> | undefined;
+
+function loadMigrationUrls() {
+  migrationUrlsPromise ??= readdir(migrationDirectoryUrl).then((files) => {
+    const migrationFiles = files
+      .filter((file) => /^\d{4}_.+\.sql$/.test(file))
+      .sort();
+    assert.ok(migrationFiles.length > 0, "No Drizzle migrations were found.");
+    return migrationFiles.map(
+      (file) => new URL(file, migrationDirectoryUrl),
+    );
+  });
+  return migrationUrlsPromise;
+}
+
+function migrationFileName(url: URL) {
+  return decodeURIComponent(url.pathname.split("/").at(-1) ?? "");
+}
+
+const phase3RuntimeTables = [
+  "learner_program_states",
+  "learner_requirement_selections",
+  "learner_unit_states",
+  "learner_unit_evidence",
+  "learner_assessment_attempts",
+  "learner_schedule_entries",
+  "learner_prerequisite_waivers",
+  "learner_progress_mutations",
+  "learner_progress_events",
+] as const;
+
+interface TableInfoRow {
+  readonly cid: number;
+  readonly name: string;
+  readonly type: string;
+  readonly notnull: number;
+  readonly dflt_value: string | null;
+  readonly pk: number;
+}
+
+interface ForeignKeyInfoRow {
+  readonly id: number;
+  readonly seq: number;
+  readonly table: string;
+  readonly from: string;
+  readonly to: string;
+  readonly on_update: string;
+  readonly on_delete: string;
+  readonly match: string;
+}
+
+interface IndexListRow {
+  readonly name: string;
+  readonly unique: number;
+  readonly origin: string;
+  readonly partial: number;
+}
+
+interface IndexInfoRow {
+  readonly seqno: number;
+  readonly name: string | null;
+}
+
+function pragmaIdentifier(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+async function readRuntimeTableShape(
+  database: D1DatabaseLike,
+  tableName: (typeof phase3RuntimeTables)[number],
+) {
+  const columns = await d1All<TableInfoRow>(
+    database.prepare(`PRAGMA table_info(${pragmaIdentifier(tableName)})`),
+    `inspect ${tableName} columns`,
+  );
+  const foreignKeyRows = await d1All<ForeignKeyInfoRow>(
+    database.prepare(
+      `PRAGMA foreign_key_list(${pragmaIdentifier(tableName)})`,
+    ),
+    `inspect ${tableName} foreign keys`,
+  );
+  const foreignKeyGroups = new Map<
+    number,
+    {
+      table: string;
+      onUpdate: string;
+      onDelete: string;
+      match: string;
+      columns: Array<{ from: string; to: string }>;
+    }
+  >();
+  for (const row of foreignKeyRows) {
+    const group = foreignKeyGroups.get(row.id) ?? {
+      table: row.table,
+      onUpdate: row.on_update,
+      onDelete: row.on_delete,
+      match: row.match,
+      columns: [],
+    };
+    group.columns[row.seq] = { from: row.from, to: row.to };
+    foreignKeyGroups.set(row.id, group);
+  }
+  const foreignKeys = [...foreignKeyGroups.values()].sort((left, right) =>
+    canonicalJson(left).localeCompare(canonicalJson(right)),
+  );
+
+  const indexRows = await d1All<IndexListRow>(
+    database.prepare(`PRAGMA index_list(${pragmaIdentifier(tableName)})`),
+    `inspect ${tableName} indexes`,
+  );
+  const indexes = await Promise.all(
+    indexRows.map(async (index) => {
+      const indexColumns = await d1All<IndexInfoRow>(
+        database.prepare(
+          `PRAGMA index_info(${pragmaIdentifier(index.name)})`,
+        ),
+        `inspect ${index.name} columns`,
+      );
+      return {
+        name: index.name,
+        unique: Boolean(index.unique),
+        origin: index.origin,
+        partial: Boolean(index.partial),
+        columns: [...indexColumns]
+          .sort((left, right) => left.seqno - right.seqno)
+          .map((column) => column.name),
+      };
+    }),
+  );
+  indexes.sort((left, right) => left.name.localeCompare(right.name));
+
+  return {
+    columns: [...columns]
+      .sort((left, right) => left.cid - right.cid)
+      .map(({ name, type, notnull, dflt_value, pk }) => ({
+        name,
+        type: type.toLowerCase(),
+        notNull: Boolean(notnull),
+        defaultValue: dflt_value,
+        primaryKeyPosition: pk,
+      })),
+    foreignKeys,
+    indexes,
+  };
+}
 
 async function createEmptyDatabase() {
   const miniflare = new Miniflare({
@@ -59,7 +204,15 @@ async function createEmptyDatabase() {
 async function createTestDatabase() {
   const { database, miniflare } = await createEmptyDatabase();
 
-  for (const migrationUrl of migrationUrls) {
+  await applyMigrations(database, await loadMigrationUrls());
+  return { database, miniflare };
+}
+
+async function applyMigrations(
+  database: D1DatabaseLike,
+  urls: readonly URL[],
+) {
+  for (const migrationUrl of urls) {
     const migration = await readFile(migrationUrl, "utf8");
     const statements = migration
       .split("--> statement-breakpoint")
@@ -74,7 +227,6 @@ async function createTestDatabase() {
       );
     }
   }
-  return { database, miniflare };
 }
 
 test("a fresh local D1 binding bootstraps the narrow runtime schema", async (t) => {
@@ -104,12 +256,128 @@ test("a fresh local D1 binding bootstraps the narrow runtime schema", async (t) 
          'learner_accounts',
          'learner_program_progress',
          'learner_unit_completions',
-         'learner_progress_imports'
+         'learner_progress_imports',
+         'learner_program_states',
+         'learner_requirement_selections',
+         'learner_unit_states',
+         'learner_unit_evidence',
+         'learner_assessment_attempts',
+         'learner_schedule_entries',
+         'learner_prerequisite_waivers',
+         'learner_progress_mutations',
+         'learner_progress_events'
        )
        ORDER BY name`,
     )
     .all<{ name: string }>();
-  assert.equal(requiredObjects.results?.length, 8);
+  assert.equal(requiredObjects.results?.length, 17);
+  const foreignKeyProblems = await database
+    .prepare("PRAGMA foreign_key_check")
+    .all();
+  assert.deepEqual(foreignKeyProblems.results ?? [], []);
+});
+
+test("the Phase 3 runtime bootstrap matches the migrated table and index shape", async (t) => {
+  const migrated = await createTestDatabase();
+  const runtime = await createEmptyDatabase();
+  t.after(() => Promise.all([migrated.miniflare.dispose(), runtime.miniflare.dispose()]));
+  await initializeCatalogRuntimeSchema(runtime.database);
+
+  for (const tableName of phase3RuntimeTables) {
+    assert.deepEqual(
+      await readRuntimeTableShape(runtime.database, tableName),
+      await readRuntimeTableShape(migrated.database, tableName),
+      `${tableName} differs between runtime bootstrap and Drizzle migrations`,
+    );
+  }
+});
+
+test("the Phase 3 migration preserves legacy enrollment anchors and unit completions", async (t) => {
+  const { database, miniflare } = await createEmptyDatabase();
+  t.after(() => miniflare.dispose());
+  const migrationUrls = await loadMigrationUrls();
+  const phase3MigrationIndex = migrationUrls.findIndex((url) =>
+    migrationFileName(url).startsWith("0004_"),
+  );
+  assert.notEqual(
+    phase3MigrationIndex,
+    -1,
+    "The Phase 3 migration (0004_*.sql) is missing.",
+  );
+  await applyMigrations(database, migrationUrls.slice(0, phase3MigrationIndex));
+  await seedPublishedProgramBundles(database, [practicalSpreadsheetsProgram]);
+
+  const learnerId = "lrn_phase3_legacy_fixture";
+  const programVersionId = practicalSpreadsheetsProgram.programVersion.id;
+  const bundleId = practicalSpreadsheetsProgram.id;
+  const unit = practicalSpreadsheetsProgram.learningUnits[0];
+  assert.ok(unit);
+  await d1Batch(
+    database,
+    [
+      database
+        .prepare("INSERT INTO learners (id) VALUES (?)")
+        .bind(learnerId),
+      database
+        .prepare(
+          `INSERT INTO learner_program_progress (
+             learner_id,
+             program_version_id,
+             bundle_id
+           ) VALUES (?, ?, ?)`,
+        )
+        .bind(learnerId, programVersionId, bundleId),
+      database
+        .prepare(
+          `INSERT INTO learner_unit_completions (
+             learner_id,
+             program_version_id,
+             course_version_id,
+             learning_unit_id,
+             completed_at
+           ) VALUES (?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          learnerId,
+          programVersionId,
+          unit.courseVersionId,
+          unit.id,
+          "2026-08-01 09:30:00",
+        ),
+    ],
+    "create Phase 3 legacy fixture",
+  );
+
+  await applyMigrations(database, migrationUrls.slice(phase3MigrationIndex));
+  assert.deepEqual(
+    await database
+      .prepare(
+        `SELECT revision, enrollment_status
+         FROM learner_program_states
+         WHERE learner_id = ? AND program_version_id = ?`,
+      )
+      .bind(learnerId, programVersionId)
+      .first(),
+    { revision: 0, enrollment_status: "not_enrolled" },
+  );
+  assert.deepEqual(
+    await database
+      .prepare(
+        `SELECT status, completed_at, tombstoned_at
+         FROM learner_unit_states
+         WHERE learner_id = ?
+           AND program_version_id = ?
+           AND course_version_id = ?
+           AND learning_unit_id = ?`,
+      )
+      .bind(learnerId, programVersionId, unit.courseVersionId, unit.id)
+      .first(),
+    {
+      status: "completed",
+      completed_at: "2026-08-01 09:30:00",
+      tombstoned_at: null,
+    },
+  );
   const foreignKeyProblems = await database
     .prepare("PRAGMA foreign_key_check")
     .all();

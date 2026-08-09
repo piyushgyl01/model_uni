@@ -4,7 +4,13 @@ import type {
   LearningUnitId,
   ProgramVersionId,
 } from "../../domain/catalog";
-import type { ProgressPatchRequest } from "../../learner-progress-contract";
+import type {
+  ProgressMutationOperation,
+  ProgressPatchRequest,
+} from "../../learner-progress-contract";
+import {
+  LearnerProgressRevisionConflictError,
+} from "../../catalog/learner-progress-repository";
 import {
   anonymousProgressResponse,
   authenticatedProgressPayload,
@@ -14,12 +20,26 @@ import {
   progressErrorResponse,
   readBoundedJson,
   rejectCrossOriginMutation,
+  rejectUnknownKeys,
   requireClientImportId,
   requireObject,
   requirePrefixedId,
 } from "../../learner-progress-api";
+import { parseProgressPatchRequest } from "../../progress-mutation-parser";
 
 export const dynamic = "force-dynamic";
+
+interface LegacyCourseUpdate {
+  readonly courseVersionId: CourseVersionId;
+  readonly completedUnitIds: readonly LearningUnitId[];
+}
+
+interface LegacyProgressPatch {
+  readonly programVersionId: ProgramVersionId;
+  readonly clientImportId: string;
+  readonly courseUpdates: readonly LegacyCourseUpdate[];
+  readonly selectedConcentrationId?: ConcentrationId | null;
+}
 
 function safeReturnTo(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//")
@@ -48,81 +68,92 @@ function parseProgramVersionId(value: unknown) {
   return id as ProgramVersionId;
 }
 
-function parsePatchRequest(value: unknown): ProgressPatchRequest {
-  const object = requireObject(value, "progress update");
-  const programVersionId = parseProgramVersionId(object.programVersionId);
-  const clientImportId = requireClientImportId(object.clientImportId);
+/**
+ * Temporary compatibility for already-open v2 tabs. A v2 payload is a stale,
+ * whole-course snapshot, so it can safely add completions but cannot prove
+ * that a missing unit is an intentional undo. Treating absence as deletion
+ * would let an old tab erase work saved by a newer device.
+ */
+function parseLegacyPatchRequest(value: unknown): LegacyProgressPatch {
+  const object = requireObject(value, "legacy progress update");
+  rejectUnknownKeys(
+    object,
+    [
+      "programVersionId",
+      "clientImportId",
+      "courseUpdates",
+      "concentrationUpdate",
+    ],
+    "legacy progress update",
+  );
   const courseUpdatesValue = object.courseUpdates;
-  const courseUpdates: ProgressPatchRequest["courseUpdates"] =
-    courseUpdatesValue === undefined
-      ? undefined
-      : (() => {
-          if (!Array.isArray(courseUpdatesValue)) {
-            badProgressRequest("courseUpdates must be an array.");
+  if (courseUpdatesValue !== undefined && !Array.isArray(courseUpdatesValue)) {
+    badProgressRequest("courseUpdates must be an array.");
+  }
+  const seenCourses = new Set<string>();
+  let unitCount = 0;
+  const courseUpdates = (courseUpdatesValue ?? []).map((item, index) => {
+    const update = requireObject(item, `courseUpdates[${index}]`);
+    rejectUnknownKeys(
+      update,
+      ["courseVersionId", "completedUnitIds"],
+      `courseUpdates[${index}]`,
+    );
+    const courseVersionId = requirePrefixedId(
+      update.courseVersionId,
+      `courseUpdates[${index}].courseVersionId`,
+    );
+    if (!courseVersionId.startsWith("crv_")) {
+      badProgressRequest(
+        `courseUpdates[${index}].courseVersionId must start with crv_.`,
+      );
+    }
+    if (seenCourses.has(courseVersionId)) {
+      badProgressRequest(`courseUpdates duplicates ${courseVersionId}.`);
+    }
+    seenCourses.add(courseVersionId);
+    if (!Array.isArray(update.completedUnitIds)) {
+      badProgressRequest(
+        `courseUpdates[${index}].completedUnitIds must be an array.`,
+      );
+    }
+    const completedUnitIds = [
+      ...new Set(
+        update.completedUnitIds.map((unitId, unitIndex) => {
+          unitCount += 1;
+          if (unitCount > 5_000) {
+            badProgressRequest("Progress update contains too many units.");
           }
-          if (courseUpdatesValue.length > 100) {
-            badProgressRequest("courseUpdates contains too many courses.");
+          const id = requirePrefixedId(
+            unitId,
+            `courseUpdates[${index}].completedUnitIds[${unitIndex}]`,
+          );
+          if (!id.startsWith("unt_")) {
+            badProgressRequest("Completed unit IDs must start with unt_.");
           }
-          const seenCourses = new Set<string>();
-          let unitCount = 0;
-          return courseUpdatesValue.map((item, index) => {
-            const update = requireObject(
-              item,
-              `courseUpdates[${index}]`,
-            );
-            const courseVersionId = requirePrefixedId(
-              update.courseVersionId,
-              `courseUpdates[${index}].courseVersionId`,
-            );
-            if (!courseVersionId.startsWith("crv_")) {
-              badProgressRequest(
-                `courseUpdates[${index}].courseVersionId must start with crv_.`,
-              );
-            }
-            if (seenCourses.has(courseVersionId)) {
-              badProgressRequest(`courseUpdates duplicates ${courseVersionId}.`);
-            }
-            seenCourses.add(courseVersionId);
-            if (!Array.isArray(update.completedUnitIds)) {
-              badProgressRequest(
-                `courseUpdates[${index}].completedUnitIds must be an array.`,
-              );
-            }
-            const completedUnitIds = [
-              ...new Set(
-                update.completedUnitIds.map((unitId, unitIndex) => {
-                  const id = requirePrefixedId(
-                    unitId,
-                    `courseUpdates[${index}].completedUnitIds[${unitIndex}]`,
-                  );
-                  if (!id.startsWith("unt_")) {
-                    badProgressRequest(
-                      `courseUpdates[${index}].completedUnitIds[${unitIndex}] must start with unt_.`,
-                    );
-                  }
-                  return id as LearningUnitId;
-                }),
-              ),
-            ];
-            unitCount += completedUnitIds.length;
-            if (unitCount > 5_000) {
-              badProgressRequest("Progress update contains too many units.");
-            }
-            return {
-              courseVersionId: courseVersionId as CourseVersionId,
-              completedUnitIds,
-            };
-          });
-        })();
+          return id as LearningUnitId;
+        }),
+      ),
+    ];
+    return {
+      courseVersionId: courseVersionId as CourseVersionId,
+      completedUnitIds,
+    };
+  });
 
-  let concentrationUpdate: ProgressPatchRequest["concentrationUpdate"];
+  let selectedConcentrationId: ConcentrationId | null | undefined;
   if (object.concentrationUpdate !== undefined) {
     const update = requireObject(
       object.concentrationUpdate,
       "concentrationUpdate",
     );
+    rejectUnknownKeys(
+      update,
+      ["selectedConcentrationId"],
+      "concentrationUpdate",
+    );
     if (update.selectedConcentrationId === null) {
-      concentrationUpdate = { selectedConcentrationId: null };
+      selectedConcentrationId = null;
     } else {
       const id = requirePrefixedId(
         update.selectedConcentrationId,
@@ -131,21 +162,51 @@ function parsePatchRequest(value: unknown): ProgressPatchRequest {
       if (!id.startsWith("con_")) {
         badProgressRequest("selectedConcentrationId must start with con_.");
       }
-      concentrationUpdate = {
-        selectedConcentrationId: id as ConcentrationId,
-      };
+      selectedConcentrationId = id as ConcentrationId;
     }
   }
-
-  if (!courseUpdates?.length && !concentrationUpdate) {
+  if (courseUpdates.length === 0 && selectedConcentrationId === undefined) {
     badProgressRequest("Progress update does not contain a change.");
   }
   return {
-    programVersionId,
-    clientImportId,
+    programVersionId: parseProgramVersionId(object.programVersionId),
+    clientImportId: requireClientImportId(object.clientImportId),
     courseUpdates,
-    concentrationUpdate,
+    ...(selectedConcentrationId !== undefined
+      ? { selectedConcentrationId }
+      : {}),
   };
+}
+
+function legacyOperations(
+  legacy: LegacyProgressPatch,
+  currentCourses: Readonly<
+    Record<string, { readonly completedUnitIds: readonly LearningUnitId[] }>
+  >,
+) {
+  const operations: ProgressMutationOperation[] = [];
+  for (const update of legacy.courseUpdates) {
+    const before = new Set(
+      currentCourses[update.courseVersionId]?.completedUnitIds ?? [],
+    );
+    const after = new Set(update.completedUnitIds);
+    for (const unitId of after) {
+      if (before.has(unitId)) continue;
+      operations.push({
+        type: "set-unit-completion",
+        courseVersionId: update.courseVersionId,
+        learningUnitId: unitId,
+        completed: true,
+      });
+    }
+  }
+  if (legacy.selectedConcentrationId !== undefined) {
+    operations.push({
+      type: "set-concentration",
+      selectedConcentrationId: legacy.selectedConcentrationId,
+    });
+  }
+  return operations;
 }
 
 export async function GET(request: Request) {
@@ -160,13 +221,14 @@ export async function GET(request: Request) {
     const returnTo = safeReturnTo(url.searchParams.get("returnTo"));
     const context = await getAuthenticatedLearner();
     if (!context) return anonymousProgressResponse(returnTo);
-    const payload = await authenticatedProgressPayload(
-      context,
-      programVersionId,
-      clientImportId,
-      returnTo,
+    return noStoreJson(
+      await authenticatedProgressPayload(
+        context,
+        programVersionId,
+        clientImportId,
+        returnTo,
+      ),
     );
-    return noStoreJson(payload);
   } catch (error) {
     return progressErrorResponse(error);
   }
@@ -177,10 +239,15 @@ export async function PATCH(request: Request) {
     rejectCrossOriginMutation(request);
     const context = await getAuthenticatedLearner();
     if (!context) return anonymousProgressResponse("/");
-    const update = parsePatchRequest(await readBoundedJson(request));
+    const raw = await readBoundedJson(request);
+    const object = requireObject(raw, "progress update");
+    const isV3 = object.schemaVersion === 3;
+    const parsed = isV3
+      ? parseProgressPatchRequest(object)
+      : parseLegacyPatchRequest(object);
     const receipt = await context.repository.getProgressImport(
       context.learner.learnerId,
-      update.clientImportId,
+      parsed.clientImportId,
     );
     if (!receipt) {
       return noStoreJson(
@@ -189,72 +256,70 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const bundle =
-      await context.repository.catalog.loadByProgramVersionId(
-        update.programVersionId,
+    let update: ProgressPatchRequest;
+    if (isV3) {
+      update = parsed as ProgressPatchRequest;
+    } else {
+      const legacy = parsed as LegacyProgressPatch;
+      const current = await context.repository.loadProgress(
+        context.learner.learnerId,
+        legacy.programVersionId,
       );
-    if (!bundle) {
-      badProgressRequest("The requested program version is not published.");
-    }
-    for (const course of update.courseUpdates ?? []) {
-      const publishedCourse = bundle.courseVersions.find(
-        (candidate) => candidate.id === course.courseVersionId,
-      );
-      if (!publishedCourse) {
-        badProgressRequest(
-          `Course ${course.courseVersionId} is not in this program version.`,
+      const operations = legacyOperations(legacy, current.courses);
+      if (operations.length === 0) {
+        return noStoreJson(
+          await authenticatedProgressPayload(
+            context,
+            legacy.programVersionId,
+            legacy.clientImportId,
+            requestReturnTo(request),
+          ),
         );
       }
-      const allowedUnits = new Set(
-        bundle.learningUnits
-          .filter(
-            (unit) => unit.courseVersionId === course.courseVersionId,
-          )
-          .map((unit) => unit.id),
+      update = {
+        schemaVersion: 3,
+        programVersionId: legacy.programVersionId,
+        clientImportId: legacy.clientImportId,
+        deviceId: "legacy-v2-client",
+        clientMutationId: `legacy-${crypto.randomUUID()}`,
+        baseRevision: current.revision,
+        operations,
+      };
+    }
+
+    try {
+      const applied = await context.repository.applyMutation({
+        learnerId: context.learner.learnerId,
+        programVersionId: update.programVersionId,
+        deviceId: update.deviceId,
+        clientMutationId: update.clientMutationId,
+        baseRevision: update.baseRevision,
+        operations: update.operations,
+      });
+      return noStoreJson(
+        await authenticatedProgressPayload(
+          context,
+          update.programVersionId,
+          update.clientImportId,
+          requestReturnTo(request),
+          applied.mutationId,
+        ),
       );
-      if (
-        course.completedUnitIds.some((unitId) => !allowedUnits.has(unitId))
-      ) {
-        badProgressRequest(
-          `A completed unit is not in course ${course.courseVersionId}.`,
+    } catch (error) {
+      if (error instanceof LearnerProgressRevisionConflictError) {
+        const current = await authenticatedProgressPayload(
+          context,
+          update.programVersionId,
+          update.clientImportId,
+          requestReturnTo(request),
+        );
+        return noStoreJson(
+          { conflict: true, reason: "revision", progress: current.progress },
+          { status: 409 },
         );
       }
+      throw error;
     }
-    const selectedConcentrationId =
-      update.concentrationUpdate?.selectedConcentrationId;
-    if (
-      selectedConcentrationId &&
-      !bundle.concentrations.some(
-        (concentration) => concentration.id === selectedConcentrationId,
-      )
-    ) {
-      badProgressRequest(
-        "The selected concentration is not in this program version.",
-      );
-    }
-
-    if (update.courseUpdates?.length) {
-      await context.repository.replaceProgramCompletions(
-        context.learner.learnerId,
-        update.programVersionId,
-        update.courseUpdates,
-      );
-    }
-    if (update.concentrationUpdate) {
-      await context.repository.setSelectedConcentration(
-        context.learner.learnerId,
-        update.programVersionId,
-        update.concentrationUpdate.selectedConcentrationId as ConcentrationId | null,
-      );
-    }
-
-    const payload = await authenticatedProgressPayload(
-      context,
-      update.programVersionId,
-      update.clientImportId,
-      requestReturnTo(request),
-    );
-    return noStoreJson(payload);
   } catch (error) {
     return progressErrorResponse(error);
   }

@@ -135,10 +135,11 @@ redeploy.
 - `app/catalog/catalog-shadow.ts` compares every checked-in publication with
   the D1 copy down to an actionable field path before the runtime repository is
   accepted. A real D1 error never silently falls back to source data.
-- `db/schema.ts` and the Drizzle migrations provide 28 relational tables,
+- `db/schema.ts` and the Drizzle migrations provide 37 relational tables,
   including versioned catalog authoring, immutable publication snapshots,
-  learner accounts, version-pinned progress, import receipts, aliases, audit
-  events, and an outbox.
+  learner accounts, enrollment settings, version-pinned progress, evidence,
+  assessment attempts, personal schedules, prerequisite waivers, import
+  receipts, aliases, audit events, and an outbox.
 
 On a fresh D1 database, the checked-in publications seed idempotently. Runtime
 catalog reads then come from D1 and are shadow-verified against the reviewed
@@ -149,10 +150,14 @@ Anonymous and offline progress remains cached in the browser. After ChatGPT
 sign-in, the learner explicitly chooses whether to merge that device's existing
 progress or use the cloud record. The merge is idempotent, local data is not
 deleted before confirmation, and choosing cloud-only does not transmit the
-device history. Signed-in progress is stored in D1 under the exact program,
-course, and unit versions and synchronizes across devices.
+device history. Signed-in enrollment, pace, pathway choices, unit progress,
+evidence, assessment attempts/results, personal schedule entries, prerequisite
+waivers, and append-only history are stored in D1 under exact immutable catalog
+versions. Browser writes enter a granular offline outbox; revision checks and
+idempotent mutation IDs prevent a stale device from replacing newer cloud work.
 
-Graded submissions, formal credentials, and public editorial authoring remain
-outside this release.
+Instructor or automated grading, formal credentials, and public editorial
+authoring remain outside this release. Persisted assessment results record their
+evaluation method and do not imply independent verification.
 
 The application uses vinext on the Cloudflare Sites runtime.

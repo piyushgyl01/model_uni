@@ -3,9 +3,10 @@
 Status: D1-backed catalog, publication, and learner-progress foundation, August 2026
 
 The current release implements the universal publication contract, validation,
-repository boundary, stable seed identities, immutable EE, Computer Science,
-and spreadsheet publications, generic program/course renderers, D1-backed
-catalog reads, and authenticated version-aware progress. Checked-in
+repository boundary, stable seed identities, six program families spanning
+engineering, Computer Science, Physics, Mathematics, and a spreadsheet sprint,
+generic program/course renderers, D1-backed catalog reads, and authenticated
+version-aware progress. Checked-in
 publications are the reviewed seed inputs; D1 stores the immutable runtime
 snapshots and every startup shadow-compares their canonical content. A protected
 publication endpoint also accepts independently validated, immutable D1-only
@@ -448,11 +449,14 @@ reversible:
    reconstructed, validated, and field-level shadow-compared with checked-in
    sources. Static fallback occurs only when the D1 binding is absent, never
    when D1 data is corrupt or divergent.
-5. **Move user state — complete for progress.** ChatGPT-authenticated learners
-   receive D1-backed, version-pinned progress. Existing
-   `course-atlas-progress-v2` data is imported only after an explicit merge or
-   cloud-only choice; the import receipt and payload hash make retries
-   idempotent. Device data remains the anonymous/offline cache.
+5. **Move user state — complete for durable learner records.**
+   ChatGPT-authenticated learners receive revisioned, D1-backed enrollment,
+   pathway choices, unit state, evidence, assessment attempts/results,
+   schedule entries, prerequisite waivers, and append-only history. Existing
+   browser data is imported only after an explicit merge or cloud-only choice;
+   payload hashes and mutation IDs make retries idempotent. A granular local
+   outbox remains the anonymous/offline cache and cannot replace a newer cloud
+   snapshot wholesale.
 6. **Add controlled publication import — complete.** An authenticated,
    same-origin endpoint uses a server-only stable-user-ID allowlist, bounded
    request parsing, whole-catalog validation, immutable idempotent D1 seeding,
@@ -553,9 +557,9 @@ that the model is not coupled to degrees or semesters.
 The active runtime path now idempotently seeds checked-in publications into
 D1, reads them through the D1 repository, verifies every checked-in publication
 against the source shadow, accepts allowlisted D1-only publication imports, and
-stores authenticated learner progress under immutable version IDs. The next
-persistence slice is editorial drafting, source ingestion, and search—not
-another read-path rewrite.
+stores revisioned authenticated learner records under immutable version IDs.
+The next persistence slice is editorial drafting, source ingestion, and
+search—not another read-path rewrite.
 
 This slice proves universal identity, reuse, provenance, versioning,
 requirements, arbitrary course shape, immutable persistence, cross-device

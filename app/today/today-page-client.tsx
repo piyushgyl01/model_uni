@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { PublishedProgramBundle } from "../domain/catalog";
-import { readProgressStore } from "../progress-storage";
+import { syncStoredProgram } from "../progress-sync-client";
+import { PROGRESS_EVENT, readProgressStore } from "../progress-storage";
 import { TodayDashboardComponent } from "../today-dashboard-component";
 
 interface TodayPageClientProps {
@@ -14,7 +15,9 @@ export function TodayPageClient({ bundles }: TodayPageClientProps) {
   const [enrolledProgramVersionIds, setEnrolledProgramVersionIds] = useState<string[]>([]);
 
   useEffect(() => {
+    let active = true;
     const updateEnrolled = () => {
+      if (!active) return;
       const store = readProgressStore();
       const enrolled = Object.entries(store.programs ?? {})
         .filter(([, program]) => program.enrollment?.status === "enrolled")
@@ -22,14 +25,27 @@ export function TodayPageClient({ bundles }: TodayPageClientProps) {
       setEnrolledProgramVersionIds(enrolled);
       setMounted(true);
     };
+    const hydrateSuppliedPrograms = async () => {
+      await Promise.all(
+        bundles.map((bundle) =>
+          syncStoredProgram(bundle.programVersion.id),
+        ),
+      );
+      updateEnrolled();
+    };
 
     updateEnrolled();
+    void hydrateSuppliedPrograms();
     const handleEvent = () => updateEnrolled();
-    window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
+    const handleReconnect = () => void hydrateSuppliedPrograms();
+    window.addEventListener(PROGRESS_EVENT, handleEvent);
+    window.addEventListener("online", handleReconnect);
     return () => {
-      window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
+      active = false;
+      window.removeEventListener(PROGRESS_EVENT, handleEvent);
+      window.removeEventListener("online", handleReconnect);
     };
-  }, []);
+  }, [bundles]);
 
   const enrolledBundles = bundles.filter((b) =>
     enrolledProgramVersionIds.includes(b.programVersion.id),

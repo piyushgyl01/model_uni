@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ProgramVersionId } from "./domain/catalog";
+import { syncStoredProgram } from "./progress-sync-client";
 import {
   cancelLocalEnrollment,
   getStoredEnrollment,
@@ -55,13 +56,14 @@ export function EnrollmentModal({
 
   const handleEnroll = (e: React.FormEvent) => {
     e.preventDefault();
-    writeLocalEnrollment(programVersionId, {
+    const cached = writeLocalEnrollment(programVersionId, {
       startDate,
       paceHoursPerWeek: paceHours,
       enrolledAt: new Date().toISOString(),
       status: "enrolled",
     });
     window.dispatchEvent(new Event(PROGRESS_EVENT));
+    if (cached) void syncStoredProgram(programVersionId);
     onClose();
   };
 
@@ -71,8 +73,9 @@ export function EnrollmentModal({
         `Are you sure you want to pause/cancel enrollment in ${programTitle}?`,
       )
     ) {
-      cancelLocalEnrollment(programVersionId);
+      const cached = cancelLocalEnrollment(programVersionId);
       window.dispatchEvent(new Event(PROGRESS_EVENT));
+      if (cached) void syncStoredProgram(programVersionId);
       onClose();
     }
   };

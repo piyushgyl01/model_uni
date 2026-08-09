@@ -318,11 +318,13 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.doesNotMatch(programPage, programSpecificHardcoding);
   assert.doesNotMatch(coursePage, /length === 16|Array\.from\(\{ length: 16/);
   assert.doesNotMatch(coursePage, programSpecificHardcoding);
-  assert.match(progress, /course-atlas-progress-v2/);
+  assert.match(progress, /course-atlas-progress-v3/);
   assert.match(progress, /programVersionId/);
   assert.match(progress, /courseVersionId/);
   assert.match(progress, /completedUnitIds/);
-  assert.match(progress, /patchCloudProgress/);
+  assert.match(progress, /syncStoredProgram/);
+  assert.match(progressStorage, /course-atlas-progress-v2/);
+  assert.match(progressStorage, /owner-scoped-v1/);
   assert.match(catalog, /StaticCatalogRepository/);
   assert.match(runtimeCatalog, /seedPublishedProgramBundles/);
   assert.match(runtimeCatalog, /compareCatalogBundleShadows/);
@@ -341,10 +343,13 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(schema, /catalogBundles/);
   assert.match(schema, /learnerProgramProgress/);
   assert.match(schema, /learnerUnitCompletions/);
+  assert.match(schema, /learnerProgramStates/);
+  assert.match(schema, /learnerUnitEvidence/);
 
   await access(new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url));
   await access(new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url));
   await access(new URL("../drizzle/0002_pale_nextwave.sql", import.meta.url));
   await access(new URL("../drizzle/0003_dazzling_paladin.sql", import.meta.url));
+  await access(new URL("../drizzle/0004_soft_champions.sql", import.meta.url));
   await access(new URL("../.openai/hosting.json", import.meta.url));
 });

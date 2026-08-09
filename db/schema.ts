@@ -1014,6 +1014,622 @@ export const learnerProgressImports = sqliteTable(
   ],
 );
 
+/**
+ * The authoritative, revisioned learner configuration for one immutable
+ * program publication. The legacy learner_program_progress row remains the
+ * version pin and enrollment anchor; this table can therefore be introduced
+ * without changing or reinterpreting existing progress rows.
+ */
+export const learnerProgramStates = sqliteTable(
+  "learner_program_states",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    revision: integer("revision").notNull().default(0),
+    lastMutationId: text("last_mutation_id"),
+    enrollmentStatus: text("enrollment_status", {
+      enum: ["not_enrolled", "enrolled", "paused", "completed"],
+    })
+      .notNull()
+      .default("not_enrolled"),
+    startDate: text("start_date"),
+    paceHoursPerWeek: real("pace_hours_per_week"),
+    studyDaysJson: text("study_days_json", { mode: "json" })
+      .$type<readonly number[]>()
+      .notNull()
+      .default([]),
+    timezone: text("timezone"),
+    enrolledAt: text("enrolled_at"),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_program_states_pk",
+      columns: [table.learnerId, table.programVersionId],
+    }),
+    foreignKey({
+      name: "learner_program_states_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_program_states_status_idx").on(
+      table.learnerId,
+      table.enrollmentStatus,
+      table.updatedAt,
+    ),
+    check(
+      "learner_program_states_revision_check",
+      sql`${table.revision} >= 0`,
+    ),
+    check(
+      "learner_program_states_enrollment_status_check",
+      sql`${table.enrollmentStatus} IN ('not_enrolled', 'enrolled', 'paused', 'completed')`,
+    ),
+    check(
+      "learner_program_states_start_date_check",
+      sql`${table.startDate} IS NULL OR (length(${table.startDate}) = 10 AND date(${table.startDate}) = ${table.startDate})`,
+    ),
+    check(
+      "learner_program_states_pace_check",
+      sql`${table.paceHoursPerWeek} IS NULL OR (${table.paceHoursPerWeek} > 0 AND ${table.paceHoursPerWeek} <= 168)`,
+    ),
+    check(
+      "learner_program_states_study_days_check",
+      sql`json_valid(${table.studyDaysJson}) AND json_type(${table.studyDaysJson}) = 'array'`,
+    ),
+    check(
+      "learner_program_states_timezone_check",
+      sql`${table.timezone} IS NULL OR length(trim(${table.timezone})) > 0`,
+    ),
+  ],
+);
+
+/** Exact learner choices inside version-pinned requirement groups. */
+export const learnerRequirementSelections = sqliteTable(
+  "learner_requirement_selections",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    requirementGroupId: text("requirement_group_id").notNull(),
+    requirementOptionId: text("requirement_option_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    selectionSource: text("selection_source", {
+      enum: ["learner", "default", "import"],
+    })
+      .notNull()
+      .default("learner"),
+    selectedAt: text("selected_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_requirement_selections_pk",
+      columns: [
+        table.learnerId,
+        table.programVersionId,
+        table.requirementGroupId,
+        table.requirementOptionId,
+      ],
+    }),
+    foreignKey({
+      name: "learner_requirement_selections_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("learner_requirement_selections_group_course_unique").on(
+      table.learnerId,
+      table.programVersionId,
+      table.requirementGroupId,
+      table.courseVersionId,
+    ),
+    index("learner_requirement_selections_course_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    check(
+      "learner_requirement_selections_source_check",
+      sql`${table.selectionSource} IN ('learner', 'default', 'import')`,
+    ),
+  ],
+);
+
+/**
+ * Current unit state. Tombstones are retained so an older offline completion
+ * cannot silently resurrect work that the learner later unchecked.
+ */
+export const learnerUnitStates = sqliteTable(
+  "learner_unit_states",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    learningUnitId: text("learning_unit_id").notNull(),
+    status: text("status", { enum: ["completed", "tombstoned"] }).notNull(),
+    completedAt: text("completed_at"),
+    tombstonedAt: text("tombstoned_at"),
+    lastMutationId: text("last_mutation_id"),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_unit_states_pk",
+      columns: [
+        table.learnerId,
+        table.programVersionId,
+        table.courseVersionId,
+        table.learningUnitId,
+      ],
+    }),
+    foreignKey({
+      name: "learner_unit_states_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_unit_states_program_status_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.status,
+      table.updatedAt,
+    ),
+    index("learner_unit_states_course_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+      table.status,
+    ),
+    check(
+      "learner_unit_states_status_timestamps_check",
+      sql`(${table.status} = 'completed' AND ${table.completedAt} IS NOT NULL AND ${table.tombstonedAt} IS NULL)
+        OR (${table.status} = 'tombstoned' AND ${table.completedAt} IS NULL AND ${table.tombstonedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+/** One current self-submitted evidence record per published learning unit. */
+export const learnerUnitEvidence = sqliteTable(
+  "learner_unit_evidence",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    learningUnitId: text("learning_unit_id").notNull(),
+    status: text("status", { enum: ["active", "tombstoned"] }).notNull(),
+    textOrUrl: text("text_or_url"),
+    submittedAt: text("submitted_at"),
+    tombstonedAt: text("tombstoned_at"),
+    lastMutationId: text("last_mutation_id"),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_unit_evidence_pk",
+      columns: [
+        table.learnerId,
+        table.programVersionId,
+        table.courseVersionId,
+        table.learningUnitId,
+      ],
+    }),
+    foreignKey({
+      name: "learner_unit_evidence_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_unit_evidence_program_updated_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.updatedAt,
+    ),
+    check(
+      "learner_unit_evidence_status_payload_check",
+      sql`(${table.status} = 'active' AND length(trim(${table.textOrUrl})) > 0 AND ${table.submittedAt} IS NOT NULL AND ${table.tombstonedAt} IS NULL)
+        OR (${table.status} = 'tombstoned' AND ${table.textOrUrl} IS NULL AND ${table.submittedAt} IS NULL AND ${table.tombstonedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+/** Version-pinned submissions and evaluation results for one assessment. */
+export const learnerAssessmentAttempts = sqliteTable(
+  "learner_assessment_attempts",
+  {
+    id: text("id").notNull(),
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    assessmentVersionId: text("assessment_version_id").notNull(),
+    attemptNumber: integer("attempt_number").notNull(),
+    status: text("status", {
+      enum: ["draft", "submitted", "evaluated", "void"],
+    })
+      .notNull()
+      .default("draft"),
+    submissionText: text("submission_text"),
+    submissionUrl: text("submission_url"),
+    submissionEvidenceJson: text("submission_evidence_json", { mode: "json" })
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+    score: real("score"),
+    maximumScore: real("maximum_score"),
+    passed: integer("passed", { mode: "boolean" }),
+    evaluationMethod: text("evaluation_method", {
+      enum: ["self", "automatic", "peer", "instructor"],
+    }),
+    feedback: text("feedback"),
+    startedAt: text("started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    submittedAt: text("submitted_at"),
+    evaluatedAt: text("evaluated_at"),
+    lastMutationId: text("last_mutation_id"),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_assessment_attempts_pk",
+      columns: [table.learnerId, table.programVersionId, table.id],
+    }),
+    uniqueIndex("learner_assessment_attempts_number_unique").on(
+      table.learnerId,
+      table.programVersionId,
+      table.assessmentVersionId,
+      table.attemptNumber,
+    ),
+    foreignKey({
+      name: "learner_assessment_attempts_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_assessment_attempts_course_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+      table.updatedAt,
+    ),
+    index("learner_assessment_attempts_status_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.status,
+      table.updatedAt,
+    ),
+    check(
+      "learner_assessment_attempts_number_check",
+      sql`${table.attemptNumber} > 0`,
+    ),
+    check(
+      "learner_assessment_attempts_score_check",
+      sql`(${table.score} IS NULL AND ${table.maximumScore} IS NULL)
+        OR (${table.score} IS NOT NULL AND ${table.maximumScore} IS NOT NULL AND ${table.score} >= 0 AND ${table.maximumScore} > 0 AND ${table.score} <= ${table.maximumScore})`,
+    ),
+    check(
+      "learner_assessment_attempts_evidence_check",
+      sql`json_valid(${table.submissionEvidenceJson}) AND json_type(${table.submissionEvidenceJson}) = 'array'`,
+    ),
+    check(
+      "learner_assessment_attempts_evaluation_method_check",
+      sql`${table.evaluationMethod} IS NULL OR ${table.evaluationMethod} IN ('self', 'automatic', 'peer', 'instructor')`,
+    ),
+    check(
+      "learner_assessment_attempts_passed_check",
+      sql`${table.passed} IS NULL OR ${table.passed} IN (0, 1)`,
+    ),
+    check(
+      "learner_assessment_attempts_lifecycle_check",
+      sql`(${table.status} = 'draft' AND ${table.submittedAt} IS NULL AND ${table.evaluatedAt} IS NULL)
+        OR (${table.status} = 'submitted' AND ${table.submittedAt} IS NOT NULL AND ${table.evaluatedAt} IS NULL)
+        OR (${table.status} = 'evaluated' AND ${table.submittedAt} IS NOT NULL AND ${table.evaluatedAt} IS NOT NULL AND ${table.passed} IS NOT NULL AND ${table.evaluationMethod} IS NOT NULL)
+        OR ${table.status} = 'void'`,
+    ),
+  ],
+);
+
+/** Durable dated assignments; Phase 4 can recalculate future rows in place. */
+export const learnerScheduleEntries = sqliteTable(
+  "learner_schedule_entries",
+  {
+    id: text("id").notNull(),
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    learningUnitId: text("learning_unit_id"),
+    assessmentVersionId: text("assessment_version_id"),
+    scheduledDate: text("scheduled_date").notNull(),
+    startTime: text("start_time"),
+    plannedMinutes: integer("planned_minutes").notNull(),
+    position: integer("position").notNull().default(0),
+    status: text("status", {
+      enum: ["planned", "completed", "skipped", "carried", "cancelled"],
+    })
+      .notNull()
+      .default("planned"),
+    sourcePlacementId: text("source_placement_id"),
+    originEntryId: text("origin_entry_id"),
+    completedAt: text("completed_at"),
+    lastMutationId: text("last_mutation_id"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_schedule_entries_pk",
+      columns: [table.learnerId, table.programVersionId, table.id],
+    }),
+    foreignKey({
+      name: "learner_schedule_entries_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    foreignKey({
+      name: "learner_schedule_entries_origin_fk",
+      columns: [
+        table.learnerId,
+        table.programVersionId,
+        table.originEntryId,
+      ],
+      foreignColumns: [
+        table.learnerId,
+        table.programVersionId,
+        table.id,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("restrict"),
+    index("learner_schedule_entries_day_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.scheduledDate,
+      table.position,
+    ),
+    index("learner_schedule_entries_status_day_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.status,
+      table.scheduledDate,
+    ),
+    check(
+      "learner_schedule_entries_subject_check",
+      sql`${table.learningUnitId} IS NULL OR ${table.assessmentVersionId} IS NULL`,
+    ),
+    check(
+      "learner_schedule_entries_date_check",
+      sql`length(${table.scheduledDate}) = 10 AND date(${table.scheduledDate}) = ${table.scheduledDate}`,
+    ),
+    check(
+      "learner_schedule_entries_start_time_check",
+      sql`${table.startTime} IS NULL OR (length(${table.startTime}) = 5 AND ${table.startTime} GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(${table.startTime}, 1, 2) <= '23')`,
+    ),
+    check(
+      "learner_schedule_entries_minutes_check",
+      sql`${table.plannedMinutes} > 0`,
+    ),
+    check(
+      "learner_schedule_entries_position_check",
+      sql`${table.position} >= 0`,
+    ),
+    check(
+      "learner_schedule_entries_status_check",
+      sql`${table.status} IN ('planned', 'completed', 'skipped', 'carried', 'cancelled')`,
+    ),
+    check(
+      "learner_schedule_entries_completion_check",
+      sql`(${table.status} = 'completed' AND ${table.completedAt} IS NOT NULL)
+        OR (${table.status} <> 'completed' AND ${table.completedAt} IS NULL)`,
+    ),
+  ],
+);
+
+/** Explicit, auditable bypasses for one prerequisite edge. */
+export const learnerPrerequisiteWaivers = sqliteTable(
+  "learner_prerequisite_waivers",
+  {
+    id: text("id").notNull(),
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    prerequisiteCourseVersionId: text("prerequisite_course_version_id").notNull(),
+    basis: text("basis", {
+      enum: ["placement", "prior_learning", "review", "manual"],
+    }).notNull(),
+    reason: text("reason").notNull(),
+    evidenceTextOrUrl: text("evidence_text_or_url"),
+    grantedAt: text("granted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    revokedAt: text("revoked_at"),
+    lastMutationId: text("last_mutation_id"),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_prerequisite_waivers_pk",
+      columns: [table.learnerId, table.programVersionId, table.id],
+    }),
+    foreignKey({
+      name: "learner_prerequisite_waivers_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("learner_prerequisite_waivers_active_unique")
+      .on(
+        table.learnerId,
+        table.programVersionId,
+        table.courseVersionId,
+        table.prerequisiteCourseVersionId,
+      )
+      .where(sql`${table.revokedAt} IS NULL`),
+    index("learner_prerequisite_waivers_course_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+      table.revokedAt,
+    ),
+    check(
+      "learner_prerequisite_waivers_distinct_courses_check",
+      sql`${table.courseVersionId} <> ${table.prerequisiteCourseVersionId}`,
+    ),
+    check(
+      "learner_prerequisite_waivers_reason_check",
+      sql`length(trim(${table.reason})) > 0`,
+    ),
+    check(
+      "learner_prerequisite_waivers_basis_check",
+      sql`${table.basis} IN ('placement', 'prior_learning', 'review', 'manual')`,
+    ),
+  ],
+);
+
+/** Idempotency record for each accepted client mutation. */
+export const learnerProgressMutations = sqliteTable(
+  "learner_progress_mutations",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    mutationId: text("mutation_id").notNull(),
+    deviceId: text("device_id").notNull(),
+    baseRevision: integer("base_revision").notNull(),
+    resultRevision: integer("result_revision").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    appliedAt: text("applied_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_progress_mutations_pk",
+      columns: [table.learnerId, table.programVersionId, table.mutationId],
+    }),
+    foreignKey({
+      name: "learner_progress_mutations_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("learner_progress_mutations_revision_unique").on(
+      table.learnerId,
+      table.programVersionId,
+      table.resultRevision,
+    ),
+    check(
+      "learner_progress_mutations_revision_check",
+      sql`${table.baseRevision} >= 0 AND ${table.resultRevision} = ${table.baseRevision} + 1`,
+    ),
+    check(
+      "learner_progress_mutations_hash_check",
+      sql`length(${table.payloadHash}) = 64`,
+    ),
+    check(
+      "learner_progress_mutations_device_check",
+      sql`length(trim(${table.deviceId})) > 0`,
+    ),
+  ],
+);
+
+/** Append-only learner history, including completion and reopening events. */
+export const learnerProgressEvents = sqliteTable(
+  "learner_progress_events",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    mutationId: text("mutation_id"),
+    entityType: text("entity_type", {
+      enum: [
+        "program",
+        "requirement",
+        "unit",
+        "evidence",
+        "assessment",
+        "schedule",
+        "waiver",
+      ],
+    }).notNull(),
+    entityId: text("entity_id").notNull(),
+    eventType: text("event_type").notNull(),
+    payloadJson: text("payload_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    occurredAt: text("occurred_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    foreignKey({
+      name: "learner_progress_events_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    foreignKey({
+      name: "learner_progress_events_mutation_fk",
+      columns: [table.learnerId, table.programVersionId, table.mutationId],
+      foreignColumns: [
+        learnerProgressMutations.learnerId,
+        learnerProgressMutations.programVersionId,
+        learnerProgressMutations.mutationId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("restrict"),
+    index("learner_progress_events_program_time_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.occurredAt,
+    ),
+    index("learner_progress_events_entity_time_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.entityType,
+      table.entityId,
+      table.occurredAt,
+    ),
+    check(
+      "learner_progress_events_entity_check",
+      sql`length(trim(${table.entityId})) > 0 AND length(trim(${table.eventType})) > 0`,
+    ),
+    check(
+      "learner_progress_events_payload_check",
+      sql`json_valid(${table.payloadJson}) AND json_type(${table.payloadJson}) = 'object'`,
+    ),
+  ],
+);
+
 export const auditEvents = sqliteTable(
   "audit_events",
   {

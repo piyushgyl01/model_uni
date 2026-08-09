@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { readProgressStore } from "./progress-storage";
+import { PROGRESS_EVENT, readProgressStore } from "./progress-storage";
 
 export function ActiveEnrollmentBanner() {
   const [mounted, setMounted] = useState(false);
@@ -25,9 +25,9 @@ export function ActiveEnrollmentBanner() {
 
     update();
     const handleEvent = () => update();
-    window.addEventListener("course-atlas-progress-v2:changed", handleEvent);
+    window.addEventListener(PROGRESS_EVENT, handleEvent);
     return () => {
-      window.removeEventListener("course-atlas-progress-v2:changed", handleEvent);
+      window.removeEventListener(PROGRESS_EVENT, handleEvent);
     };
   }, []);
 
