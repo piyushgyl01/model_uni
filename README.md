@@ -166,6 +166,17 @@ personal schedule; the remaining calendar and completion date are recalculated
 from actual unfinished hours. Completed and carried entries remain immutable
 daily history.
 
+Course status now follows an academic mastery lifecycle: not started, studying,
+assessment due, submitted, evaluated, passed, or retry required. Checking every
+learning unit records completed study work but cannot pass a course by itself.
+Passing requires all published learning work, every required assessment with
+submission evidence, the published weighted threshold (including individually
+required assessments), and evidence for required project/practical units.
+Prerequisite locks disable course, evidence, assessment, and Today controls;
+placement results and other waivers unlock only the declared prerequisite and
+are retained as explicit, revocable learner records. The normal learner UI has
+no bulk “mark all complete” action.
+
 Instructor or automated grading, formal credentials, and public editorial
 authoring remain outside this release. Persisted assessment results record their
 evaluation method and do not imply independent verification.

@@ -13,10 +13,13 @@ import { practicalSpreadsheetsProgram } from "../content/programs/practical-spre
 
 const bundle = computerScienceBundle;
 
-function completedCourses(
+function masteredCourses(
   courseVersionIds: ReadonlySet<CourseVersionId>,
-): NonNullable<StoredProgramProgress["courses"]> {
-  return Object.fromEntries(
+): Pick<
+  StoredProgramProgress,
+  "courses" | "unitEvidences" | "assessmentAttempts"
+> {
+  const courses = Object.fromEntries(
     [...courseVersionIds].map((courseVersionId) => [
       courseVersionId,
       {
@@ -26,6 +29,61 @@ function completedCourses(
       },
     ]),
   );
+  const units = bundle.learningUnits.filter((unit) =>
+    courseVersionIds.has(unit.courseVersionId),
+  );
+  const unitEvidences = Object.fromEntries(
+    units
+      .filter(
+        (unit) =>
+          unit.kind === "project" ||
+          ["project", "lab", "portfolio", "presentation"].includes(
+            unit.assessmentKind ?? "",
+          ),
+      )
+      .map((unit) => [
+        unit.id,
+        {
+          learningUnitId: unit.id,
+          courseVersionId: unit.courseVersionId,
+          textOrUrl: `evidence-${unit.id}`,
+        },
+      ]),
+  );
+  const assessmentAttempts = Object.fromEntries(
+    bundle.courseVersions
+      .filter((course) => courseVersionIds.has(course.id))
+      .flatMap((course) =>
+        course.gradingPolicy.contributions.map((contribution, index) => {
+          const assessment = bundle.assessmentVersions.find(
+            (candidate) => candidate.id === contribution.assessmentVersionId,
+          );
+          assert.ok(assessment);
+          const id = `path-attempt-${course.id}-${index}`;
+          return [
+            id,
+            {
+              id,
+              assessmentVersionId: assessment.id,
+              courseVersionId: course.id,
+              attemptNumber: 1,
+              status: "evaluated" as const,
+              startedAt: "2026-08-01T00:00:00.000Z",
+              submittedAt: "2026-08-02T00:00:00.000Z",
+              submissionEvidence: ["artifact"],
+              result: {
+                score: assessment.maximumScore,
+                maximumScore: assessment.maximumScore,
+                passed: true,
+                evaluationMethod: "self" as const,
+                evaluatedAt: "2026-08-03T00:00:00.000Z",
+              },
+            },
+          ];
+        }),
+      ),
+  );
+  return { courses, unitEvidences, assessmentAttempts };
 }
 
 test("Today uses one 30-course, 240-unit Computer Science concentration path", () => {
@@ -54,6 +112,9 @@ test("Today uses one 30-course, 240-unit Computer Science concentration path", (
     ...coreCourseIds,
     ...unselectedConcentrationCourseIds,
   ]);
+  const masteredOutsideSelectedPath = masteredCourses(
+    completedOutsideSelectedPath,
+  );
   const progress: StoredProgramProgress = {
     selectedConcentrationId: selectedConcentration.id,
     enrollment: {
@@ -62,7 +123,7 @@ test("Today uses one 30-course, 240-unit Computer Science concentration path", (
       enrolledAt: "2026-08-08T00:00:00Z",
       status: "enrolled",
     },
-    courses: completedCourses(completedOutsideSelectedPath),
+    ...masteredOutsideSelectedPath,
   };
 
   const queue = calculateTodayQueue(bundle, progress, "2028-09-18");

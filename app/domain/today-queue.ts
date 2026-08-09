@@ -14,6 +14,10 @@ import {
   type CalendarStudySession,
   type DatedAcademicTerm,
 } from "./academic-calendar";
+import {
+  evaluateAllCoursePrerequisites,
+  type CoursePrerequisiteEvaluation,
+} from "./prerequisite-evaluator";
 
 export interface TodayStudyBlock {
   readonly scheduleEntry: ScheduleEntry;
@@ -30,6 +34,7 @@ export interface TodayStudyBlock {
   readonly plannedMinutes: number;
   readonly completed: boolean;
   readonly canComplete: boolean;
+  readonly lockedReason?: string;
   readonly completesUnit: boolean;
   readonly periodLabel: string;
   readonly taskKind: AcademicTaskKind;
@@ -70,7 +75,14 @@ export interface TodayQueueResult {
   readonly currentPeriodLabel: string;
 }
 
-function studyBlock(session: CalendarStudySession): TodayStudyBlock {
+function studyBlock(
+  session: CalendarStudySession,
+  prerequisiteEvaluations?: ReadonlyMap<
+    CourseVersionId,
+    CoursePrerequisiteEvaluation
+  >,
+): TodayStudyBlock {
+  const prerequisite = prerequisiteEvaluations?.get(session.courseVersionId);
   return {
     scheduleEntry: session.entry,
     scheduleEntryId: session.entry.id,
@@ -85,7 +97,12 @@ function studyBlock(session: CalendarStudySession): TodayStudyBlock {
     estimatedHours: Math.round((session.entry.plannedMinutes / 60) * 10) / 10,
     plannedMinutes: session.entry.plannedMinutes,
     completed: session.entry.status === "completed",
-    canComplete: session.entry.status === "planned",
+    canComplete:
+      session.entry.status === "planned" &&
+      (prerequisite?.isUnlocked ?? true),
+    ...(!prerequisite?.isUnlocked && prerequisite?.lockReasonText
+      ? { lockedReason: prerequisite.lockReasonText }
+      : {}),
     completesUnit: session.completesUnit,
     periodLabel: session.periodLabel,
     taskKind: session.taskKind,
@@ -115,12 +132,16 @@ export function calculateTodayQueue(
   today?: string,
 ): TodayQueueResult {
   const calendar = buildAcademicCalendar(bundle, progress, today);
+  const prerequisiteEvaluations = evaluateAllCoursePrerequisites(
+    bundle,
+    progress,
+  );
   const blocks = calendar.todaySessions
     .filter(
       (session) =>
         session.entry.status === "planned" || session.entry.status === "completed",
     )
-    .map(studyBlock);
+    .map((session) => studyBlock(session, prerequisiteEvaluations));
   return {
     isEnrolled: calendar.isEnrolled,
     ...(calendar.enrollment ? { enrollment: calendar.enrollment } : {}),

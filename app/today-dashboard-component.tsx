@@ -405,6 +405,11 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
                 />
                 {block.completed ? "Completed ✓" : "Complete Session"}
               </label>
+              {block.lockedReason && (
+                <div style={{ color: "#aa0000", fontSize: "0.8rem", marginTop: "0.35rem", maxWidth: "18rem" }}>
+                  🔒 {block.lockedReason}
+                </div>
+              )}
             </div>
           </div>
         );

@@ -5,6 +5,7 @@ import type {
 } from "./catalog";
 import type { StoredProgramProgress } from "../progress-storage";
 import { resolveLearnerPath } from "./learner-path";
+import { getMasteredCourseVersionIds } from "./mastery";
 
 export interface CoursePrerequisiteDetail {
   readonly courseVersionId: CourseVersionId;
@@ -28,49 +29,28 @@ export function getCompletedCourseVersionIds(
   bundle: PublishedProgramBundle,
   progress: StoredProgramProgress | undefined,
 ): Set<CourseVersionId> {
-  const completedIds = new Set<CourseVersionId>();
-  if (!progress?.courses) return completedIds;
+  return getMasteredCourseVersionIds(bundle, progress);
+}
 
-  const selectedConcentrationId = bundle.concentrations.find(
-    (concentration) => concentration.id === progress.selectedConcentrationId,
-  )?.id;
-  const learnerPath = resolveLearnerPath(bundle, { selectedConcentrationId });
-
-  // Build map of total units per course version
-  const unitIdsByCourseVersion = new Map<CourseVersionId, Set<string>>();
-  for (const unit of learnerPath.learningUnits) {
-    const current =
-      unitIdsByCourseVersion.get(unit.courseVersionId) ?? new Set<string>();
-    current.add(unit.id);
-    unitIdsByCourseVersion.set(unit.courseVersionId, current);
-  }
-
-  for (const [courseVersionId, courseProgress] of Object.entries(progress.courses)) {
-    const cvId = courseVersionId as CourseVersionId;
-    if (!learnerPath.selectedCourseVersionIdSet.has(cvId)) continue;
-    const completedUnits = courseProgress.completedUnitIds ?? [];
-    const allowedUnitIds = unitIdsByCourseVersion.get(cvId) ?? new Set();
-    const completedUnitIds = new Set(
-      completedUnits.filter((unitId) => allowedUnitIds.has(unitId)),
-    );
-
-    // A course is completed if all its learning units are marked done
-    if (
-      allowedUnitIds.size > 0 &&
-      completedUnitIds.size === allowedUnitIds.size
-    ) {
-      completedIds.add(cvId);
-    }
-  }
-
-  return completedIds;
+export function getActiveWaivedPrerequisiteCourseVersionIds(
+  progress: StoredProgramProgress | undefined,
+  courseVersionId: CourseVersionId,
+) {
+  return new Set(
+    Object.values(progress?.prerequisiteWaivers ?? {})
+      .filter(
+        (waiver) =>
+          waiver.courseVersionId === courseVersionId && !waiver.revokedAt,
+      )
+      .map((waiver) => waiver.prerequisiteCourseVersionId),
+  );
 }
 
 export function evaluateCoursePrerequisites(
   bundle: PublishedProgramBundle,
   courseVersionId: CourseVersionId,
   completedCourseVersionIds: Set<CourseVersionId>,
-  bypassedCourseVersionIds?: Set<CourseVersionId>,
+  waivedPrerequisiteCourseVersionIds?: Set<CourseVersionId>,
 ): CoursePrerequisiteEvaluation {
   const courseVersion = bundle.courseVersions.find((cv) => cv.id === courseVersionId);
   const isCompleted = completedCourseVersionIds.has(courseVersionId);
@@ -108,7 +88,7 @@ export function evaluateCoursePrerequisites(
     const canonicalSlug = prereqCourse?.canonicalSlug ?? title.toLowerCase().replace(/\s+/g, "-");
     const isSatisfied =
       completedCourseVersionIds.has(prereq.courseVersionId) ||
-      Boolean(bypassedCourseVersionIds?.has(prereq.courseVersionId));
+      Boolean(waivedPrerequisiteCourseVersionIds?.has(prereq.courseVersionId));
 
     const detail: CoursePrerequisiteDetail = {
       courseVersionId: prereq.courseVersionId,
@@ -129,8 +109,7 @@ export function evaluateCoursePrerequisites(
     }
   }
 
-  const isExplicitlyBypassed = Boolean(bypassedCourseVersionIds?.has(courseVersionId));
-  const isUnlocked = isCompleted || isExplicitlyBypassed || missingRequired.length === 0;
+  const isUnlocked = isCompleted || missingRequired.length === 0;
 
   let lockReasonText: string | undefined;
   if (!isUnlocked && missingRequired.length > 0) {
@@ -152,21 +131,33 @@ export function evaluateCoursePrerequisites(
 export function evaluateAllCoursePrerequisites(
   bundle: PublishedProgramBundle,
   progress: StoredProgramProgress | undefined,
-  bypassedCourseVersionIds?: Set<CourseVersionId>,
+  additionalWaivedPrerequisiteCourseVersionIds?: Set<CourseVersionId>,
 ): Map<CourseVersionId, CoursePrerequisiteEvaluation> {
   const completedIds = getCompletedCourseVersionIds(bundle, progress);
   const evaluationMap = new Map<CourseVersionId, CoursePrerequisiteEvaluation>();
   const selectedConcentrationId = bundle.concentrations.find(
     (concentration) => concentration.id === progress?.selectedConcentrationId,
   )?.id;
-  const learnerPath = resolveLearnerPath(bundle, { selectedConcentrationId });
+  const learnerPath = resolveLearnerPath(bundle, {
+    selectedConcentrationId,
+    selectedCourseVersionIds: Object.values(
+      progress?.requirementSelections ?? {},
+    ).flat(),
+  });
 
   for (const cv of learnerPath.courseVersions) {
+    const waivedPrerequisites = getActiveWaivedPrerequisiteCourseVersionIds(
+      progress,
+      cv.id,
+    );
+    for (const id of additionalWaivedPrerequisiteCourseVersionIds ?? []) {
+      waivedPrerequisites.add(id);
+    }
     const evalResult = evaluateCoursePrerequisites(
       bundle,
       cv.id,
       completedIds,
-      bypassedCourseVersionIds,
+      waivedPrerequisites,
     );
     evaluationMap.set(cv.id, evalResult);
   }

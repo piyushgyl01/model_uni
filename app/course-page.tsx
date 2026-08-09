@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CourseProgress from "./course-progress";
+import { CourseAccessProvider } from "./course-access-context";
 import { PrerequisiteLockBanner } from "./prerequisite-lock-banner";
 import { UnitEvidenceInput } from "./unit-evidence-input";
 import type {
@@ -198,8 +199,6 @@ export default function CoursePage({
     ]),
   );
 
-  const allowedUnitIds = new Set(orderedUnits.map((u) => u.id));
-
   const renderLearningUnit = (unit: LearningUnit, depth = 0) => {
     const unitResources = unit.resourceVersionIds.map((resourceVersionId) => ({
       resourceVersionId,
@@ -268,7 +267,6 @@ export default function CoursePage({
               programVersionId={bundle.programVersion.id}
               courseVersionId={courseVersion.id}
               unitId={unit.id}
-              allowedUnitIds={allowedUnitIds}
             />
           </section>
         </div>
@@ -309,8 +307,12 @@ export default function CoursePage({
       </header>
 
       <main id="course-main">
+        <CourseAccessProvider
+          bundle={bundle}
+          courseVersionId={courseVersion.id}
+        >
         {/* Prerequisite Lock Warning Banner if required prerequisites are unfulfilled */}
-        <PrerequisiteLockBanner bundle={bundle} courseVersionId={courseVersion.id} />
+        <PrerequisiteLockBanner />
 
         {/* Course Header Banner */}
         <section className="hero universal-course-hero" aria-labelledby="course-title">
@@ -524,6 +526,7 @@ export default function CoursePage({
             </article>
           </div>
         </section>
+        </CourseAccessProvider>
       </main>
 
       <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>

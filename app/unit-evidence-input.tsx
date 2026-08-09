@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { CourseVersionId, LearningUnitId, ProgramVersionId } from "./domain/catalog";
+import { useCourseAccess } from "./course-access-context";
 import { syncStoredProgram } from "./progress-sync-client";
 import {
   PROGRESS_EVENT,
-  readLocalCourseUnits,
   readLocalUnitEvidence,
-  writeLocalCourseUnits,
   writeLocalUnitEvidence,
 } from "./progress-storage";
 
@@ -15,19 +14,17 @@ interface UnitEvidenceInputProps {
   readonly programVersionId: ProgramVersionId;
   readonly courseVersionId: CourseVersionId;
   readonly unitId: LearningUnitId;
-  readonly allowedUnitIds: ReadonlySet<string>;
 }
 
 export function UnitEvidenceInput({
   programVersionId,
   courseVersionId,
   unitId,
-  allowedUnitIds,
 }: UnitEvidenceInputProps) {
+  const { hydrated, prerequisites } = useCourseAccess();
   const [mounted, setMounted] = useState(false);
   const [evidenceText, setEvidenceText] = useState("");
   const [savedTime, setSavedTime] = useState<string | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -39,12 +36,6 @@ export function UnitEvidenceInput({
       setEvidenceText(evidence?.textOrUrl ?? "");
       setSavedTime(evidence?.updatedAt ?? null);
 
-      const completedUnits = readLocalCourseUnits(
-        programVersionId,
-        courseVersionId,
-        allowedUnitIds,
-      );
-      setIsCompleted(completedUnits.includes(unitId));
       setMounted(true);
     };
 
@@ -54,7 +45,7 @@ export function UnitEvidenceInput({
     return () => {
       window.removeEventListener(PROGRESS_EVENT, handleEvent);
     };
-  }, [allowedUnitIds, courseVersionId, programVersionId, unitId]);
+  }, [courseVersionId, programVersionId, unitId]);
 
   if (!mounted) {
     return (
@@ -64,7 +55,7 @@ export function UnitEvidenceInput({
     );
   }
 
-  const handleSave = (andComplete = false) => {
+  const handleSave = () => {
     const submittedEvidence = evidenceText.trim();
     if (!submittedEvidence) return;
 
@@ -76,24 +67,8 @@ export function UnitEvidenceInput({
       true,
     );
 
-    let completionSaved = false;
-    if (andComplete && !isCompleted) {
-      const currentCompleted = readLocalCourseUnits(
-        programVersionId,
-        courseVersionId,
-        allowedUnitIds,
-      );
-      const nextCompleted = [...currentCompleted, unitId];
-      completionSaved = writeLocalCourseUnits(
-        programVersionId,
-        courseVersionId,
-        nextCompleted,
-        true,
-      );
-    }
-
     window.dispatchEvent(new Event(PROGRESS_EVENT));
-    if (evidenceSaved || completionSaved) {
+    if (evidenceSaved) {
       void syncStoredProgram(programVersionId);
     }
   };
@@ -127,6 +102,7 @@ export function UnitEvidenceInput({
         placeholder="e.g. https://github.com/myuser/os-lab1 or lab summary notes"
         value={evidenceText}
         onChange={(e) => setEvidenceText(e.target.value)}
+        disabled={!hydrated || !prerequisites.isUnlocked}
         style={{
           width: "100%",
           padding: "0.4rem 0.5rem",
@@ -142,7 +118,8 @@ export function UnitEvidenceInput({
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
           type="button"
-          onClick={() => handleSave(false)}
+          onClick={handleSave}
+          disabled={!hydrated || !prerequisites.isUnlocked || !evidenceText.trim()}
           style={{
             background: "#fff",
             border: "1px solid #000",
@@ -153,22 +130,6 @@ export function UnitEvidenceInput({
           }}
         >
           Save Proof
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSave(true)}
-          style={{
-            background: isCompleted ? "#e6ffe6" : "#0000ee",
-            color: isCompleted ? "#006600" : "#fff",
-            border: "1px solid #000",
-            padding: "0.3rem 0.65rem",
-            fontSize: "0.8rem",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          {isCompleted ? "✓ Evidence Saved & Complete" : "Save & Mark Unit Complete ✓"}
         </button>
       </div>
     </div>

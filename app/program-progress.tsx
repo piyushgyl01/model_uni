@@ -8,6 +8,7 @@ import type {
   PublishedProgramBundle,
 } from "./domain/catalog";
 import { resolveLearnerPath } from "./domain/learner-path";
+import { getCompletedCourseVersionIds } from "./domain/prerequisite-evaluator";
 import { evaluateProgramRequirements } from "./domain/validation";
 import { PROGRESS_STORAGE_NAMESPACE } from "./learner-progress-contract";
 import {
@@ -71,6 +72,8 @@ export default function ProgramProgress({
   const [completedByCourse, setCompletedByCourse] = useState<
     Record<string, readonly LearningUnitId[]>
   >({});
+  const [storedProgress, setStoredProgress] =
+    useState<ReturnType<typeof getStoredProgram>>();
   const [selectedConcentrationId, setSelectedConcentrationId] = useState(
     concentrations[0]?.id ?? "",
   );
@@ -84,8 +87,9 @@ export default function ProgramProgress({
 
   const refreshFromLocal = useCallback(() => {
     setCompletedByCourse(localCompletedByCourse(programVersionId, courses));
-    const storedConcentration =
-      getStoredProgram(programVersionId)?.selectedConcentrationId;
+    const stored = getStoredProgram(programVersionId);
+    setStoredProgress(stored);
+    const storedConcentration = stored?.selectedConcentrationId;
     setSelectedConcentrationId(
       storedConcentration &&
         concentrations.some(
@@ -176,6 +180,9 @@ export default function ProgramProgress({
     if (bundle) {
       const learnerPath = resolveLearnerPath(bundle, {
         selectedConcentrationId,
+        selectedCourseVersionIds: Object.values(
+          storedProgress?.requirementSelections ?? {},
+        ).flat(),
       });
       return courses.filter((course) =>
         learnerPath.selectedCourseVersionIdSet.has(course.courseVersionId),
@@ -197,7 +204,27 @@ export default function ProgramProgress({
     coreCourseVersionIds,
     courses,
     selectedConcentrationId,
+    storedProgress?.requirementSelections,
   ]);
+
+  const completedCourseVersionIds = useMemo(() => {
+    if (bundle) {
+      return getCompletedCourseVersionIds(bundle, storedProgress);
+    }
+    const set = new Set<CourseVersionId>();
+    for (const course of activeCourses) {
+      const allowed = new Set(course.unitIds);
+      const completed = new Set(
+        (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
+          allowed.has(unitId),
+        ),
+      );
+      if (course.unitIds.length > 0 && completed.size === allowed.size) {
+        set.add(course.courseVersionId);
+      }
+    }
+    return set;
+  }, [activeCourses, bundle, completedByCourse, storedProgress]);
 
   const totals = useMemo(() => {
     const totalUnits = activeCourses.reduce(
@@ -216,36 +243,12 @@ export default function ProgramProgress({
       },
       0,
     );
-    const completedCourses = activeCourses.filter(
-      (course) => {
-        const allowed = new Set(course.unitIds);
-        const completed = new Set(
-          (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
-            allowed.has(unitId),
-          ),
-        );
-        return course.unitIds.length > 0 && completed.size === allowed.size;
-      },
+    const completedCourses = activeCourses.filter((course) =>
+      completedCourseVersionIds.has(course.courseVersionId),
     ).length;
 
     return { totalUnits, completedUnits, completedCourses };
-  }, [activeCourses, completedByCourse]);
-
-  const completedCourseVersionIds = useMemo(() => {
-    const set = new Set<CourseVersionId>();
-    for (const course of activeCourses) {
-      const allowed = new Set(course.unitIds);
-      const completed = new Set(
-        (completedByCourse[course.courseVersionId] ?? []).filter((unitId) =>
-          allowed.has(unitId),
-        ),
-      );
-      if (course.unitIds.length > 0 && completed.size === allowed.size) {
-        set.add(course.courseVersionId);
-      }
-    }
-    return set;
-  }, [activeCourses, completedByCourse]);
+  }, [activeCourses, completedByCourse, completedCourseVersionIds]);
 
   const requirementEvaluation = useMemo(() => {
     if (!bundle) return undefined;
@@ -253,8 +256,8 @@ export default function ProgramProgress({
   }, [bundle, completedCourseVersionIds]);
 
   const percentage =
-    totals.totalUnits > 0
-      ? Math.round((totals.completedUnits / totals.totalUnits) * 100)
+    activeCourses.length > 0
+      ? Math.round((totals.completedCourses / activeCourses.length) * 100)
       : 0;
 
   const chooseConcentration = async (id: string) => {
@@ -306,7 +309,7 @@ export default function ProgramProgress({
       <div
         className="progress-rail"
         role="progressbar"
-        aria-label={`${percentage}% of learning units complete`}
+        aria-label={`${percentage}% of courses passed`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percentage}
@@ -314,8 +317,8 @@ export default function ProgramProgress({
         <span style={{ width: `${percentage}%` }} />
       </div>
       <p className="universal-progress-detail" aria-live="polite">
-        {totals.completedUnits} of {totals.totalUnits} learning units ·{" "}
-        {totals.completedCourses} of {activeCourses.length} courses completed
+        {totals.completedCourses} of {activeCourses.length} courses passed ·{" "}
+        {totals.completedUnits} of {totals.totalUnits} learning units completed
       </p>
 
       {/* REQUIREMENT-AWARE DEGREE STATUS BREAKDOWN */}

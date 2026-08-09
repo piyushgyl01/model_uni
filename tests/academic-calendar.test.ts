@@ -237,7 +237,9 @@ test("graduation uses actual remaining hours and safe achievable capacity", () =
 
   assert.equal(firstTermCourseIds.size, 5);
   assert.equal(plan.completedUnits, 40);
-  assert.equal(plan.remainingMinutes, 4_000 * 60);
+  // Checked learning units no longer erase the still-unsubmitted assessment
+  // workload for those five courses (40 hours per course).
+  assert.equal(plan.remainingMinutes, 4_200 * 60);
   assert.equal(constrained.dailyCapacityMinutes, 480);
   assert.equal(constrained.effectiveWeeklyMinutes, 480);
   assert.equal(constrained.capacityLimited, true);

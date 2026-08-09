@@ -20,6 +20,7 @@ import type {
   StoredProgramProgress,
 } from "../progress-storage";
 import { resolveLearnerPath } from "./learner-path";
+import { evaluateCourseMastery } from "./mastery";
 
 const DEFAULT_STUDY_DAYS: readonly StudyDay[] = [1, 2, 3, 4, 5];
 const MAX_DAILY_MINUTES = 8 * 60;
@@ -362,6 +363,41 @@ function completedUnitIdsForPath(
   return completed;
 }
 
+function completedAssessmentVersionIdsForPath(
+  bundle: PublishedProgramBundle,
+  items: readonly WorkItem[],
+  progress: StoredProgramProgress | undefined,
+) {
+  const evaluationByCourse = new Map<
+    CourseVersionId,
+    ReturnType<typeof evaluateCourseMastery>
+  >();
+  const completed = new Set<string>();
+  for (const item of items) {
+    if (!item.assessment) continue;
+    let evaluation = evaluationByCourse.get(item.courseVersion.id);
+    if (!evaluation) {
+      evaluation = evaluateCourseMastery(
+        bundle,
+        item.courseVersion.id,
+        progress,
+      );
+      evaluationByCourse.set(item.courseVersion.id, evaluation);
+    }
+    const assessment = evaluation.assessments.find(
+      (candidate) =>
+        candidate.assessmentVersion.id === item.assessment?.id,
+    );
+    if (
+      assessment?.thresholdSatisfied ||
+      assessment?.latestAttempt?.status === "submitted"
+    ) {
+      completed.add(item.assessment.id);
+    }
+  }
+  return completed;
+}
+
 function subjectMinutes(
   entries: readonly ScheduleEntry[],
   status: ScheduleEntry["status"],
@@ -476,12 +512,21 @@ export function buildAcademicCalendar(
   const { path, items } = workItemsForPath(bundle, progress);
   const itemsBySubject = new Map(items.map((item) => [item.subjectKey, item]));
   const completedUnitIds = completedUnitIdsForPath(items, progress);
+  const completedAssessmentVersionIds = completedAssessmentVersionIdsForPath(
+    bundle,
+    items,
+    progress,
+  );
   const storedEntries = Object.values(progress?.scheduleEntries ?? {}).filter(
     (entry) => itemsBySubject.has(subjectKey(entry.subject)),
   );
   const completedMinutesBySubject = subjectMinutes(storedEntries, "completed");
   for (const item of items) {
-    if (completedUnitIds.has(item.unit.id)) {
+    if (
+      (item.assessment &&
+        completedAssessmentVersionIds.has(item.assessment.id)) ||
+      (!item.assessment && completedUnitIds.has(item.unit.id))
+    ) {
       completedMinutesBySubject.set(item.subjectKey, item.totalMinutes);
     }
   }
@@ -914,7 +959,6 @@ export function buildAcademicCalendar(
   });
 
   const remainingMinutes = items.reduce((total, item) => {
-    if (completedUnitIds.has(item.unit.id)) return total;
     return (
       total +
       Math.max(0, item.totalMinutes - (completedMinutesBySubject.get(item.subjectKey) ?? 0))
