@@ -156,6 +156,16 @@ waivers, and append-only history are stored in D1 under exact immutable catalog
 versions. Browser writes enter a granular offline outbox; revision checks and
 idempotent mutation IDs prevent a stale device from replacing newer cloud work.
 
+The learner calendar is generated from the enrolled start date, exact selected
+path, weekly pace, timezone, and chosen study days. It runs term courses
+concurrently, divides long units and assessments into sessions of at most 90
+minutes, dates midpoint work, finals, projects, breaks, and deadlines, and caps
+generated work at eight hours on any study day. Only the current day's
+assignments and explicit carry-forwards are materialized into the durable
+personal schedule; the remaining calendar and completion date are recalculated
+from actual unfinished hours. Completed and carried entries remain immutable
+daily history.
+
 Instructor or automated grading, formal credentials, and public editorial
 authoring remain outside this release. Persisted assessment results record their
 evaluation method and do not imply independent verification.

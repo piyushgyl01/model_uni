@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CourseVersionId, LearningUnitId, PublishedProgramBundle } from "./domain/catalog";
+import type { CourseVersionId, PublishedProgramBundle } from "./domain/catalog";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
 import { syncStoredProgram } from "./progress-sync-client";
 import { TermProgressWidget } from "./term-progress-widget";
 import {
   PROGRESS_EVENT,
-  readLocalCourseUnits,
+  enqueueProgressOperations,
   readLocalUnitEvidence,
   readProgressStore,
-  writeLocalCourseUnits,
 } from "./progress-storage";
 
 interface TodayDashboardProps {
@@ -29,8 +28,24 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
   useEffect(() => {
     const refreshQueue = () => {
       const stored = readProgressStore().programs?.[programVersionId];
-      setQueue(calculateTodayQueue(bundle, stored));
+      const nextQueue = calculateTodayQueue(bundle, stored);
+      setQueue(nextQueue);
       setMounted(true);
+      if (nextQueue.reconciliationOperations.length > 0) {
+        let persisted = true;
+        for (
+          let index = 0;
+          index < nextQueue.reconciliationOperations.length;
+          index += 20
+        ) {
+          persisted =
+            enqueueProgressOperations(
+              programVersionId,
+              nextQueue.reconciliationOperations.slice(index, index + 20),
+            ) && persisted;
+        }
+        if (persisted) void syncStoredProgram(programVersionId);
+      }
     };
 
     refreshQueue();
@@ -45,38 +60,31 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
     };
   }, [bundle, programVersionId]);
 
-  const handleToggleBlock = (
-    courseVersionId: string,
-    unitId: string,
-    currentlyCompleted: boolean,
-  ) => {
-    const unitsInCourse = bundle.learningUnits.filter(
-      (u) => u.courseVersionId === courseVersionId,
-    );
-    const allowedUnitIds: ReadonlySet<string> = new Set(
-      unitsInCourse.map((u) => u.id as string),
-    );
-
-    const currentCompleted = readLocalCourseUnits(
-      programVersionId,
-      courseVersionId as CourseVersionId,
-      allowedUnitIds,
-    );
-
-    let nextCompleted: string[];
-    if (currentlyCompleted) {
-      nextCompleted = currentCompleted.filter((id) => id !== unitId);
-    } else {
-      nextCompleted = [...currentCompleted, unitId];
-    }
-
-    const cached = writeLocalCourseUnits(
-      programVersionId,
-      courseVersionId as CourseVersionId,
-      nextCompleted as readonly LearningUnitId[],
-      true,
-    );
-    window.dispatchEvent(new Event(PROGRESS_EVENT));
+  const handleCompleteBlock = (block: TodayQueueResult["blocks"][number]) => {
+    if (!block.canComplete) return;
+    const completedAt = new Date().toISOString();
+    const operations = [
+      {
+        type: "upsert-schedule-entry" as const,
+        entry: {
+          ...block.scheduleEntry,
+          status: "completed" as const,
+          completedAt,
+          updatedAt: completedAt,
+        },
+      },
+      ...(block.completesUnit
+        ? [
+            {
+              type: "set-unit-completion" as const,
+              courseVersionId: block.courseVersionId,
+              learningUnitId: block.unitId,
+              completed: true,
+            },
+          ]
+        : []),
+    ];
+    const cached = enqueueProgressOperations(programVersionId, operations);
     if (cached) void syncStoredProgram(programVersionId);
   };
 
@@ -137,6 +145,9 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
   const allBlocksDone =
     queue.totalBlocksToday > 0 &&
     queue.completedBlocksToday === queue.totalBlocksToday;
+  const activeTerm =
+    queue.terms.find((term) => term.label === queue.currentPeriodLabel) ??
+    queue.terms[0];
 
   return (
     <section
@@ -175,7 +186,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
             ACTIVE ENROLLMENT
           </span>
           <strong style={{ fontSize: "1.1rem" }}>
-            {queue.currentPeriodLabel} · Daily Study Queue
+            {queue.currentPeriodLabel} · {queue.today} · Daily Study Plan
           </strong>
         </div>
         <button
@@ -194,6 +205,29 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
       {/* TERM PROGRESS VIEW ("In Term X of Y") */}
       <TermProgressWidget bundle={bundle} />
+
+      {activeTerm && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.65rem 0.75rem",
+            border: "1px solid #aaa",
+            fontSize: "0.85rem",
+          }}
+        >
+          <strong>Academic calendar:</strong> {activeTerm.startDate} → {activeTerm.endDate}
+          {activeTerm.milestones.map((milestone) => (
+            <span key={`${milestone.label}-${milestone.date}`}>
+              {" · "}{milestone.label}: {milestone.date}
+            </span>
+          ))}
+          {activeTerm.breakAfter && (
+            <span>
+              {" · "}Break: {activeTerm.breakAfter.startDate} → {activeTerm.breakAfter.endDate}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div
@@ -225,9 +259,28 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
         </div>
         <div>
           <div style={{ fontSize: "0.8rem", color: "#555" }}>Est. Finish</div>
-          <strong>~{queue.estimatedWeeksRemaining} weeks</strong>
+          <strong>{queue.estimatedCompletionDate}</strong>
+          <div style={{ fontSize: "0.75rem", color: "#555" }}>
+            {queue.remainingHours.toLocaleString()} hours · ~{queue.estimatedWeeksRemaining} weeks
+          </div>
         </div>
       </div>
+
+      {queue.capacityLimited && (
+        <div
+          style={{
+            background: "#fff8e6",
+            border: "1px solid #8a5a00",
+            padding: "0.75rem",
+            marginBottom: "1.25rem",
+            fontSize: "0.9rem",
+          }}
+        >
+          Your selected days can safely hold {queue.effectiveWeeklyHours} hours per week at the
+          eight-hour daily ceiling. The completion estimate uses that real capacity, not the
+          higher requested pace.
+        </div>
+      )}
 
       {/* Celebration Notice */}
       {allBlocksDone && (
@@ -246,10 +299,17 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
       {/* Study Blocks List */}
       <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
-        📅 Today&apos;s Study Tasks ({queue.blocks.length} Units)
+        📅 Today&apos;s Study Tasks ({queue.blocks.length} Sessions)
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {queue.blocks.length === 0 && (
+          <div style={{ border: "1px solid #aaa", padding: "0.85rem", background: "#f9f9f9" }}>
+            {queue.todayIsStudyDay
+              ? "No work is due today. Your remaining plan has been recalculated."
+              : "Today is not one of your chosen study days. Your work resumes on the next study day."}
+          </div>
+        )}
         {queue.blocks.map((block, index) => {
           const evidence = readLocalUnitEvidence(
             programVersionId,
@@ -258,7 +318,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
           );
           return (
             <div
-              key={block.unitId}
+              key={block.scheduleEntryId}
               style={{
                 border: block.completed ? "1px solid #aaa" : "2px solid #000",
                 background: block.completed ? "#f9f9f9" : "#fff",
@@ -277,7 +337,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#555" }}>
-                    Block {index + 1} of {queue.blocks.length} · {block.courseTitle} ({block.periodLabel})
+                    Session {index + 1} of {queue.blocks.length} · {block.scheduleEntry.startTime ?? "Flexible"} · {block.courseTitle} ({block.periodLabel})
                   </div>
                   <h4 style={{ margin: "0.2rem 0 0.4rem", fontSize: "1.1rem" }}>
                     <a
@@ -303,7 +363,23 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
                     )}
                   </h4>
                 <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
-                  <strong>Topic:</strong> {block.unitTopic} · ⏱️ ~{block.estimatedHours} hrs ({block.unitKind})
+                  <strong>What:</strong> {block.activity}
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
+                  <strong>Where:</strong>{" "}
+                  {block.resourceUrl ? (
+                    <a href={block.resourceUrl} target="_blank" rel="noreferrer">
+                      {block.where}
+                    </a>
+                  ) : (
+                    block.where
+                  )}
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
+                  <strong>Produce:</strong> {block.produce}
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "#555" }}>
+                  {block.unitTopic} · {block.taskKind} · {block.plannedMinutes} minutes · deadline {block.deadlineDate}
                 </div>
               </div>
 
@@ -324,21 +400,29 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
                 <input
                   type="checkbox"
                   checked={block.completed}
-                  onChange={() =>
-                    handleToggleBlock(
-                      block.courseVersionId,
-                      block.unitId,
-                      block.completed,
-                    )
-                  }
+                  disabled={!block.canComplete}
+                  onChange={() => handleCompleteBlock(block)}
                 />
-                {block.completed ? "Completed ✓" : "Mark Done"}
+                {block.completed ? "Completed ✓" : "Complete Session"}
               </label>
             </div>
           </div>
         );
       })}
       </div>
+
+      {queue.recentHistory.length > 0 && (
+        <div style={{ marginTop: "1.25rem", borderTop: "1px solid #000", paddingTop: "1rem" }}>
+          <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
+            Recent Daily History
+          </h3>
+          {queue.recentHistory.map((day) => (
+            <div key={day.date} style={{ marginBottom: "0.6rem", fontSize: "0.85rem" }}>
+              <strong>{day.date}</strong> — {day.blocks.map((block) => block.unitTitle).join(" · ")}
+            </div>
+          ))}
+        </div>
+      )}
 
       <EnrollmentModal
         programVersionId={programVersionId}

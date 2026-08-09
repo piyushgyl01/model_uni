@@ -65,7 +65,7 @@ test("Today uses one 30-course, 240-unit Computer Science concentration path", (
     courses: completedCourses(completedOutsideSelectedPath),
   };
 
-  const queue = calculateTodayQueue(bundle, progress);
+  const queue = calculateTodayQueue(bundle, progress, "2028-09-18");
 
   assert.equal(coreCourseIds.size, 28);
   assert.equal(queue.totalUnits, 240);

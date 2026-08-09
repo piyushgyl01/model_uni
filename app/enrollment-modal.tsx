@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ProgramVersionId } from "./domain/catalog";
+import type { StudyDay } from "./learner-progress-contract";
 import { syncStoredProgram } from "./progress-sync-client";
 import {
   cancelLocalEnrollment,
@@ -24,6 +25,16 @@ const PACE_PRESETS = [
   { hours: 10, label: "Casual (10 hrs/week)", desc: "~9 years completion" },
 ];
 
+const STUDY_DAY_OPTIONS: readonly { readonly value: StudyDay; readonly label: string }[] = [
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+  { value: 0, label: "Sun" },
+];
+
 export function EnrollmentModal({
   programVersionId,
   programTitle,
@@ -35,6 +46,7 @@ export function EnrollmentModal({
     return today.toISOString().split("T")[0];
   });
   const [paceHours, setPaceHours] = useState(40);
+  const [studyDays, setStudyDays] = useState<StudyDay[]>([1, 2, 3, 4, 5]);
   const [isCurrentlyEnrolled, setIsCurrentlyEnrolled] = useState(false);
 
   useEffect(() => {
@@ -44,6 +56,7 @@ export function EnrollmentModal({
         if (current) {
           setStartDate(current.startDate);
           setPaceHours(current.paceHoursPerWeek);
+          setStudyDays([...(current.preferredStudyDays ?? [1, 2, 3, 4, 5])]);
           setIsCurrentlyEnrolled(current.status === "enrolled");
         } else {
           setIsCurrentlyEnrolled(false);
@@ -59,6 +72,7 @@ export function EnrollmentModal({
     const cached = writeLocalEnrollment(programVersionId, {
       startDate,
       paceHoursPerWeek: paceHours,
+      preferredStudyDays: studyDays,
       enrolledAt: new Date().toISOString(),
       status: "enrolled",
     });
@@ -189,6 +203,28 @@ export function EnrollmentModal({
             ))}
           </div>
 
+          <fieldset style={{ margin: "0 0 1.25rem", padding: "0.75rem", border: "1px solid #000" }}>
+            <legend style={{ fontWeight: "bold" }}>Study Days</legend>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {STUDY_DAY_OPTIONS.map((day) => (
+                <label key={day.value} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={studyDays.includes(day.value)}
+                    onChange={() =>
+                      setStudyDays((current) =>
+                        current.includes(day.value)
+                          ? current.filter((value) => value !== day.value)
+                          : [...current, day.value],
+                      )
+                    }
+                  />
+                  {day.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <div
             style={{
               background: "#f9f9f9",
@@ -199,8 +235,12 @@ export function EnrollmentModal({
             }}
           >
             💡 <strong>Daily Target:</strong> ~
-            {Math.round((paceHours / 7) * 10) / 10} hours / day. Your daily
-            study queue will generate 2–4 learning units per day based on this pace.
+            {Math.round(
+              (Math.min(paceHours, Math.max(1, studyDays.length) * 8) /
+                Math.max(1, studyDays.length)) *
+                10,
+            ) / 10} hours on each chosen day. Learning units are divided into
+            sessions of no more than 90 minutes.
           </div>
 
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
@@ -233,6 +273,7 @@ export function EnrollmentModal({
             </button>
             <button
               type="submit"
+              disabled={studyDays.length === 0}
               style={{
                 padding: "0.5rem 1.25rem",
                 border: "2px solid #000",
