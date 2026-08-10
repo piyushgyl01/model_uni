@@ -41,7 +41,7 @@ export default async function Home() {
 
         <nav className="desktop-nav" aria-label="Homepage navigation">
           <Link href="/today">Today&apos;s Queue</Link>
-          <Link href="/transcript">Transcript & Portfolio</Link>
+          <Link href="/transcript">Independent Learning Record</Link>
           {homeNav.slice(1).map(([label, id]) => (
             <a key={id} href={`#${id}`}>{label}</a>
           ))}

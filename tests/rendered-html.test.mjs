@@ -250,6 +250,16 @@ test("a sixteen-unit EE course uses the same standalone classroom", async () => 
   assert.match(html, /Cumulative/);
 });
 
+test("the learner record is explicitly independent and makes no institutional claim", async () => {
+  const response = await render("/transcript");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Independent Learning Record/);
+  assert.match(html, /non-accredited record/i);
+  assert.doesNotMatch(html, /Official Academic Transcript/i);
+  assert.doesNotMatch(html, /verified work evidence/i);
+});
+
 test("legacy degree links redirect and unknown programs remain 404", async () => {
   const legacy = await render("/degrees/computer-science");
   assert.ok([307, 308].includes(legacy.status));
@@ -275,6 +285,9 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     progressStorage,
     chatgptAuth,
     learnerProgressApi,
+    transcriptPage,
+    transcriptClient,
+    independentLearningRecord,
     schema,
   ] = await Promise.all([
     readFile(new URL("../app/programs/[slug]/page.tsx", import.meta.url), "utf8"),
@@ -301,6 +314,15 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     readFile(new URL("../app/chatgpt-auth.ts", import.meta.url), "utf8"),
     readFile(
       new URL("../app/learner-progress-api.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/transcript/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/transcript/transcript-page-client.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/domain/independent-learning-record.ts", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -336,6 +358,19 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   );
   assert.match(chatgptAuth, /oai-authenticated-user-id/);
   assert.match(learnerProgressApi, /subject: user\.id/);
+  assert.match(transcriptClient, /buildIndependentLearningRecord/);
+  assert.match(transcriptClient, /course\.canonicalSlug/);
+  assert.doesNotMatch(transcriptClient, /evaluateProgramRequirements/);
+  assert.doesNotMatch(
+    `${transcriptPage}\n${transcriptClient}`,
+    /official|verified work|degree completed|credentialLabel/i,
+  );
+  assert.match(
+    independentLearningRecord,
+    /evaluateLearnerPathCompletion/,
+  );
+  assert.match(independentLearningRecord, /self-attested/);
+  assert.match(independentLearningRecord, /instructor-reviewed/);
   assert.match(schema, /programVersions/);
   assert.match(schema, /courseVersions/);
   assert.match(schema, /resourceRights/);

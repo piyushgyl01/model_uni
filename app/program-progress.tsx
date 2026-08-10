@@ -7,9 +7,11 @@ import type {
   ProgramVersionId,
   PublishedProgramBundle,
 } from "./domain/catalog";
-import { resolveLearnerPath } from "./domain/learner-path";
+import {
+  evaluateLearnerPathCompletion,
+  resolveLearnerPath,
+} from "./domain/learner-path";
 import { getCompletedCourseVersionIds } from "./domain/prerequisite-evaluator";
-import { evaluateProgramRequirements } from "./domain/validation";
 import { PROGRESS_STORAGE_NAMESPACE } from "./learner-progress-contract";
 import {
   connectionFromResponse,
@@ -252,8 +254,23 @@ export default function ProgramProgress({
 
   const requirementEvaluation = useMemo(() => {
     if (!bundle) return undefined;
-    return evaluateProgramRequirements(bundle, completedCourseVersionIds);
-  }, [bundle, completedCourseVersionIds]);
+    const learnerPath = resolveLearnerPath(bundle, {
+      selectedConcentrationId,
+      selectedCourseVersionIds: Object.values(
+        storedProgress?.requirementSelections ?? {},
+      ).flat(),
+    });
+    return evaluateLearnerPathCompletion(
+      bundle,
+      learnerPath,
+      completedCourseVersionIds,
+    );
+  }, [
+    bundle,
+    completedCourseVersionIds,
+    selectedConcentrationId,
+    storedProgress?.requirementSelections,
+  ]);
 
   const percentage =
     activeCourses.length > 0
@@ -303,7 +320,7 @@ export default function ProgramProgress({
       />
 
       <div className="progress-label">
-        <span id="program-progress-title">Overall Degree Progress</span>
+        <span id="program-progress-title">Overall Pathway Progress</span>
         <strong>{percentage}%</strong>
       </div>
       <div
@@ -321,7 +338,7 @@ export default function ProgramProgress({
         {totals.completedUnits} of {totals.totalUnits} learning units completed
       </p>
 
-      {/* REQUIREMENT-AWARE DEGREE STATUS BREAKDOWN */}
+      {/* REQUIREMENT-AWARE PATHWAY STATUS BREAKDOWN */}
       {bundle && requirementEvaluation && (
         <div
           style={{
@@ -341,8 +358,8 @@ export default function ProgramProgress({
           >
             <strong style={{ fontSize: "0.95rem" }}>
               {requirementEvaluation.satisfied
-                ? "🎓 Degree Requirements Satisfied!"
-                : "📊 Degree Requirement Status"}
+                ? "Pathway requirements completed"
+                : "📊 Pathway Requirement Status"}
             </strong>
             <span
               style={{
@@ -401,7 +418,7 @@ export default function ProgramProgress({
                 textDecoration: "underline",
               }}
             >
-              View Official Academic Transcript & Portfolio →
+              View Independent Learning Record →
             </a>
           </div>
         </div>

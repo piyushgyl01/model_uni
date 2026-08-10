@@ -75,6 +75,24 @@ export interface ResolvedLearnerPath {
   readonly diagnostics: readonly LearnerPathDiagnostic[];
 }
 
+/**
+ * Audits passed courses against the exact pathway selected by the resolver.
+ * Historical or off-path work can remain in the learner record, but it cannot
+ * satisfy the completion claim for a different concentration or elective set.
+ */
+export function evaluateLearnerPathCompletion(
+  bundle: PublishedProgramBundle,
+  learnerPath: ResolvedLearnerPath,
+  passedCourseVersionIds: ReadonlySet<CourseVersionId>,
+): ProgramRequirementEvaluation {
+  const passedOnSelectedPath = new Set(
+    [...passedCourseVersionIds].filter((courseVersionId) =>
+      learnerPath.selectedCourseVersionIdSet.has(courseVersionId),
+    ),
+  );
+  return evaluateProgramRequirements(bundle, passedOnSelectedPath);
+}
+
 function creditsSatisfied(
   group: RequirementGroup,
   options: readonly RequirementOption[],

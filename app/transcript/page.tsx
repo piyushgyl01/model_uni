@@ -4,8 +4,8 @@ import type { PublishedProgramBundle } from "../domain/catalog";
 import { TranscriptPageClient } from "./transcript-page-client";
 
 export const metadata = {
-  title: "Official Academic Transcript & Portfolio | Course Atlas",
-  description: "Your official self-directed university degree completion transcript and verified work evidence portfolio.",
+  title: "Independent Learning Record | Course Atlas",
+  description: "A learner-controlled record of pathway requirements, mastery, assessments, projects, hours, and evidence provenance.",
 };
 
 export default async function TranscriptPage() {
@@ -27,10 +27,10 @@ export default async function TranscriptPage() {
           ← Back to All Degree Programs
         </Link>
         <h1 style={{ margin: "0.5rem 0 0.2rem 0", fontSize: "1.8rem" }}>
-          📜 Official Academic Transcript & Portfolio
+          📜 Independent Learning Record
         </h1>
         <p style={{ margin: 0, color: "#444" }}>
-          Official self-directed record of completed university courses, degree requirement audits, and verified work evidence.
+          A transparent, non-accredited record of pathway progress, assessment results, projects, hours, and evidence provenance.
         </p>
       </div>
 
