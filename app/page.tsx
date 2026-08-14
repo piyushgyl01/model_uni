@@ -1,10 +1,26 @@
 import Link from "next/link";
 import { getRuntimeCatalogRepository } from "./catalog/cloudflare-catalog";
-import { futureDirections } from "../content/catalog";
+import { futureDirections } from "../content/catalog-release";
 
 import { ActiveEnrollmentBanner } from "./active-enrollment-banner";
+import type { ProgramKind } from "./domain/catalog";
 
 export const dynamic = "force-dynamic";
+
+interface HomeSearchParams {
+  readonly q?: string;
+  readonly cursor?: string;
+  readonly school?: string;
+  readonly discipline?: string;
+  readonly kind?: string;
+}
+
+const PROGRAM_KINDS = new Set<ProgramKind>([
+  "degree-equivalent pathway",
+  "certificate pathway",
+  "course sequence",
+  "independent study",
+]);
 
 const homeNav = [
   ["Today's Queue", "today"],
@@ -19,13 +35,32 @@ function hoursLabel(hours: number) {
   return `${hours} guided hours`;
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  readonly searchParams: Promise<HomeSearchParams>;
+}) {
+  const filters = await searchParams;
+  const kind = PROGRAM_KINDS.has(filters.kind as ProgramKind)
+    ? (filters.kind as ProgramKind)
+    : undefined;
   const catalogRepository = await getRuntimeCatalogRepository();
-  const programs = await catalogRepository.listPrograms();
+  const [page, stats] = await Promise.all([
+    catalogRepository.listProgramPage({
+      limit: 24,
+      ...(filters.cursor ? { cursor: filters.cursor } : {}),
+      ...(filters.q ? { q: filters.q } : {}),
+      ...(filters.school ? { school: filters.school } : {}),
+      ...(filters.discipline ? { discipline: filters.discipline } : {}),
+      ...(kind ? { kind } : {}),
+    }),
+    catalogRepository.getCatalogStats(),
+  ]);
+  if (!stats) {
+    throw new Error("The indexed catalog statistics projection is unavailable.");
+  }
+  const programs = page.items;
   const schools = Array.from(new Set(programs.map((program) => program.school)));
-
-  const totalCourses = programs.reduce((sum, program) => sum + program.courseCount, 0);
-  const totalUnits = programs.reduce((sum, program) => sum + program.learningUnitCount, 0);
 
   return (
     <div className="catalog-home">
@@ -80,9 +115,9 @@ export default async function Home() {
 
           <aside className="catalog-manifesto" style={{ marginTop: "25px" }}>
             <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", fontSize: "0.95rem" }}>
-              <span><strong>{programs.length}</strong> complete programs</span>
-              <span><strong>{totalCourses}</strong> courses across minimum paths</span>
-              <span><strong>{totalUnits.toLocaleString("en-US")}</strong> executable learning units</span>
+              <span><strong>{stats.activeProgramCount}</strong> complete programs</span>
+              <span><strong>{stats.minimumPathCourseCount}</strong> courses across minimum paths</span>
+              <span><strong>{stats.learningUnitCount.toLocaleString("en-US")}</strong> executable learning units</span>
             </div>
           </aside>
         </section>
@@ -104,6 +139,27 @@ export default async function Home() {
             <p style={{ color: "#555" }}>
               Different structures. One learning engine. Choose a degree program below to open its term-by-term curriculum, free learning materials, and progress tracker.
             </p>
+            <form action="/" method="get" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "1rem" }}>
+              <label htmlFor="catalog-search" style={{ fontWeight: "bold", alignSelf: "center" }}>
+                Search catalog
+              </label>
+              <input
+                id="catalog-search"
+                name="q"
+                type="search"
+                defaultValue={filters.q ?? ""}
+                placeholder="Program title"
+                style={{ flex: "1 1 260px", minWidth: 0, padding: "0.55rem", border: "2px solid #000" }}
+              />
+              <button className="button button-primary" type="submit">
+                Search
+              </button>
+              {(filters.q || filters.cursor) && (
+                <Link className="button button-quiet" href="/">
+                  Clear
+                </Link>
+              )}
+            </form>
           </div>
 
           <div className="degree-card-grid">
@@ -144,6 +200,31 @@ export default async function Home() {
               </article>
             ))}
           </div>
+
+          {programs.length === 0 && (
+            <div style={{ border: "1px solid #000", background: "#fff", padding: "1rem" }}>
+              No published programs match this catalog search.
+            </div>
+          )}
+
+          {page.nextCursor && (
+            <div style={{ marginTop: "1.25rem" }}>
+              <Link
+                className="button button-quiet"
+                href={`/?${new URLSearchParams({
+                  ...(filters.q ? { q: filters.q } : {}),
+                  ...(filters.school ? { school: filters.school } : {}),
+                  ...(filters.discipline
+                    ? { discipline: filters.discipline }
+                    : {}),
+                  ...(kind ? { kind } : {}),
+                  cursor: page.nextCursor,
+                }).toString()}#programs`}
+              >
+                Next catalog page →
+              </Link>
+            </div>
+          )}
 
           {/* Research Roadmap */}
           <div className="catalog-roadmap" style={{ marginTop: "35px" }}>
@@ -243,7 +324,7 @@ export default async function Home() {
           </p>
         </div>
         <div className="provenance">
-          <strong>Available Degrees:</strong>
+          <strong>Programs on this page:</strong>
           <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginTop: "8px" }}>
             {programs.map((p) => (
               <Link key={p.programId} href={`/programs/${p.slug}`}>

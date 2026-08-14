@@ -21,6 +21,7 @@ import {
 import { D1OperationError } from "./d1-contract";
 import type { D1DatabaseLike } from "./d1-contract";
 import { CatalogValidationError } from "./static-repository";
+import { projectCatalogReadModels } from "./catalog-read-model";
 
 export const MAX_CATALOG_IMPORT_BYTES = 16 * 1024 * 1024;
 export const MAX_CATALOG_IMPORT_BUNDLES = 16;
@@ -407,6 +408,7 @@ export async function importPublishedCatalogBundles(
     if (seed.inserted === 1) insertedBundleIds.push(bundle.id);
     else unchangedBundleIds.push(bundle.id);
   }
+  await projectCatalogReadModels(database, bundles);
 
   const reconstructed = (
     await Promise.all(

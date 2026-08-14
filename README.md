@@ -128,23 +128,31 @@ redeploy.
 - `app/catalog/d1-repository.ts` stores immutable publications in bounded D1
   chunks, uses bounded statement batches, reconstructs and validates them, and
   rejects an attempt to reuse a published identity for changed content.
+- `catalog_program_summaries` and `catalog_course_search_rows` are disposable,
+  indexed D1 projections behind bounded, keyset-paginated catalog APIs. Learner
+  pathway, term, Today, and Independent Learning Record rows are pinned to the
+  exact bundle hash and progress revision, so request cost depends on the active
+  learner path rather than total catalog size.
 - `app/api/catalog/import/route.ts` is the allowlisted, same-origin publication
   API for adding validated bundles without coupling catalog growth to source
   releases. Explicit program supersessions can change which identity owns a
   canonical slug without deleting historical publications.
 - `app/catalog/catalog-shadow.ts` compares every checked-in publication with
-  the D1 copy down to an actionable field path before the runtime repository is
-  accepted. A real D1 error never silently falls back to source data.
-- `db/schema.ts` and the Drizzle migrations provide 37 relational tables,
+  the D1 copy down to an actionable field path during release initialization or
+  protected publication. Ordinary reads check a compact indexed release marker;
+  a real D1 error never silently falls back to source data.
+- `db/schema.ts` and the Drizzle migrations provide 46 relational tables,
   including versioned catalog authoring, immutable publication snapshots,
   learner accounts, enrollment settings, version-pinned progress, evidence,
   assessment attempts, personal schedules, prerequisite waivers, import
   receipts, aliases, audit events, and an outbox.
 
-On a fresh D1 database, the checked-in publications seed idempotently. Runtime
-catalog reads then come from D1 and are shadow-verified against the reviewed
-source packages. Older D1 publications are retained so historical learner
-progress stays resolvable through durable versioned routes.
+On a fresh D1 database, the checked-in publications seed idempotently and build
+their read models. Full source shadow verification happens only when that compact
+release manifest changes; steady-state Worker cold starts do one indexed marker
+lookup and do not import or hash every curriculum. Older D1 publications are
+retained so historical learner progress stays resolvable through durable
+versioned routes.
 
 Anonymous and offline progress remains cached in the browser. After ChatGPT
 sign-in, the learner explicitly chooses whether to merge that device's existing

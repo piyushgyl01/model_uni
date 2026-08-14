@@ -1,5 +1,9 @@
 import type {
+  CourseCode,
+  CourseVersionId,
   ProgramId,
+  ProgramKind,
+  ProgramVersionId,
   PublishedProgramBundle,
   SemanticVersion,
 } from "../domain/catalog";
@@ -23,6 +27,58 @@ export interface CatalogProgramSummary {
   readonly learningUnitCount: number;
   readonly resourceCount: number;
   readonly nominalHours: number;
+}
+
+export interface CatalogPage<Item> {
+  readonly items: readonly Item[];
+  readonly nextCursor?: string;
+}
+
+export interface CatalogProgramPageQuery {
+  readonly limit?: number;
+  readonly cursor?: string;
+  readonly q?: string;
+  readonly school?: string;
+  readonly discipline?: string;
+  readonly kind?: ProgramKind;
+}
+
+export interface CatalogCourseSearchQuery {
+  readonly limit?: number;
+  readonly cursor?: string;
+  readonly q?: string;
+  readonly programVersionId?: ProgramVersionId;
+  readonly discipline?: string;
+  readonly format?: PublishedProgramBundle["courseVersions"][number]["format"];
+}
+
+export interface CatalogCourseSearchResult {
+  readonly programId: ProgramId;
+  readonly programVersionId: ProgramVersionId;
+  readonly programSlug: string;
+  readonly programTitle: string;
+  readonly courseId: PublishedProgramBundle["courses"][number]["id"];
+  readonly courseVersionId: CourseVersionId;
+  readonly slug: string;
+  readonly version: SemanticVersion;
+  readonly primaryCode?: string;
+  readonly codes: readonly CourseCode[];
+  readonly title: string;
+  readonly summary: string;
+  readonly discipline: string;
+  readonly format: PublishedProgramBundle["courseVersions"][number]["format"];
+  readonly nominalHours: number;
+}
+
+export interface CatalogStats {
+  readonly bundleCount: number;
+  readonly activeProgramCount: number;
+  readonly minimumPathCourseCount: number;
+  readonly learningUnitCount: number;
+  readonly nominalHours: number;
+  readonly schoolCount: number;
+  readonly projectionVersion: number;
+  readonly projectedAt: string;
 }
 
 /**

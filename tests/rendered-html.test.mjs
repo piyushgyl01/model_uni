@@ -287,6 +287,11 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     learnerProgressApi,
     transcriptPage,
     transcriptClient,
+    todayPage,
+    todayClient,
+    cloudflareCatalog,
+    catalogReadModel,
+    learnerReadModel,
     independentLearningRecord,
     schema,
   ] = await Promise.all([
@@ -321,6 +326,23 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
       new URL("../app/transcript/transcript-page-client.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(new URL("../app/today/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/today/today-page-client.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/catalog/cloudflare-catalog.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/catalog/catalog-read-model.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/catalog/learner-read-model-repository.ts", import.meta.url),
+      "utf8",
+    ),
     readFile(
       new URL("../app/domain/independent-learning-record.ts", import.meta.url),
       "utf8",
@@ -350,6 +372,13 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(catalog, /StaticCatalogRepository/);
   assert.match(runtimeCatalog, /seedPublishedProgramBundles/);
   assert.match(runtimeCatalog, /compareCatalogBundleShadows/);
+  assert.match(runtimeCatalog, /projectCatalogReadModels/);
+  assert.match(cloudflareCatalog, /releaseProjectionIsCurrent/);
+  assert.match(cloudflareCatalog, /await import\(/);
+  assert.doesNotMatch(
+    cloudflareCatalog.split("await import(")[0],
+    /content\/catalog["']/,
+  );
   assert.match(progressApi, /getAuthenticatedLearner/);
   assert.match(progressApi, /rejectCrossOriginMutation/);
   assert.match(
@@ -358,8 +387,22 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   );
   assert.match(chatgptAuth, /oai-authenticated-user-id/);
   assert.match(learnerProgressApi, /subject: user\.id/);
+  assert.match(transcriptClient, /learner-views\/record/);
   assert.match(transcriptClient, /buildIndependentLearningRecord/);
   assert.match(transcriptClient, /course\.canonicalSlug/);
+  assert.doesNotMatch(transcriptPage, /listPrograms|loadBySlug|PublishedProgramBundle/);
+  assert.doesNotMatch(todayPage, /listPrograms|loadBySlug|PublishedProgramBundle/);
+  assert.doesNotMatch(todayClient, /bundles\.map|listPrograms/);
+  assert.match(todayClient, /learner-views\/today/);
+  assert.match(catalogReadModel, /listD1ProgramPage/);
+  assert.match(catalogReadModel, /searchD1Courses/);
+  assert.doesNotMatch(
+    catalogReadModel.slice(catalogReadModel.indexOf("listD1ProgramPage")),
+    /\bOFFSET\b/,
+  );
+  assert.match(learnerReadModel, /learner_pathway_course_rows/);
+  assert.match(learnerReadModel, /learner_today_assignment_rows/);
+  assert.match(learnerReadModel, /learner_transcript_rows/);
   assert.doesNotMatch(transcriptClient, /evaluateProgramRequirements/);
   assert.doesNotMatch(
     `${transcriptPage}\n${transcriptClient}`,
@@ -380,11 +423,15 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(schema, /learnerUnitCompletions/);
   assert.match(schema, /learnerProgramStates/);
   assert.match(schema, /learnerUnitEvidence/);
+  assert.match(schema, /catalogProgramSummaries/);
+  assert.match(schema, /catalogCourseSearchRows/);
+  assert.match(schema, /learnerPathwaySnapshots/);
 
   await access(new URL("../drizzle/0000_supreme_bloodscream.sql", import.meta.url));
   await access(new URL("../drizzle/0001_big_infant_terrible.sql", import.meta.url));
   await access(new URL("../drizzle/0002_pale_nextwave.sql", import.meta.url));
   await access(new URL("../drizzle/0003_dazzling_paladin.sql", import.meta.url));
   await access(new URL("../drizzle/0004_soft_champions.sql", import.meta.url));
+  await access(new URL("../drizzle/0005_sparkling_cannonball.sql", import.meta.url));
   await access(new URL("../.openai/hosting.json", import.meta.url));
 });

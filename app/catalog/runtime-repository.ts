@@ -1,6 +1,7 @@
 import type { CatalogRepository } from "./repository";
 import {
   AsyncStaticCatalogRepository,
+  CatalogDataError,
   collectStaticCatalogBundles,
   D1CatalogRepository,
   seedPublishedProgramBundles,
@@ -16,6 +17,11 @@ import {
   CatalogShadowMismatchError,
   compareCatalogBundleShadows,
 } from "./catalog-shadow";
+import {
+  markCatalogReleaseProjectionCurrent,
+  projectCatalogReadModels,
+} from "./catalog-read-model";
+import { catalogPublicationLock } from "../../content/manifests/catalog-publication-lock";
 
 export interface RuntimeCatalogRepositoryOptions {
   readonly database?: D1DatabaseLike | null;
@@ -41,6 +47,7 @@ export async function createRuntimeCatalogRepository({
   await registerCatalogProgramSupersessions(database, programSupersessions);
   const checkedInBundles = collectStaticCatalogBundles(staticRepository);
   await seedPublishedProgramBundles(database, checkedInBundles);
+  await projectCatalogReadModels(database, checkedInBundles);
   const repository = new D1CatalogRepository(database);
   if (verifyShadow) {
     const runtimeBundles = (
@@ -58,6 +65,20 @@ export async function createRuntimeCatalogRepository({
       runtimeBundles,
     );
     if (!report.matches) throw new CatalogShadowMismatchError(report);
+  }
+  const releaseBundleIds = new Set<string>(
+    catalogPublicationLock.map((record) => record.bundleId),
+  );
+  const isCompleteCheckedInRelease =
+    checkedInBundles.length === releaseBundleIds.size &&
+    checkedInBundles.every((bundle) => releaseBundleIds.has(bundle.id));
+  if (
+    isCompleteCheckedInRelease &&
+    !(await markCatalogReleaseProjectionCurrent(database))
+  ) {
+    throw new CatalogDataError("checked-in catalog projection release", [
+      "The compact release marker could not be verified after projection.",
+    ]);
   }
   return repository;
 }

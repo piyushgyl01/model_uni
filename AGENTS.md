@@ -35,11 +35,11 @@
 
 ## Key Conventions
 
-- **Immutable publications**: Checked-in bundles are seed inputs. D1 stores immutable runtime snapshots. On startup, `catalog-shadow.ts` shadow-compares every field; D1 errors never silently fall back.
+- **Immutable publications**: Checked-in bundles are seed inputs. D1 stores immutable runtime snapshots. Release initialization/import shadow-compares every field; steady-state startup checks one compact release marker. D1 errors never silently fall back.
 - **Stable IDs**: Type-prefixed UUIDv7 (`crs_`, `crv_`, `unt_`, `prg_`, `prv_`, `res_`, `rv_`, `bnd_`). Never derive IDs from slugs/titles.
 - **Version pinning**: Learner progress pinned to exact `programVersionId` + `courseVersionId` + `learningUnitId`. Survives catalog upgrades via explicit equivalency.
 - **Repository pattern**: UI/routes call `catalogRepository.loadBySlug()` — never import program data directly.
-- **Migrations**: Five additive Drizzle migrations (`drizzle/0000_*.sql` through `drizzle/0004_*.sql`). Run via Miniflare in tests; `npm run db:generate` for new schema changes.
+- **Migrations**: Six additive Drizzle migrations (`drizzle/0000_*.sql` through `drizzle/0005_*.sql`). Run via Miniflare in tests; `npm run db:generate` for new schema changes.
 
 ## Test Suite Specifics
 
@@ -89,7 +89,7 @@
 | `app/catalog/catalog-shadow.ts` | Field-level D1 vs static comparison |
 | `app/catalog/learner-progress-repository.ts` | Version-pinned progress CRUD + import receipts |
 | `content/catalog.ts` | Checked-in publication registry (StaticCatalogRepository) |
-| `db/schema.ts` | 37-table D1 schema (catalog + learner + audit + outbox) |
+| `db/schema.ts` | 46-table D1 schema (catalog + learner + projections + audit + outbox) |
 | `drizzle.config.ts` | Drizzle config (SQLite dialect, `./db/schema.ts`) |
 | `vite.config.ts` | vinext + Cloudflare plugin + local bindings |
 | `.openai/hosting.json` | Cloudflare Sites project binding config |

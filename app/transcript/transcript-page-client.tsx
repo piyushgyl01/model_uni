@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PublishedProgramBundle } from "../domain/catalog";
+import type {
+  LearnerProgramReference,
+  LearnerRecordView,
+} from "../catalog/learner-read-model-repository";
+import type {
+  ProgramVersionId,
+  PublishedProgramBundle,
+} from "../domain/catalog";
 import {
   buildIndependentLearningRecord,
   EVIDENCE_REVIEW_LABELS,
@@ -14,8 +21,28 @@ import {
   type StoredProgramProgress,
 } from "../progress-storage";
 
-interface TranscriptPageClientProps {
-  readonly bundles: readonly PublishedProgramBundle[];
+interface LearnerProgramsResponse {
+  readonly authenticated: boolean;
+  readonly programs?: readonly LearnerProgramReference[];
+}
+
+interface ProgramOption {
+  readonly programVersionId: ProgramVersionId;
+  readonly title: string;
+  readonly enrolled: boolean;
+  readonly source: "cloud" | "local";
+}
+
+async function loadExactBundle(programVersionId: ProgramVersionId) {
+  const response = await fetch(
+    `/api/catalog/program-versions/${encodeURIComponent(programVersionId)}`,
+    { headers: { accept: "application/json" } },
+  );
+  if (!response.ok) return undefined;
+  const payload = (await response.json()) as {
+    readonly bundle?: PublishedProgramBundle;
+  };
+  return payload.bundle;
 }
 
 function formatDate(value: string | undefined) {
@@ -49,40 +76,79 @@ function EvidenceValue({ evidence }: { readonly evidence: LearningRecordEvidence
   );
 }
 
-export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
+export function TranscriptPageClient() {
   const [mounted, setMounted] = useState(false);
-  const [selectedProgramVersionId, setSelectedProgramVersionId] = useState("");
+  const [selectedProgramVersionId, setSelectedProgramVersionId] = useState<
+    ProgramVersionId | ""
+  >("");
   const [store, setStore] = useState<Record<string, StoredProgramProgress>>({});
+  const [cloudPrograms, setCloudPrograms] = useState<
+    readonly LearnerProgramReference[]
+  >([]);
+  const [localBundles, setLocalBundles] = useState<
+    readonly PublishedProgramBundle[]
+  >([]);
+  const [recordEpoch, setRecordEpoch] = useState(0);
+  const [cloudRecord, setCloudRecord] = useState<{
+    readonly programVersionId: ProgramVersionId;
+    readonly view: LearnerRecordView;
+  }>();
 
   useEffect(() => {
     let active = true;
-    const refreshStore = () => {
-      if (!active) return;
+    const refreshPrograms = async (synchronize: boolean) => {
       const programs = readProgressStore().programs ?? {};
-      setStore(programs);
-
-      if (!selectedProgramVersionId) {
-        const enrolledId = Object.keys(programs).find(
-          (id) => programs[id]?.enrollment?.status === "enrolled",
-        );
-        setSelectedProgramVersionId(
-          enrolledId ?? bundles[0]?.programVersion.id ?? "",
-        );
+      const localIds = Object.keys(programs) as ProgramVersionId[];
+      if (synchronize) {
+        await Promise.all(localIds.map((id) => syncStoredProgram(id)));
       }
+      const response = await fetch("/api/learner-views", {
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+      const payload = (await response
+        .json()
+        .catch(() => ({ authenticated: false }))) as LearnerProgramsResponse;
+      const cloud = payload.authenticated ? (payload.programs ?? []) : [];
+      const cloudIds = new Set(cloud.map((program) => program.programVersionId));
+      const localOnlyIds = localIds.filter((id) => !cloudIds.has(id));
+      const bundles = (
+        await Promise.all(localOnlyIds.map(loadExactBundle))
+      ).filter(
+        (bundle): bundle is PublishedProgramBundle => bundle !== undefined,
+      );
+      if (!active) return;
+      setStore(readProgressStore().programs ?? {});
+      setCloudPrograms(cloud);
+      setLocalBundles(bundles);
+      setSelectedProgramVersionId((current) => {
+        const available = new Set([
+          ...cloud.map((program) => program.programVersionId),
+          ...bundles.map((bundle) => bundle.programVersion.id),
+        ]);
+        if (current && available.has(current)) return current;
+        return (
+          cloud.find((program) => program.enrollmentStatus === "enrolled")
+            ?.programVersionId ??
+          bundles.find(
+            (bundle) =>
+              programs[bundle.programVersion.id]?.enrollment?.status ===
+              "enrolled",
+          )?.programVersion.id ??
+          cloud[0]?.programVersionId ??
+          bundles[0]?.programVersion.id ??
+          ""
+        );
+      });
       setMounted(true);
     };
 
-    const hydrateSuppliedPrograms = async () => {
-      await Promise.all(
-        bundles.map((bundle) => syncStoredProgram(bundle.programVersion.id)),
-      );
-      refreshStore();
+    void refreshPrograms(true);
+    const handleEvent = () => {
+      setRecordEpoch((value) => value + 1);
+      void refreshPrograms(false);
     };
-
-    refreshStore();
-    void hydrateSuppliedPrograms();
-    const handleEvent = () => refreshStore();
-    const handleReconnect = () => void hydrateSuppliedPrograms();
+    const handleReconnect = () => void refreshPrograms(true);
     window.addEventListener(PROGRESS_EVENT, handleEvent);
     window.addEventListener("online", handleReconnect);
     return () => {
@@ -90,7 +156,38 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
       window.removeEventListener(PROGRESS_EVENT, handleEvent);
       window.removeEventListener("online", handleReconnect);
     };
-  }, [bundles, selectedProgramVersionId]);
+  }, []);
+
+  useEffect(() => {
+    if (
+      !selectedProgramVersionId ||
+      !cloudPrograms.some(
+        (program) => program.programVersionId === selectedProgramVersionId,
+      )
+    ) {
+      return;
+    }
+    let active = true;
+    const load = async () => {
+      await syncStoredProgram(selectedProgramVersionId);
+      const query = new URLSearchParams({
+        programVersionId: selectedProgramVersionId,
+      });
+      const response = await fetch(`/api/learner-views/record?${query}`, {
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok || !active) return;
+      const view = (await response.json()) as LearnerRecordView;
+      if (active) {
+        setCloudRecord({ programVersionId: selectedProgramVersionId, view });
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [cloudPrograms, recordEpoch, selectedProgramVersionId]);
 
   if (!mounted) {
     return (
@@ -100,20 +197,83 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
     );
   }
 
-  const activeBundle =
-    bundles.find(
+  const activeBundle = localBundles.find(
       (bundle) => bundle.programVersion.id === selectedProgramVersionId,
-    ) ?? bundles[0];
-
-  if (!activeBundle) {
-    return <div>No published learning pathways found.</div>;
+    );
+  const selectedCloudRecord =
+    cloudRecord?.programVersionId === selectedProgramVersionId
+      ? cloudRecord.view
+      : undefined;
+  if (
+    selectedProgramVersionId &&
+    !activeBundle &&
+    cloudPrograms.some(
+      (program) => program.programVersionId === selectedProgramVersionId,
+    ) &&
+    !selectedCloudRecord
+  ) {
+    return (
+      <div style={{ padding: "1.5rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+        Loading Independent Learning Record...
+      </div>
+    );
+  }
+  if (!activeBundle && !selectedCloudRecord) {
+    return (
+      <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+        No learner pathways have progress yet. Start from a program page, enroll,
+        and your Independent Learning Record will appear here.
+      </div>
+    );
   }
 
-  const programProgress = store[activeBundle.programVersion.id];
-  const record = buildIndependentLearningRecord(activeBundle, programProgress);
-  const concentration = activeBundle.concentrations.find(
-    (candidate) => candidate.id === record.learnerPath.selectedConcentrationId,
-  );
+  const programProgress = activeBundle
+    ? store[activeBundle.programVersion.id]
+    : undefined;
+  const localRecord = activeBundle
+    ? buildIndependentLearningRecord(activeBundle, programProgress)
+    : undefined;
+  const record = selectedCloudRecord?.record ?? localRecord!;
+  const programTitle =
+    selectedCloudRecord?.program.title ?? activeBundle!.programVersion.title;
+  const programSchool =
+    selectedCloudRecord?.program.school ?? activeBundle!.program.school;
+  const programVersion =
+    selectedCloudRecord?.program.version ?? activeBundle!.programVersion.version;
+  const programSlug =
+    selectedCloudRecord?.program.slug ?? activeBundle!.program.canonicalSlug;
+  const concentrationTitle =
+    selectedCloudRecord?.program.selectedConcentrationTitle ??
+    activeBundle?.concentrations.find(
+      (candidate) =>
+        candidate.id === localRecord?.learnerPath.selectedConcentrationId,
+    )?.title;
+  const enrollment = selectedCloudRecord?.enrollment ?? programProgress?.enrollment;
+  const requirementGroups = selectedCloudRecord
+    ? selectedCloudRecord.requirementGroups
+    : activeBundle!.programVersion.requirements.map((group) => ({
+        id: group.id,
+        title: group.title,
+        minSelections: group.rule.minSelections,
+        evaluation: record.requirementEvaluation.groups.find(
+          (candidate) => candidate.requirementGroupId === group.id,
+        ),
+      }));
+  const options: readonly ProgramOption[] = [
+    ...cloudPrograms.map((program) => ({
+      programVersionId: program.programVersionId,
+      title: program.title,
+      enrolled: program.enrollmentStatus === "enrolled",
+      source: "cloud" as const,
+    })),
+    ...localBundles.map((bundle) => ({
+      programVersionId: bundle.programVersion.id,
+      title: bundle.programVersion.title,
+      enrolled:
+        store[bundle.programVersion.id]?.enrollment?.status === "enrolled",
+      source: "local" as const,
+    })),
+  ];
   const completionPercentage = Math.round(
     (record.totals.completedLearningUnits /
       Math.max(1, record.totals.learningUnits)) *
@@ -131,16 +291,14 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
   return (
     <div>
       <div style={{ marginBottom: "1.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        {bundles.map((bundle) => {
+        {options.map((option) => {
           const isSelected =
-            bundle.programVersion.id === selectedProgramVersionId;
-          const isEnrolled =
-            store[bundle.programVersion.id]?.enrollment?.status === "enrolled";
+            option.programVersionId === selectedProgramVersionId;
           return (
             <button
-              key={bundle.programVersion.id}
+              key={`${option.source}:${option.programVersionId}`}
               onClick={() =>
-                setSelectedProgramVersionId(bundle.programVersion.id)
+                setSelectedProgramVersionId(option.programVersionId)
               }
               style={{
                 padding: "0.5rem 0.85rem",
@@ -152,8 +310,8 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
                 fontSize: "0.85rem",
               }}
             >
-              {isEnrolled ? "● " : ""}
-              {bundle.programVersion.title}
+              {option.enrolled ? "● " : ""}
+              {option.title}
             </button>
           );
         })}
@@ -190,11 +348,11 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
                 Course Atlas · Independent Learning Record
               </div>
               <h2 style={{ margin: "0.3rem 0", fontSize: "1.6rem" }}>
-                {activeBundle.programVersion.title}
+                {programTitle}
               </h2>
               <div style={{ fontSize: "0.95rem", color: "#333" }}>
-                {activeBundle.program.school}
-                {concentration ? ` · ${concentration.title}` : ""}
+                {programSchool}
+                {concentrationTitle ? ` · ${concentrationTitle}` : ""}
               </div>
             </div>
 
@@ -217,7 +375,7 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
                   : "PATHWAY IN PROGRESS"}
               </div>
               <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.4rem" }}>
-                Catalog version {activeBundle.programVersion.version}
+                Catalog version {programVersion}
               </div>
             </div>
           </div>
@@ -254,9 +412,9 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
           <div>
             <div style={{ fontSize: "0.8rem", color: "#555" }}>Learning status</div>
             <strong>
-              {programProgress?.enrollment?.status === "enrolled"
+              {enrollment?.status === "enrolled"
                 ? "Actively enrolled"
-                : programProgress?.enrollment?.status === "paused"
+                : enrollment?.status === "paused"
                   ? "Paused"
                   : "Independent study"}
             </strong>
@@ -264,8 +422,8 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
           <div>
             <div style={{ fontSize: "0.8rem", color: "#555" }}>Study pace</div>
             <strong>
-              {programProgress?.enrollment
-                ? `${programProgress.enrollment.paceHoursPerWeek} hrs / week`
+              {enrollment
+                ? `${enrollment.paceHoursPerWeek} hrs / week`
                 : "Not recorded"}
             </strong>
           </div>
@@ -297,10 +455,8 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
           📊 Pathway Requirement Audit
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "2rem" }}>
-          {activeBundle.programVersion.requirements.map((group) => {
-            const groupEvaluation = record.requirementEvaluation.groups.find(
-              (candidate) => candidate.requirementGroupId === group.id,
-            );
+          {requirementGroups.map((group) => {
+            const groupEvaluation = group.evaluation;
             const isSatisfied = groupEvaluation?.satisfied ?? false;
             const selectedCount =
               groupEvaluation?.selectedCourseVersionIds.length ?? 0;
@@ -318,7 +474,7 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
                   <span style={{ color: isSatisfied ? "#008800" : "#cc0000", fontWeight: "bold", textAlign: "right" }}>
                     {isSatisfied
                       ? "✓ Requirement completed"
-                      : `${selectedCount} / ${group.rule.minSelections} passed`}
+                      : `${selectedCount} / ${group.minSelections} passed`}
                   </span>
                 </div>
                 {groupEvaluation && groupEvaluation.reasons.length > 0 && (
@@ -361,7 +517,11 @@ export function TranscriptPageClient({ bundles }: TranscriptPageClientProps) {
                   </td>
                   <td style={{ padding: "0.5rem" }}>
                     <a
-                      href={`/programs/${activeBundle.program.canonicalSlug}/courses/${course.canonicalSlug}`}
+                      href={
+                        "canonicalPath" in course
+                          ? course.canonicalPath
+                          : `/programs/${programSlug}/courses/${course.canonicalSlug}`
+                      }
                       style={{ fontWeight: "bold", color: "#000" }}
                     >
                       {course.title}

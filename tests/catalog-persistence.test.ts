@@ -72,6 +72,23 @@ const phase3RuntimeTables = [
   "learner_progress_events",
 ] as const;
 
+const phase7ReadModelTables = [
+  "catalog_projection_state",
+  "catalog_program_summaries",
+  "catalog_course_search_rows",
+  "catalog_course_search_terms",
+  "learner_pathway_snapshots",
+  "learner_pathway_course_rows",
+  "learner_term_schedule_rows",
+  "learner_today_assignment_rows",
+  "learner_transcript_rows",
+] as const;
+
+const runtimeShapeTables = [
+  ...phase3RuntimeTables,
+  ...phase7ReadModelTables,
+] as const;
+
 interface TableInfoRow {
   readonly cid: number;
   readonly name: string;
@@ -110,7 +127,7 @@ function pragmaIdentifier(value: string) {
 
 async function readRuntimeTableShape(
   database: D1DatabaseLike,
-  tableName: (typeof phase3RuntimeTables)[number],
+  tableName: (typeof runtimeShapeTables)[number],
 ) {
   const columns = await d1All<TableInfoRow>(
     database.prepare(`PRAGMA table_info(${pragmaIdentifier(tableName)})`),
@@ -277,19 +294,153 @@ test("a fresh local D1 binding bootstraps the narrow runtime schema", async (t) 
   assert.deepEqual(foreignKeyProblems.results ?? [], []);
 });
 
-test("the Phase 3 runtime bootstrap matches the migrated table and index shape", async (t) => {
+test("the runtime bootstrap matches the migrated state and read-model shapes", async (t) => {
   const migrated = await createTestDatabase();
   const runtime = await createEmptyDatabase();
   t.after(() => Promise.all([migrated.miniflare.dispose(), runtime.miniflare.dispose()]));
   await initializeCatalogRuntimeSchema(runtime.database);
 
-  for (const tableName of phase3RuntimeTables) {
+  for (const tableName of runtimeShapeTables) {
     assert.deepEqual(
       await readRuntimeTableShape(runtime.database, tableName),
       await readRuntimeTableShape(migrated.database, tableName),
       `${tableName} differs between runtime bootstrap and Drizzle migrations`,
     );
   }
+});
+
+test("the Phase 7 release marker supports one-point projection freshness checks", async (t) => {
+  const { database, miniflare } = await createTestDatabase();
+  t.after(() => miniflare.dispose());
+
+  const manifestHash = "a".repeat(64);
+  await database
+    .prepare(
+      `INSERT INTO catalog_projection_state (
+         release_key,
+         manifest_hash,
+         bundle_count,
+         active_program_count,
+         minimum_path_course_count,
+         learning_unit_count,
+         nominal_hours,
+         school_count,
+         projection_version
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      "catalog-publication-lock-v1",
+      manifestHash,
+      7,
+      9,
+      152,
+      1_464,
+      28_000,
+      3,
+      1,
+    )
+    .run();
+
+  assert.deepEqual(
+    await database
+      .prepare(
+        `SELECT
+           manifest_hash,
+           bundle_count,
+           active_program_count,
+           minimum_path_course_count,
+           learning_unit_count,
+           nominal_hours,
+           school_count,
+           projection_version
+         FROM catalog_projection_state
+         WHERE release_key = ?`,
+      )
+      .bind("catalog-publication-lock-v1")
+      .first(),
+    {
+      manifest_hash: manifestHash,
+      bundle_count: 7,
+      active_program_count: 9,
+      minimum_path_course_count: 152,
+      learning_unit_count: 1_464,
+      nominal_hours: 28_000,
+      school_count: 3,
+      projection_version: 1,
+    },
+  );
+});
+
+test("the Phase 7 migration is additive and preserves publication and progress rows", async (t) => {
+  const { database, miniflare } = await createEmptyDatabase();
+  t.after(() => miniflare.dispose());
+  const migrationUrls = await loadMigrationUrls();
+  const phase7MigrationIndex = migrationUrls.findIndex((url) =>
+    migrationFileName(url).startsWith("0005_"),
+  );
+  assert.notEqual(
+    phase7MigrationIndex,
+    -1,
+    "The Phase 7 migration (0005_*.sql) is missing.",
+  );
+  await applyMigrations(database, migrationUrls.slice(0, phase7MigrationIndex));
+  await seedPublishedProgramBundles(database, [practicalSpreadsheetsProgram]);
+
+  const learnerId = "lrn_phase7_preservation_fixture";
+  await d1Batch(
+    database,
+    [
+      database.prepare("INSERT INTO learners (id) VALUES (?)").bind(learnerId),
+      database
+        .prepare(
+          `INSERT INTO learner_program_progress (
+             learner_id,
+             program_version_id,
+             bundle_id
+           ) VALUES (?, ?, ?)`,
+        )
+        .bind(
+          learnerId,
+          practicalSpreadsheetsProgram.programVersion.id,
+          practicalSpreadsheetsProgram.id,
+        ),
+    ],
+    "create Phase 7 preservation fixture",
+  );
+
+  await applyMigrations(database, migrationUrls.slice(phase7MigrationIndex));
+  assert.equal(
+    (
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM catalog_bundles")
+        .first<{ count: number }>()
+    )?.count,
+    1,
+  );
+  assert.equal(
+    (
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM learner_program_progress")
+        .first<{ count: number }>()
+    )?.count,
+    1,
+  );
+  const readModelTables = await database
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM sqlite_schema
+       WHERE type = 'table'
+         AND name IN (${phase7ReadModelTables.map(() => "?").join(", ")})`,
+    )
+    .bind(...phase7ReadModelTables)
+    .first<{ count: number }>();
+  assert.equal(readModelTables?.count, phase7ReadModelTables.length);
+  assert.deepEqual(
+    (
+      await database.prepare("PRAGMA foreign_key_check").all()
+    ).results ?? [],
+    [],
+  );
 });
 
 test("the Phase 3 migration preserves legacy enrollment anchors and unit completions", async (t) => {

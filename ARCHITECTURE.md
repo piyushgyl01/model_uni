@@ -8,11 +8,13 @@ engineering, Computer Science, Physics, Mathematics, and a spreadsheet sprint,
 generic program/course renderers, D1-backed catalog reads, and authenticated
 version-aware progress. Checked-in
 publications are the reviewed seed inputs; D1 stores the immutable runtime
-snapshots and every startup shadow-compares their canonical content. A protected
+snapshots. Publication/import work performs full validation and shadow comparison;
+ordinary requests verify one compact release marker and query indexed projections. A protected
 publication endpoint also accepts independently validated, immutable D1-only
-bundles. The later editorial drafting, connector ingestion, credential, and
-search sections below remain target architecture, not claims about the live
-product.
+bundles. The later editorial drafting, connector ingestion, and credential
+sections below remain target architecture, not claims about the live product.
+Indexed program/course discovery and learner-specific pathway, term, Today, and
+learning-record projections are implemented in the current release.
 
 ## 1. Product boundary
 
@@ -262,13 +264,14 @@ Search is a read model, not the catalog database. Each indexed document includes
   link check, and quality score;
 - popularity and completion aggregates with minimum privacy thresholds.
 
-Phase 1 uses D1 FTS5 for titles, descriptions, provider names, and outcomes.
-Phase 2 uses a dedicated engine such as OpenSearch or Typesense for typo
-tolerance, facets, multilingual analyzers, and high-volume indexing. PostgreSQL
-remains authoritative. `outbox_events` provides idempotent indexing; every
-document carries `schema_version` and `source_revision`. A full reindex can be
-built under a new alias and atomically swapped. Embeddings may rerank candidates
-but cannot override rights, safety, locale, or availability filters.
+The current implementation uses disposable D1 program summaries, course search
+rows, and weighted search terms. Catalog APIs use bounded keyset pagination and
+prepared filters. Every projection carries a payload hash and projection
+version, so it can be rebuilt from immutable publications without changing
+catalog identity. A future dedicated engine such as OpenSearch or Typesense may
+add typo tolerance, multilingual analyzers, and high-volume facets. Embeddings
+may rerank candidates but cannot override rights, safety, locale, or availability
+filters.
 
 ## 10. User plans and progress
 

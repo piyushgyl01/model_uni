@@ -1630,6 +1630,822 @@ export const learnerProgressEvents = sqliteTable(
   ],
 );
 
+/**
+ * Phase 7 read models are disposable projections. Immutable catalog bundle
+ * chunks and revisioned learner state remain authoritative; every row below
+ * carries the exact source version needed to detect and rebuild stale data.
+ */
+export const catalogProjectionState = sqliteTable(
+  "catalog_projection_state",
+  {
+    releaseKey: text("release_key").primaryKey(),
+    manifestHash: text("manifest_hash").notNull(),
+    bundleCount: integer("bundle_count").notNull(),
+    activeProgramCount: integer("active_program_count").notNull().default(0),
+    minimumPathCourseCount: integer("minimum_path_course_count")
+      .notNull()
+      .default(0),
+    learningUnitCount: integer("learning_unit_count").notNull().default(0),
+    nominalHours: integer("nominal_hours").notNull().default(0),
+    schoolCount: integer("school_count").notNull().default(0),
+    projectionVersion: integer("projection_version").notNull(),
+    projectedAt: text("projected_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check(
+      "catalog_projection_state_release_key_check",
+      sql`length(trim(${table.releaseKey})) > 0`,
+    ),
+    check(
+      "catalog_projection_state_manifest_hash_check",
+      sql`length(${table.manifestHash}) = 64`,
+    ),
+    check(
+      "catalog_projection_state_bundle_count_check",
+      sql`${table.bundleCount} >= 0`,
+    ),
+    check(
+      "catalog_projection_state_aggregate_counts_check",
+      sql`${table.activeProgramCount} >= 0 AND ${table.minimumPathCourseCount} >= 0 AND ${table.learningUnitCount} >= 0 AND ${table.nominalHours} >= 0 AND ${table.schoolCount} >= 0 AND ${table.schoolCount} <= ${table.activeProgramCount}`,
+    ),
+    check(
+      "catalog_projection_state_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
+export const catalogProgramSummaries = sqliteTable(
+  "catalog_program_summaries",
+  {
+    programVersionId: text("program_version_id").primaryKey(),
+    bundleId: text("bundle_id").notNull(),
+    programId: text("program_id").notNull(),
+    canonicalSlug: text("canonical_slug").notNull(),
+    semanticVersion: text("semantic_version").notNull(),
+    title: text("title").notNull(),
+    shortTitle: text("short_title"),
+    school: text("school").notNull(),
+    discipline: text("discipline").notNull(),
+    kind: text("kind").notNull(),
+    credentialLabel: text("credential_label").notNull(),
+    lifecycle: text("lifecycle", { enum: ["active", "retired"] })
+      .notNull()
+      .default("active"),
+    summary: text("summary").notNull(),
+    nominalDuration: text("nominal_duration").notNull(),
+    nominalHours: integer("nominal_hours").notNull(),
+    courseCount: integer("course_count").notNull(),
+    availableCourseCount: integer("available_course_count").notNull(),
+    learningUnitCount: integer("learning_unit_count").notNull(),
+    assessmentCount: integer("assessment_count").notNull(),
+    resourceCount: integer("resource_count").notNull(),
+    concentrationCount: integer("concentration_count").notNull(),
+    publishedAt: text("published_at").notNull(),
+    isActive: integer("is_active", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    titleSortKey: text("title_sort_key").notNull(),
+    searchText: text("search_text").notNull(),
+    sourcePayloadHash: text("source_payload_hash").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    foreignKey({
+      name: "catalog_program_summaries_bundle_version_fk",
+      columns: [table.bundleId, table.programVersionId],
+      foreignColumns: [catalogBundles.id, catalogBundles.programVersionId],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("catalog_program_summaries_bundle_unique").on(table.bundleId),
+    uniqueIndex("catalog_program_summaries_slug_version_unique").on(
+      table.canonicalSlug,
+      table.semanticVersion,
+    ),
+    index("catalog_program_summaries_active_title_idx").on(
+      table.isActive,
+      table.titleSortKey,
+      table.programVersionId,
+    ),
+    index("catalog_program_summaries_discipline_title_idx").on(
+      table.isActive,
+      table.discipline,
+      table.titleSortKey,
+      table.programVersionId,
+    ),
+    index("catalog_program_summaries_kind_title_idx").on(
+      table.isActive,
+      table.kind,
+      table.titleSortKey,
+      table.programVersionId,
+    ),
+    index("catalog_program_summaries_published_idx").on(
+      table.isActive,
+      table.publishedAt,
+      table.programVersionId,
+    ),
+    check(
+      "catalog_program_summaries_counts_check",
+      sql`${table.nominalHours} >= 0 AND ${table.courseCount} >= 0 AND ${table.availableCourseCount} >= ${table.courseCount} AND ${table.learningUnitCount} >= 0 AND ${table.assessmentCount} >= 0 AND ${table.resourceCount} >= 0 AND ${table.concentrationCount} >= 0`,
+    ),
+    check(
+      "catalog_program_summaries_lifecycle_check",
+      sql`${table.lifecycle} IN ('active', 'retired')`,
+    ),
+    check(
+      "catalog_program_summaries_source_hash_check",
+      sql`length(${table.sourcePayloadHash}) = 64`,
+    ),
+    check(
+      "catalog_program_summaries_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+    check(
+      "catalog_program_summaries_search_keys_check",
+      sql`length(trim(${table.titleSortKey})) > 0 AND length(trim(${table.searchText})) > 0`,
+    ),
+  ],
+);
+
+/** One compact, filterable result row for each course in a publication. */
+export const catalogCourseSearchRows = sqliteTable(
+  "catalog_course_search_rows",
+  {
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    bundleId: text("bundle_id").notNull(),
+    programId: text("program_id").notNull(),
+    programCanonicalSlug: text("program_canonical_slug").notNull(),
+    programTitle: text("program_title").notNull(),
+    courseId: text("course_id").notNull(),
+    canonicalSlug: text("canonical_slug").notNull(),
+    semanticVersion: text("semantic_version").notNull(),
+    primaryCode: text("primary_code"),
+    codesJson: text("codes_json", { mode: "json" })
+      .$type<readonly { namespace: string; value: string }[]>()
+      .notNull()
+      .default([]),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    discipline: text("discipline").notNull(),
+    format: text("format").notNull(),
+    nominalHours: integer("nominal_hours").notNull(),
+    position: integer("position").notNull(),
+    isActive: integer("is_active", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    titleSortKey: text("title_sort_key").notNull(),
+    codeSortKey: text("code_sort_key"),
+    searchText: text("search_text").notNull(),
+    sourcePayloadHash: text("source_payload_hash").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "catalog_course_search_rows_pk",
+      columns: [table.programVersionId, table.courseVersionId],
+    }),
+    foreignKey({
+      name: "catalog_course_search_rows_bundle_version_fk",
+      columns: [table.bundleId, table.programVersionId],
+      foreignColumns: [catalogBundles.id, catalogBundles.programVersionId],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("catalog_course_search_rows_program_position_idx").on(
+      table.programVersionId,
+      table.position,
+      table.courseVersionId,
+    ),
+    index("catalog_course_search_rows_active_title_idx").on(
+      table.isActive,
+      table.titleSortKey,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    index("catalog_course_search_rows_active_code_idx").on(
+      table.isActive,
+      table.codeSortKey,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    index("catalog_course_search_rows_active_slug_idx").on(
+      table.isActive,
+      table.canonicalSlug,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    index("catalog_course_search_rows_discipline_title_idx").on(
+      table.isActive,
+      table.discipline,
+      table.titleSortKey,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    index("catalog_course_search_rows_format_title_idx").on(
+      table.isActive,
+      table.format,
+      table.titleSortKey,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    check(
+      "catalog_course_search_rows_nonnegative_values_check",
+      sql`${table.nominalHours} >= 0 AND ${table.position} >= 0`,
+    ),
+    check(
+      "catalog_course_search_rows_codes_check",
+      sql`json_valid(${table.codesJson}) AND json_type(${table.codesJson}) = 'array'`,
+    ),
+    check(
+      "catalog_course_search_rows_source_hash_check",
+      sql`length(${table.sourcePayloadHash}) = 64`,
+    ),
+    check(
+      "catalog_course_search_rows_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+    check(
+      "catalog_course_search_rows_search_keys_check",
+      sql`length(trim(${table.titleSortKey})) > 0 AND length(trim(${table.searchText})) > 0`,
+    ),
+  ],
+);
+
+/**
+ * Normalized terms make word and prefix lookup an index range scan without an
+ * FTS virtual table, which keeps local Miniflare exports and D1 migrations
+ * portable. A rebuild can freely replace all terms for one immutable bundle.
+ */
+export const catalogCourseSearchTerms = sqliteTable(
+  "catalog_course_search_terms",
+  {
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    term: text("term").notNull(),
+    field: text("field", {
+      enum: ["title", "code", "slug", "discipline", "summary", "outcome"],
+    }).notNull(),
+    weight: integer("weight").notNull().default(1),
+  },
+  (table) => [
+    primaryKey({
+      name: "catalog_course_search_terms_pk",
+      columns: [
+        table.programVersionId,
+        table.courseVersionId,
+        table.term,
+        table.field,
+      ],
+    }),
+    foreignKey({
+      name: "catalog_course_search_terms_course_fk",
+      columns: [table.programVersionId, table.courseVersionId],
+      foreignColumns: [
+        catalogCourseSearchRows.programVersionId,
+        catalogCourseSearchRows.courseVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("catalog_course_search_terms_lookup_idx").on(
+      table.term,
+      table.weight,
+      table.programVersionId,
+      table.courseVersionId,
+    ),
+    check(
+      "catalog_course_search_terms_term_check",
+      sql`length(trim(${table.term})) > 0`,
+    ),
+    check(
+      "catalog_course_search_terms_field_check",
+      sql`${table.field} IN ('title', 'code', 'slug', 'discipline', 'summary', 'outcome')`,
+    ),
+    check(
+      "catalog_course_search_terms_weight_check",
+      sql`${table.weight} > 0`,
+    ),
+  ],
+);
+
+/** One current, exact path header for a version-pinned learner enrollment. */
+export const learnerPathwaySnapshots = sqliteTable(
+  "learner_pathway_snapshots",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    bundleId: text("bundle_id").notNull(),
+    sourceProgressRevision: integer("source_progress_revision").notNull(),
+    calendarAsOfDate: text("calendar_as_of_date").notNull(),
+    selectedConcentrationId: text("selected_concentration_id"),
+    selectedConcentrationTitle: text("selected_concentration_title"),
+    pathResolved: integer("path_resolved", { mode: "boolean" }).notNull(),
+    requirementsSatisfied: integer("requirements_satisfied", {
+      mode: "boolean",
+    }).notNull(),
+    courseCount: integer("course_count").notNull(),
+    learningUnitCount: integer("learning_unit_count").notNull(),
+    assessmentCount: integer("assessment_count").notNull(),
+    nominalHours: integer("nominal_hours").notNull(),
+    requirementEvaluationJson: text("requirement_evaluation_json", {
+      mode: "json",
+    })
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    diagnosticsJson: text("diagnostics_json", { mode: "json" })
+      .$type<readonly Record<string, unknown>[]>()
+      .notNull()
+      .default([]),
+    calendarSummaryJson: text("calendar_summary_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    sourcePayloadHash: text("source_payload_hash").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_pathway_snapshots_pk",
+      columns: [table.learnerId, table.programVersionId],
+    }),
+    foreignKey({
+      name: "learner_pathway_snapshots_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    foreignKey({
+      name: "learner_pathway_snapshots_bundle_version_fk",
+      columns: [table.bundleId, table.programVersionId],
+      foreignColumns: [catalogBundles.id, catalogBundles.programVersionId],
+    })
+      .onUpdate("cascade")
+      .onDelete("restrict"),
+    index("learner_pathway_snapshots_revision_idx").on(
+      table.learnerId,
+      table.sourceProgressRevision,
+      table.programVersionId,
+    ),
+    check(
+      "learner_pathway_snapshots_revision_check",
+      sql`${table.sourceProgressRevision} >= 0`,
+    ),
+    check(
+      "learner_pathway_snapshots_as_of_date_check",
+      sql`length(${table.calendarAsOfDate}) = 10 AND date(${table.calendarAsOfDate}) = ${table.calendarAsOfDate}`,
+    ),
+    check(
+      "learner_pathway_snapshots_concentration_title_check",
+      sql`${table.selectedConcentrationTitle} IS NULL OR length(trim(${table.selectedConcentrationTitle})) > 0`,
+    ),
+    check(
+      "learner_pathway_snapshots_counts_check",
+      sql`${table.courseCount} >= 0 AND ${table.learningUnitCount} >= 0 AND ${table.assessmentCount} >= 0 AND ${table.nominalHours} >= 0`,
+    ),
+    check(
+      "learner_pathway_snapshots_evaluation_check",
+      sql`json_valid(${table.requirementEvaluationJson}) AND json_type(${table.requirementEvaluationJson}) = 'object'`,
+    ),
+    check(
+      "learner_pathway_snapshots_diagnostics_check",
+      sql`json_valid(${table.diagnosticsJson}) AND json_type(${table.diagnosticsJson}) = 'array'`,
+    ),
+    check(
+      "learner_pathway_snapshots_calendar_summary_check",
+      sql`json_valid(${table.calendarSummaryJson}) AND json_type(${table.calendarSummaryJson}) = 'object'`,
+    ),
+    check(
+      "learner_pathway_snapshots_source_hash_check",
+      sql`length(${table.sourcePayloadHash}) = 64`,
+    ),
+    check(
+      "learner_pathway_snapshots_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
+/** Ordered, denormalized course rows for the learner's resolved pathway only. */
+export const learnerPathwayCourseRows = sqliteTable(
+  "learner_pathway_course_rows",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    courseId: text("course_id").notNull(),
+    canonicalSlug: text("canonical_slug").notNull(),
+    code: text("code"),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    format: text("format").notNull(),
+    nominalHours: integer("nominal_hours").notNull(),
+    position: integer("position").notNull(),
+    periodId: text("period_id"),
+    periodLabel: text("period_label"),
+    requirementGroupIdsJson: text("requirement_group_ids_json", {
+      mode: "json",
+    })
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+    prerequisiteCourseVersionIdsJson: text(
+      "prerequisite_course_version_ids_json",
+      { mode: "json" },
+    )
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+    learningUnitCount: integer("learning_unit_count").notNull(),
+    assessmentCount: integer("assessment_count").notNull(),
+    sourceProgressRevision: integer("source_progress_revision").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_pathway_course_rows_pk",
+      columns: [table.learnerId, table.programVersionId, table.courseVersionId],
+    }),
+    foreignKey({
+      name: "learner_pathway_course_rows_snapshot_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerPathwaySnapshots.learnerId,
+        learnerPathwaySnapshots.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_pathway_course_rows_order_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.position,
+      table.courseVersionId,
+    ),
+    index("learner_pathway_course_rows_period_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.periodId,
+      table.position,
+    ),
+    check(
+      "learner_pathway_course_rows_values_check",
+      sql`${table.nominalHours} >= 0 AND ${table.position} >= 0 AND ${table.learningUnitCount} >= 0 AND ${table.assessmentCount} >= 0 AND ${table.sourceProgressRevision} >= 0`,
+    ),
+    check(
+      "learner_pathway_course_rows_requirements_check",
+      sql`json_valid(${table.requirementGroupIdsJson}) AND json_type(${table.requirementGroupIdsJson}) = 'array'`,
+    ),
+    check(
+      "learner_pathway_course_rows_prerequisites_check",
+      sql`json_valid(${table.prerequisiteCourseVersionIdsJson}) AND json_type(${table.prerequisiteCourseVersionIdsJson}) = 'array'`,
+    ),
+    check(
+      "learner_pathway_course_rows_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
+/** Dated academic terms, already scoped to one exact learner pathway. */
+export const learnerTermScheduleRows = sqliteTable(
+  "learner_term_schedule_rows",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    termKey: text("term_key").notNull(),
+    periodId: text("period_id"),
+    label: text("label").notNull(),
+    position: integer("position").notNull(),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    status: text("status", {
+      enum: ["completed", "current", "upcoming"],
+    }).notNull(),
+    courseVersionIdsJson: text("course_version_ids_json", { mode: "json" })
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+    milestonesJson: text("milestones_json", { mode: "json" })
+      .$type<readonly Record<string, unknown>[]>()
+      .notNull()
+      .default([]),
+    breakStartDate: text("break_start_date"),
+    breakEndDate: text("break_end_date"),
+    totalPlannedMinutes: integer("total_planned_minutes").notNull(),
+    completedMinutes: integer("completed_minutes").notNull(),
+    sourceProgressRevision: integer("source_progress_revision").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_term_schedule_rows_pk",
+      columns: [table.learnerId, table.programVersionId, table.termKey],
+    }),
+    foreignKey({
+      name: "learner_term_schedule_rows_snapshot_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerPathwaySnapshots.learnerId,
+        learnerPathwaySnapshots.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_term_schedule_rows_order_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.position,
+    ),
+    index("learner_term_schedule_rows_date_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.startDate,
+      table.endDate,
+    ),
+    index("learner_term_schedule_rows_status_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.status,
+      table.startDate,
+    ),
+    check(
+      "learner_term_schedule_rows_date_check",
+      sql`length(${table.startDate}) = 10 AND date(${table.startDate}) = ${table.startDate} AND length(${table.endDate}) = 10 AND date(${table.endDate}) = ${table.endDate} AND ${table.endDate} >= ${table.startDate}`,
+    ),
+    check(
+      "learner_term_schedule_rows_break_check",
+      sql`(${table.breakStartDate} IS NULL AND ${table.breakEndDate} IS NULL) OR (${table.breakStartDate} IS NOT NULL AND ${table.breakEndDate} IS NOT NULL AND date(${table.breakStartDate}) = ${table.breakStartDate} AND date(${table.breakEndDate}) = ${table.breakEndDate} AND ${table.breakEndDate} >= ${table.breakStartDate})`,
+    ),
+    check(
+      "learner_term_schedule_rows_status_check",
+      sql`${table.status} IN ('completed', 'current', 'upcoming')`,
+    ),
+    check(
+      "learner_term_schedule_rows_values_check",
+      sql`${table.position} >= 0 AND ${table.totalPlannedMinutes} >= 0 AND ${table.completedMinutes} >= 0 AND ${table.completedMinutes} <= ${table.totalPlannedMinutes} AND ${table.sourceProgressRevision} >= 0`,
+    ),
+    check(
+      "learner_term_schedule_rows_courses_check",
+      sql`json_valid(${table.courseVersionIdsJson}) AND json_type(${table.courseVersionIdsJson}) = 'array'`,
+    ),
+    check(
+      "learner_term_schedule_rows_milestones_check",
+      sql`json_valid(${table.milestonesJson}) AND json_type(${table.milestonesJson}) = 'array'`,
+    ),
+    check(
+      "learner_term_schedule_rows_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
+/** Query-ready daily assignments for Today and dated history views. */
+export const learnerTodayAssignmentRows = sqliteTable(
+  "learner_today_assignment_rows",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    assignmentId: text("assignment_id").notNull(),
+    scheduleEntryId: text("schedule_entry_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    courseCanonicalSlug: text("course_canonical_slug").notNull(),
+    courseTitle: text("course_title").notNull(),
+    subjectKind: text("subject_kind", {
+      enum: ["learning_unit", "assessment_version"],
+    }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    learningUnitId: text("learning_unit_id"),
+    assessmentVersionId: text("assessment_version_id"),
+    termKey: text("term_key"),
+    periodLabel: text("period_label").notNull(),
+    taskKind: text("task_kind", {
+      enum: ["study", "project", "midterm", "final", "assessment"],
+    }).notNull(),
+    title: text("title").notNull(),
+    topic: text("topic").notNull(),
+    activity: text("activity").notNull(),
+    whereText: text("where_text").notNull(),
+    resourceUrl: text("resource_url"),
+    produce: text("produce").notNull(),
+    scheduledDate: text("scheduled_date").notNull(),
+    deadlineDate: text("deadline_date").notNull(),
+    startTime: text("start_time"),
+    plannedMinutes: integer("planned_minutes").notNull(),
+    position: integer("position").notNull(),
+    status: text("status", {
+      enum: ["planned", "completed", "skipped", "carried", "cancelled"],
+    })
+      .notNull()
+      .default("planned"),
+    completedAt: text("completed_at"),
+    assignmentJson: text("assignment_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    sourceProgressRevision: integer("source_progress_revision").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_today_assignment_rows_pk",
+      columns: [table.learnerId, table.programVersionId, table.assignmentId],
+    }),
+    foreignKey({
+      name: "learner_today_assignment_rows_snapshot_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerPathwaySnapshots.learnerId,
+        learnerPathwaySnapshots.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("learner_today_assignment_rows_schedule_entry_unique").on(
+      table.learnerId,
+      table.programVersionId,
+      table.scheduleEntryId,
+    ),
+    index("learner_today_assignment_rows_day_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.scheduledDate,
+      table.position,
+    ),
+    index("learner_today_assignment_rows_day_status_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.scheduledDate,
+      table.status,
+      table.position,
+    ),
+    index("learner_today_assignment_rows_course_day_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.courseVersionId,
+      table.scheduledDate,
+    ),
+    check(
+      "learner_today_assignment_rows_subject_check",
+      sql`(${table.subjectKind} = 'learning_unit' AND ${table.learningUnitId} = ${table.subjectId} AND ${table.assessmentVersionId} IS NULL) OR (${table.subjectKind} = 'assessment_version' AND ${table.assessmentVersionId} = ${table.subjectId})`,
+    ),
+    check(
+      "learner_today_assignment_rows_task_kind_check",
+      sql`${table.taskKind} IN ('study', 'project', 'midterm', 'final', 'assessment')`,
+    ),
+    check(
+      "learner_today_assignment_rows_date_check",
+      sql`length(${table.scheduledDate}) = 10 AND date(${table.scheduledDate}) = ${table.scheduledDate} AND length(${table.deadlineDate}) = 10 AND date(${table.deadlineDate}) = ${table.deadlineDate}`,
+    ),
+    check(
+      "learner_today_assignment_rows_start_time_check",
+      sql`${table.startTime} IS NULL OR (length(${table.startTime}) = 5 AND ${table.startTime} GLOB '[0-2][0-9]:[0-5][0-9]' AND substr(${table.startTime}, 1, 2) <= '23')`,
+    ),
+    check(
+      "learner_today_assignment_rows_values_check",
+      sql`${table.plannedMinutes} > 0 AND ${table.position} >= 0 AND ${table.sourceProgressRevision} >= 0`,
+    ),
+    check(
+      "learner_today_assignment_rows_status_check",
+      sql`${table.status} IN ('planned', 'completed', 'skipped', 'carried', 'cancelled')`,
+    ),
+    check(
+      "learner_today_assignment_rows_completion_check",
+      sql`(${table.status} = 'completed' AND ${table.completedAt} IS NOT NULL) OR (${table.status} <> 'completed' AND ${table.completedAt} IS NULL)`,
+    ),
+    check(
+      "learner_today_assignment_rows_assignment_check",
+      sql`json_valid(${table.assignmentJson}) AND json_type(${table.assignmentJson}) = 'object'`,
+    ),
+    check(
+      "learner_today_assignment_rows_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
+/** One honest Independent Learning Record row per course on the exact path. */
+export const learnerTranscriptRows = sqliteTable(
+  "learner_transcript_rows",
+  {
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    courseCanonicalSlug: text("course_canonical_slug").notNull(),
+    code: text("code").notNull(),
+    title: text("title").notNull(),
+    format: text("format").notNull(),
+    position: integer("position").notNull(),
+    nominalHours: integer("nominal_hours").notNull(),
+    totalUnits: integer("total_units").notNull(),
+    completedUnits: integer("completed_units").notNull(),
+    completedLearningHours: real("completed_learning_hours").notNull(),
+    masteryState: text("mastery_state", {
+      enum: [
+        "not-started",
+        "studying",
+        "assessment-due",
+        "submitted",
+        "evaluated",
+        "passed",
+        "retry",
+      ],
+    }).notNull(),
+    passed: integer("passed", { mode: "boolean" }).notNull(),
+    weightedScorePercentage: real("weighted_score_percentage"),
+    assessmentHours: real("assessment_hours").notNull(),
+    assessmentCount: integer("assessment_count").notNull(),
+    assessmentAttemptCount: integer("assessment_attempt_count").notNull(),
+    projectCount: integer("project_count").notNull(),
+    evidencedProjectCount: integer("evidenced_project_count").notNull(),
+    evidenceCount: integer("evidence_count").notNull(),
+    assessmentsJson: text("assessments_json", { mode: "json" })
+      .$type<readonly Record<string, unknown>[]>()
+      .notNull()
+      .default([]),
+    projectsJson: text("projects_json", { mode: "json" })
+      .$type<readonly Record<string, unknown>[]>()
+      .notNull()
+      .default([]),
+    evidenceJson: text("evidence_json", { mode: "json" })
+      .$type<readonly Record<string, unknown>[]>()
+      .notNull()
+      .default([]),
+    sourceProgressRevision: integer("source_progress_revision").notNull(),
+    projectionVersion: integer("projection_version").notNull().default(1),
+    rebuiltAt: text("rebuilt_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_transcript_rows_pk",
+      columns: [table.learnerId, table.programVersionId, table.courseVersionId],
+    }),
+    foreignKey({
+      name: "learner_transcript_rows_snapshot_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerPathwaySnapshots.learnerId,
+        learnerPathwaySnapshots.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_transcript_rows_order_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.position,
+      table.courseVersionId,
+    ),
+    index("learner_transcript_rows_passed_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.passed,
+      table.position,
+    ),
+    check(
+      "learner_transcript_rows_values_check",
+      sql`${table.position} >= 0 AND ${table.nominalHours} >= 0 AND ${table.totalUnits} >= 0 AND ${table.completedUnits} >= 0 AND ${table.completedUnits} <= ${table.totalUnits} AND ${table.completedLearningHours} >= 0 AND ${table.assessmentHours} >= 0 AND ${table.assessmentCount} >= 0 AND ${table.assessmentAttemptCount} >= 0 AND ${table.projectCount} >= 0 AND ${table.evidencedProjectCount} >= 0 AND ${table.evidencedProjectCount} <= ${table.projectCount} AND ${table.evidenceCount} >= 0 AND ${table.sourceProgressRevision} >= 0`,
+    ),
+    check(
+      "learner_transcript_rows_mastery_state_check",
+      sql`${table.masteryState} IN ('not-started', 'studying', 'assessment-due', 'submitted', 'evaluated', 'passed', 'retry')`,
+    ),
+    check(
+      "learner_transcript_rows_score_check",
+      sql`${table.weightedScorePercentage} IS NULL OR ${table.weightedScorePercentage} BETWEEN 0 AND 100`,
+    ),
+    check(
+      "learner_transcript_rows_assessments_check",
+      sql`json_valid(${table.assessmentsJson}) AND json_type(${table.assessmentsJson}) = 'array'`,
+    ),
+    check(
+      "learner_transcript_rows_projects_check",
+      sql`json_valid(${table.projectsJson}) AND json_type(${table.projectsJson}) = 'array'`,
+    ),
+    check(
+      "learner_transcript_rows_evidence_check",
+      sql`json_valid(${table.evidenceJson}) AND json_type(${table.evidenceJson}) = 'array'`,
+    ),
+    check(
+      "learner_transcript_rows_projection_version_check",
+      sql`${table.projectionVersion} > 0`,
+    ),
+  ],
+);
+
 export const auditEvents = sqliteTable(
   "audit_events",
   {

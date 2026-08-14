@@ -1,76 +1,160 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { PublishedProgramBundle } from "../domain/catalog";
+import type { LearnerTodayView } from "../catalog/learner-read-model-repository";
+import type {
+  ProgramVersionId,
+  PublishedProgramBundle,
+} from "../domain/catalog";
 import { syncStoredProgram } from "../progress-sync-client";
 import { PROGRESS_EVENT, readProgressStore } from "../progress-storage";
 import { TodayDashboardComponent } from "../today-dashboard-component";
 
-interface TodayPageClientProps {
-  readonly bundles: readonly PublishedProgramBundle[];
+interface LearnerProgramsResponse {
+  readonly authenticated: boolean;
+  readonly programs?: readonly {
+    readonly programVersionId: ProgramVersionId;
+    readonly enrollmentStatus: string;
+  }[];
+  readonly signInPath?: string;
 }
 
-export function TodayPageClient({ bundles }: TodayPageClientProps) {
+async function loadExactBundle(programVersionId: ProgramVersionId) {
+  const response = await fetch(
+    `/api/catalog/program-versions/${encodeURIComponent(programVersionId)}`,
+    { headers: { accept: "application/json" } },
+  );
+  if (!response.ok) return undefined;
+  const payload = (await response.json()) as {
+    readonly bundle?: PublishedProgramBundle;
+  };
+  return payload.bundle;
+}
+
+async function loadTodayView(programVersionId: ProgramVersionId) {
+  const query = new URLSearchParams({ programVersionId });
+  const response = await fetch(`/api/learner-views/today?${query}`, {
+    headers: { accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) return undefined;
+  return (await response.json()) as LearnerTodayView;
+}
+
+export function TodayPageClient() {
   const [mounted, setMounted] = useState(false);
-  const [enrolledProgramVersionIds, setEnrolledProgramVersionIds] = useState<string[]>([]);
+  const [views, setViews] = useState<readonly LearnerTodayView[]>([]);
+  const [localBundles, setLocalBundles] = useState<
+    readonly PublishedProgramBundle[]
+  >([]);
+  const [signInPath, setSignInPath] = useState<string>();
 
   useEffect(() => {
     let active = true;
-    const updateEnrolled = () => {
-      if (!active) return;
+
+    const load = async (synchronize: boolean) => {
       const store = readProgressStore();
-      const enrolled = Object.entries(store.programs ?? {})
+      const localEnrolledIds = Object.entries(store.programs ?? {})
         .filter(([, program]) => program.enrollment?.status === "enrolled")
-        .map(([versionId]) => versionId);
-      setEnrolledProgramVersionIds(enrolled);
+        .map(([programVersionId]) => programVersionId as ProgramVersionId);
+
+      if (synchronize) {
+        await Promise.all(
+          localEnrolledIds.map((programVersionId) =>
+            syncStoredProgram(programVersionId),
+          ),
+        );
+      }
+
+      const programsResponse = await fetch("/api/learner-views", {
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+      const programsPayload = (await programsResponse
+        .json()
+        .catch(() => ({ authenticated: false }))) as LearnerProgramsResponse;
+      const cloudEnrolledIds = programsPayload.authenticated
+        ? (programsPayload.programs ?? [])
+            .filter((program) => program.enrollmentStatus === "enrolled")
+            .map((program) => program.programVersionId)
+        : [];
+      const cloudViews = (
+        await Promise.all(cloudEnrolledIds.map(loadTodayView))
+      ).filter((view): view is LearnerTodayView => view !== undefined);
+      const cloudIds = new Set(
+        cloudViews.map((view) => view.program.programVersionId),
+      );
+      const localOnlyIds = localEnrolledIds.filter((id) => !cloudIds.has(id));
+      const exactBundles = (
+        await Promise.all(localOnlyIds.map(loadExactBundle))
+      ).filter(
+        (bundle): bundle is PublishedProgramBundle => bundle !== undefined,
+      );
+
+      if (!active) return;
+      setViews(cloudViews);
+      setLocalBundles(exactBundles);
+      setSignInPath(programsPayload.signInPath);
       setMounted(true);
     };
-    const hydrateSuppliedPrograms = async () => {
-      await Promise.all(
-        bundles.map((bundle) =>
-          syncStoredProgram(bundle.programVersion.id),
-        ),
-      );
-      updateEnrolled();
-    };
 
-    updateEnrolled();
-    void hydrateSuppliedPrograms();
-    const handleEvent = () => updateEnrolled();
-    const handleReconnect = () => void hydrateSuppliedPrograms();
-    window.addEventListener(PROGRESS_EVENT, handleEvent);
+    void load(true);
+    const handleProgress = () => void load(false);
+    const handleReconnect = () => void load(true);
+    window.addEventListener(PROGRESS_EVENT, handleProgress);
     window.addEventListener("online", handleReconnect);
     return () => {
       active = false;
-      window.removeEventListener(PROGRESS_EVENT, handleEvent);
+      window.removeEventListener(PROGRESS_EVENT, handleProgress);
       window.removeEventListener("online", handleReconnect);
     };
-  }, [bundles]);
+  }, []);
 
-  const enrolledBundles = bundles.filter((b) =>
-    enrolledProgramVersionIds.includes(b.programVersion.id),
-  );
-
-  // If learner is enrolled in 1 or more programs, display their today dashboard(s)
-  if (mounted && enrolledBundles.length > 0) {
+  if (!mounted) {
     return (
-      <div>
-        {enrolledBundles.map((bundle) => (
-          <TodayDashboardComponent key={bundle.programVersion.id} bundle={bundle} />
-        ))}
+      <div style={{ padding: "1rem", border: "1px solid #ccc" }}>
+        Loading your active study plan...
       </div>
     );
   }
 
-  // Otherwise, default to showing Computer Science and Electrical Engineering with an enrollment prompt
-  const csBundle = bundles.find((b) => b.program.canonicalSlug === "computer-science") ?? bundles[0];
+  if (views.length === 0 && localBundles.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "1rem",
+          background: "#f0f4ff",
+          border: "1px solid #0000ee",
+          marginBottom: "1.5rem",
+        }}
+      >
+        ℹ️ <strong>You are not enrolled in a program yet.</strong>{" "}
+        <Link href="/#programs">Choose a published pathway</Link> to set a
+        start date and weekly pace.
+        {signInPath && (
+          <>
+            {" "}Already have cloud progress? <a href={signInPath}>Sign in</a>.
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ padding: "1rem", background: "#f0f4ff", border: "1px solid #0000ee", marginBottom: "1.5rem" }}>
-        ℹ️ <strong>You are not enrolled in any degree programs yet.</strong> Select a program below to start your degree and set your daily study pace.
-      </div>
-      {csBundle && <TodayDashboardComponent bundle={csBundle} />}
+      {views.map((view) => (
+        <TodayDashboardComponent
+          key={view.program.programVersionId}
+          view={view}
+        />
+      ))}
+      {localBundles.map((bundle) => (
+        <TodayDashboardComponent
+          key={bundle.programVersion.id}
+          bundle={bundle}
+        />
+      ))}
     </div>
   );
 }

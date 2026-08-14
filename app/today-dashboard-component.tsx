@@ -12,20 +12,70 @@ import {
   readLocalUnitEvidence,
   readProgressStore,
 } from "./progress-storage";
+import type { LearnerTodayView } from "./catalog/learner-read-model-repository";
 
-interface TodayDashboardProps {
-  readonly bundle: PublishedProgramBundle;
+type TodayDashboardProps =
+  | { readonly bundle: PublishedProgramBundle; readonly view?: never }
+  | { readonly bundle?: never; readonly view: LearnerTodayView };
+
+function queueFromView(view: LearnerTodayView): TodayQueueResult {
+  return {
+    ...view.queue,
+    reconciliationOperations: [],
+  };
 }
 
-export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
-  const programVersionId = bundle.programVersion.id;
+export function TodayDashboardComponent(props: TodayDashboardProps) {
+  const bundle = "bundle" in props ? props.bundle : undefined;
+  const projectedView = "view" in props ? props.view : undefined;
+  const programVersionId =
+    bundle?.programVersion.id ?? projectedView!.program.programVersionId;
+  const programTitle = bundle?.programVersion.title ?? projectedView!.program.title;
+  const programSlug = bundle?.program.canonicalSlug ?? projectedView!.program.slug;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(Boolean(projectedView));
+  const [projectedTerms, setProjectedTerms] = useState(
+    projectedView?.queue.terms ?? [],
+  );
+  const [projectedTermProgress, setProjectedTermProgress] = useState(
+    projectedView?.termProgress,
+  );
   const [queue, setQueue] = useState<TodayQueueResult>(() =>
-    calculateTodayQueue(bundle, undefined),
+    bundle
+      ? calculateTodayQueue(bundle, undefined)
+      : queueFromView(projectedView!),
   );
 
   useEffect(() => {
+    if (!bundle) {
+      let active = true;
+      const refreshProjectedQueue = async (synchronize: boolean) => {
+        if (synchronize) await syncStoredProgram(programVersionId);
+        const query = new URLSearchParams({ programVersionId });
+        const response = await fetch(`/api/learner-views/today?${query}`, {
+          headers: { accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok || !active) return;
+        const view = (await response.json()) as LearnerTodayView;
+        if (active) {
+          setQueue(queueFromView(view));
+          setProjectedTerms(view.queue.terms);
+          setProjectedTermProgress(view.termProgress);
+        }
+      };
+      void refreshProjectedQueue(true);
+      const handleProgressChange = () => void refreshProjectedQueue(false);
+      const handleReconnect = () => void refreshProjectedQueue(true);
+      window.addEventListener(PROGRESS_EVENT, handleProgressChange);
+      window.addEventListener("online", handleReconnect);
+      return () => {
+        active = false;
+        window.removeEventListener(PROGRESS_EVENT, handleProgressChange);
+        window.removeEventListener("online", handleReconnect);
+      };
+    }
+
     const refreshQueue = () => {
       const stored = readProgressStore().programs?.[programVersionId];
       const nextQueue = calculateTodayQueue(bundle, stored);
@@ -85,7 +135,27 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
         : []),
     ];
     const cached = enqueueProgressOperations(programVersionId, operations);
-    if (cached) void syncStoredProgram(programVersionId);
+    if (cached) {
+      setQueue((current) => ({
+        ...current,
+        blocks: current.blocks.map((candidate) =>
+          candidate.scheduleEntryId === block.scheduleEntryId
+            ? {
+                ...candidate,
+                completed: true,
+                canComplete: false,
+                scheduleEntry: {
+                  ...candidate.scheduleEntry,
+                  status: "completed",
+                  completedAt,
+                },
+              }
+            : candidate,
+        ),
+        completedBlocksToday: current.completedBlocksToday + 1,
+      }));
+      void syncStoredProgram(programVersionId);
+    }
   };
 
   if (!mounted) return null;
@@ -111,7 +181,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
         >
           <div>
             <h2 style={{ margin: "0 0 0.4rem 0", fontSize: "1.2rem" }}>
-              ⚡ Start Studying {bundle.programVersion.title}
+              ⚡ Start Studying {programTitle}
             </h2>
             <p style={{ margin: 0, fontSize: "0.95rem" }}>
               Enroll to generate your daily <strong>&quot;What do I do today?&quot;</strong> study queue based on your weekly pace.
@@ -134,7 +204,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
         </div>
         <EnrollmentModal
           programVersionId={programVersionId}
-          programTitle={bundle.programVersion.title}
+          programTitle={programTitle}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
@@ -204,7 +274,18 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
       </div>
 
       {/* TERM PROGRESS VIEW ("In Term X of Y") */}
-      <TermProgressWidget bundle={bundle} />
+      {bundle ? (
+        <TermProgressWidget bundle={bundle} />
+      ) : (
+        projectedTermProgress ? (
+          <TermProgressWidget evaluation={projectedTermProgress} />
+        ) : (
+          <TermProgressWidget
+            terms={projectedTerms}
+            currentPeriodLabel={queue.currentPeriodLabel}
+          />
+        )
+      )}
 
       {activeTerm && (
         <div
@@ -341,7 +422,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
                   </div>
                   <h4 style={{ margin: "0.2rem 0 0.4rem", fontSize: "1.1rem" }}>
                     <a
-                      href={`/programs/${bundle.program.canonicalSlug}/courses/${block.courseSlug}`}
+                      href={`/programs/${programSlug}/courses/${block.courseSlug}`}
                       style={{ textDecoration: block.completed ? "line-through" : "underline" }}
                     >
                       Unit {block.unitOrder}: {block.unitTitle}
@@ -431,7 +512,7 @@ export function TodayDashboardComponent({ bundle }: TodayDashboardProps) {
 
       <EnrollmentModal
         programVersionId={programVersionId}
-        programTitle={bundle.programVersion.title}
+        programTitle={programTitle}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />

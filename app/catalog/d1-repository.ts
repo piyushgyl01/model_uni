@@ -1,5 +1,6 @@
 import type {
   ProgramId,
+  ProgramVersionId,
   PublishedProgramBundle,
   SemanticVersion,
 } from "../domain/catalog";
@@ -16,9 +17,22 @@ import {
   type D1ResultLike,
 } from "./d1-contract";
 import type {
+  CatalogCourseSearchQuery,
+  CatalogCourseSearchResult,
+  CatalogPage,
+  CatalogProgramPageQuery,
   CatalogProgramSummary,
   CatalogRepository,
+  CatalogStats,
 } from "./repository";
+import {
+  getD1CatalogStats,
+  listD1ProgramPage,
+  listStaticProgramPage,
+  searchD1Courses,
+  staticCatalogStats,
+  staticCourseSearchResults,
+} from "./catalog-read-model";
 import {
   CatalogValidationError,
   StaticCatalogRepository,
@@ -26,6 +40,13 @@ import {
 
 export interface AsyncCatalogRepository {
   listPrograms(): Promise<readonly CatalogProgramSummary[]>;
+  listProgramPage(
+    query?: CatalogProgramPageQuery,
+  ): Promise<CatalogPage<CatalogProgramSummary>>;
+  searchCourses(
+    query?: CatalogCourseSearchQuery,
+  ): Promise<CatalogPage<CatalogCourseSearchResult>>;
+  getCatalogStats(): Promise<CatalogStats | undefined>;
   listVersions(slug: string): Promise<readonly SemanticVersion[]>;
   loadBySlug(
     slug: string,
@@ -34,6 +55,9 @@ export interface AsyncCatalogRepository {
   loadByProgramId(
     programId: ProgramId,
     version?: SemanticVersion,
+  ): Promise<PublishedProgramBundle | undefined>;
+  loadByProgramVersionId(
+    programVersionId: ProgramVersionId,
   ): Promise<PublishedProgramBundle | undefined>;
 }
 
@@ -591,6 +615,18 @@ function latestBundle(
 export class D1CatalogRepository implements AsyncCatalogRepository {
   constructor(readonly database: D1DatabaseLike) {}
 
+  async listProgramPage(query: CatalogProgramPageQuery = {}) {
+    return listD1ProgramPage(this.database, query);
+  }
+
+  async searchCourses(query: CatalogCourseSearchQuery = {}) {
+    return searchD1Courses(this.database, query);
+  }
+
+  async getCatalogStats() {
+    return getD1CatalogStats(this.database);
+  }
+
   async listPrograms(): Promise<readonly CatalogProgramSummary[]> {
     const rows = await d1All<CatalogSummaryRow>(
       this.database.prepare(
@@ -748,7 +784,7 @@ export class D1CatalogRepository implements AsyncCatalogRepository {
   }
 
   async loadByProgramVersionId(
-    programVersionId: string,
+    programVersionId: ProgramVersionId,
   ): Promise<PublishedProgramBundle | undefined> {
     const bundles = await this.loadRows(
       this.database
@@ -884,6 +920,21 @@ export class AsyncStaticCatalogRepository implements AsyncCatalogRepository {
     return this.staticRepository.listPrograms();
   }
 
+  async listProgramPage(query: CatalogProgramPageQuery = {}) {
+    return listStaticProgramPage(this.staticRepository, query);
+  }
+
+  async searchCourses(query: CatalogCourseSearchQuery = {}) {
+    return staticCourseSearchResults(
+      collectStaticCatalogBundles(this.staticRepository),
+      query,
+    );
+  }
+
+  async getCatalogStats() {
+    return staticCatalogStats(this.staticRepository);
+  }
+
   async listVersions(slug: string) {
     return this.staticRepository.listVersions(slug);
   }
@@ -894,6 +945,16 @@ export class AsyncStaticCatalogRepository implements AsyncCatalogRepository {
 
   async loadByProgramId(programId: ProgramId, version?: SemanticVersion) {
     return this.staticRepository.loadByProgramId(programId, version);
+  }
+
+  async loadByProgramVersionId(programVersionId: ProgramVersionId) {
+    for (const program of this.staticRepository.listPrograms()) {
+      for (const version of this.staticRepository.listVersions(program.slug)) {
+        const bundle = this.staticRepository.loadBySlug(program.slug, version);
+        if (bundle?.programVersion.id === programVersionId) return bundle;
+      }
+    }
+    return undefined;
   }
 }
 

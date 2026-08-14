@@ -1,9 +1,16 @@
 import {
+  CATALOG_READ_MODEL_VERSION,
+  CATALOG_RELEASE_BUNDLE_COUNT,
+  CATALOG_RELEASE_KEY,
+  CATALOG_RELEASE_MANIFEST_SHA256,
   catalogProgramSupersessions,
-  catalogRepository as checkedInCatalog,
-} from "../../content/catalog";
+} from "../../content/catalog-release";
 import type { D1DatabaseLike } from "./d1-contract";
-import type { AsyncCatalogRepository } from "./d1-repository";
+import {
+  D1CatalogRepository,
+  type AsyncCatalogRepository,
+} from "./d1-repository";
+import { initializeCatalogRuntimeSchema } from "./d1-runtime-schema";
 import { D1LearnerProgressRepository } from "./learner-progress-repository";
 import { createRuntimeCatalogRepository } from "./runtime-repository";
 
@@ -37,17 +44,61 @@ export async function getCatalogD1Binding(): Promise<
   }
 }
 
+interface CatalogProjectionStateRow {
+  readonly manifest_hash: string;
+  readonly bundle_count: number;
+  readonly projection_version: number;
+}
+
+async function releaseProjectionIsCurrent(database: D1DatabaseLike) {
+  const row = await database
+    .prepare(
+      `SELECT manifest_hash, bundle_count, projection_version
+       FROM catalog_projection_state
+       WHERE release_key = ?`,
+    )
+    .bind(CATALOG_RELEASE_KEY)
+    .first<CatalogProjectionStateRow>();
+  return (
+    row?.manifest_hash === CATALOG_RELEASE_MANIFEST_SHA256 &&
+    row.bundle_count === CATALOG_RELEASE_BUNDLE_COUNT &&
+    row.projection_version === CATALOG_READ_MODEL_VERSION
+  );
+}
+
 /**
- * Worker-isolate singleton. The first request idempotently seeds checked-in
- * publications; later requests reuse the validated D1 repository.
+ * Worker-isolate singleton. The ordinary production path performs one compact
+ * release-marker lookup and then serves indexed D1 projections. Full curriculum
+ * modules are loaded only to initialize or upgrade a missing release.
  */
 export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
-  runtimeRepository ??= (async () =>
-    createRuntimeCatalogRepository({
-      database: await getCatalogD1Binding(),
+  if (runtimeRepository) return runtimeRepository;
+
+  const initialization = (async () => {
+    const database = await getCatalogD1Binding();
+    if (database) {
+      await initializeCatalogRuntimeSchema(database);
+      if (await releaseProjectionIsCurrent(database)) {
+        return new D1CatalogRepository(database);
+      }
+    }
+
+    const { catalogRepository: checkedInCatalog } = await import(
+      "../../content/catalog"
+    );
+    return createRuntimeCatalogRepository({
+      database,
       staticRepository: checkedInCatalog,
       programSupersessions: catalogProgramSupersessions,
-    }))();
+    });
+  })();
+  const retryableInitialization = initialization.catch((error) => {
+    if (runtimeRepository === retryableInitialization) {
+      runtimeRepository = undefined;
+    }
+    throw error;
+  });
+  runtimeRepository = retryableInitialization;
   return runtimeRepository;
 }
 
@@ -58,11 +109,20 @@ export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
 export function getRuntimeLearnerProgressRepository(): Promise<
   D1LearnerProgressRepository | undefined
 > {
-  learnerProgressRepository ??= (async () => {
+  if (learnerProgressRepository) return learnerProgressRepository;
+
+  const initialization = (async () => {
     const database = await getCatalogD1Binding();
     if (!database) return undefined;
     await getRuntimeCatalogRepository();
     return new D1LearnerProgressRepository(database);
   })();
+  const retryableInitialization = initialization.catch((error) => {
+    if (learnerProgressRepository === retryableInitialization) {
+      learnerProgressRepository = undefined;
+    }
+    throw error;
+  });
+  learnerProgressRepository = retryableInitialization;
   return learnerProgressRepository;
 }

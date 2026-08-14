@@ -10,6 +10,7 @@ import {
   catalogPublicationLock,
   type CatalogPublicationLockRecord,
 } from "../content/manifests/catalog-publication-lock";
+import { CATALOG_RELEASE_MANIFEST_SHA256 } from "../content/catalog-release";
 
 test("checked-in publications match the append-only publication lock", async () => {
   const bundles = collectStaticCatalogBundles(catalogRepository);
@@ -47,4 +48,12 @@ test("checked-in publications match the append-only publication lock", async () 
       `Publication ${bundle.id} changed after release. Publish a new version instead.`,
     );
   }
+});
+
+test("the compact release manifest matches the append-only publication lock", async () => {
+  assert.equal(
+    await sha256Hex(canonicalJson(catalogPublicationLock)),
+    CATALOG_RELEASE_MANIFEST_SHA256,
+    "Update the compact release manifest only after intentionally appending publication locks.",
+  );
 });
