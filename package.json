@@ -13,7 +13,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "catalog:export": "node --import tsx scripts/export-catalog.ts"
+    "catalog:export": "node --import tsx scripts/export-catalog.ts",
+    "catalog:audit-resources": "node --import tsx scripts/audit-runnable-resources.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

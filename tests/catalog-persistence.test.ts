@@ -36,6 +36,7 @@ import { catalogPublicationLock } from "../content/manifests/catalog-publication
 import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
+import { computerScienceBundleV12 } from "../content/programs/computer-science-v1-2";
 import { mechanicalEngineeringBundle } from "../content/programs/mechanical-engineering";
 import { physicsBundle } from "../content/programs/physics";
 import { mathematicsBundle } from "../content/programs/mathematics";
@@ -922,6 +923,38 @@ test("Mechanical Engineering survives a complete D1 seed and reconstruction", as
   assert.equal(summary.learningUnitCount, 240);
   assert.equal(summary.resourceCount, 34);
   assert.equal(summary.nominalHours, 4_800);
+});
+
+test("runnable Computer Science 1.2 survives D1 without losing weekly instruction", async (t) => {
+  const { database, miniflare } = await createTestDatabase();
+  t.after(() => miniflare.dispose());
+
+  await seedPublishedProgramBundles(database, [computerScienceBundleV12]);
+
+  const repository = new D1CatalogRepository(database);
+  const reconstructed = await repository.loadByProgramId(
+    computerScienceBundleV12.program.id,
+  );
+  assert.ok(reconstructed);
+  assert.equal(canonicalJson(reconstructed), canonicalJson(computerScienceBundleV12));
+  assert.equal(reconstructed.programVersion.qualityStandard, "runnable-pathway-v1");
+  assert.equal(
+    reconstructed.learningUnits.flatMap((unit) => unit.weeklyAssignments ?? [])
+      .length,
+    544,
+  );
+  assert.equal(
+    reconstructed.assessmentVersions.filter(
+      (assessment) => assessment.stage === "midterm",
+    ).length,
+    34,
+  );
+  assert.ok(
+    reconstructed.assessmentVersions.every(
+      (assessment) =>
+        assessment.passingScore === 70 && assessment.rubric?.length === 4,
+    ),
+  );
 });
 
 test("Physics survives a complete D1 seed and reconstruction", async (t) => {

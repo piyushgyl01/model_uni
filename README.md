@@ -24,9 +24,11 @@ deliberately different programs:
   592 authored learning units, and 78 reviewed resources. A coherent selected
   path contains 31 courses and 496 units across six terms.
 - **Computer Science** — 34 available courses, three coherent concentrations,
-  272 learning units, 68 assessments, and 34 verified free primary
-  resources. A selected six-term path contains 30 courses, 240 units, and 120
-  Course Atlas credits.
+  272 topic blocks, 544 exact weekly assignments, 68 rubric-scored assessments,
+  and 34 verified free primary resources. A selected six-term path contains 30
+  courses, 240 topic blocks, 480 weekly assignments, and 120 Course Atlas
+  credits. Version 1.2 is the first publication held to the automated
+  `runnable-pathway-v1` instructional-quality standard.
 - **Mechanical Engineering** — 34 available courses, three coherent
   concentrations, 272 learning units, 68 assessments, and 34 verified free
   primary resources. A selected six-term path contains 30 courses, 240 units,
@@ -67,7 +69,14 @@ Run the complete production and contract verification:
 ```bash
 npm test
 npm run lint
+npm run catalog:audit-resources
 ```
+
+The dated Computer Science 1.2 provider-check report is kept at
+`content/audits/computer-science-v1-2-resources-2026-08-14.json`. It separates
+successful HTTP checks and redirects from provider-blocked URLs that retain
+manual editorial evidence; any definitive DNS/400/404/410 failure makes the
+audit command fail.
 
 Database schema changes use Drizzle:
 
@@ -112,6 +121,13 @@ redeploy.
   a set of completed course versions satisfies a program. Catalog-level
   validation also rejects a reused identity whose definition differs between
   programs.
+- `app/domain/instructional-quality.ts` applies the opt-in runnable-pathway
+  standard: exact weekly source locations, concrete work and deliverables,
+  workload reconciliation, staged assessments, rubrics and passing scores,
+  current access/rights/freshness evidence, and anti-template checks.
+- `scripts/audit-runnable-resources.ts` checks every unique runnable-source URL
+  and can persist a complete dated report with `--report <path>`; it never
+  upgrades a blocked or timed-out result into automated verification.
 - `app/catalog/repository.ts` is the content-storage-independent read contract.
   Runtime routes use the asynchronous D1 adapter; the static adapter supplies
   reviewed publications to the idempotent seed pipeline and remains the

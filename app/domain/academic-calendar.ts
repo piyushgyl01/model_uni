@@ -193,6 +193,66 @@ function subjectKey(subject: ScheduleEntrySubject) {
   return `${subject.kind}:${subject.id}`;
 }
 
+function compareScheduleEntryOrder(left: ScheduleEntry, right: ScheduleEntry) {
+  return (
+    compareDates(left.scheduledDate, right.scheduledDate) ||
+    (left.startTime ?? "99:99").localeCompare(right.startTime ?? "99:99") ||
+    left.position - right.position ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+/**
+ * Schedule entries predate explicit work offsets. Reconstruct each stored
+ * entry's offset from its subject-local order. Carry-forward descendants
+ * inherit the origin's offset and split that original interval, so history
+ * remains attached to the work that was actually assigned on that date.
+ */
+function storedWorkOffsets(entries: readonly ScheduleEntry[]) {
+  const offsets = new Map<string, number>();
+  const entriesBySubject = new Map<string, ScheduleEntry[]>();
+  for (const entry of entries) {
+    const key = subjectKey(entry.subject);
+    entriesBySubject.set(key, [...(entriesBySubject.get(key) ?? []), entry]);
+  }
+
+  for (const subjectEntries of entriesBySubject.values()) {
+    const entryIds = new Set(subjectEntries.map((entry) => entry.id));
+    const childrenByOrigin = new Map<string, ScheduleEntry[]>();
+    for (const entry of subjectEntries) {
+      if (!entry.originEntryId || !entryIds.has(entry.originEntryId)) continue;
+      childrenByOrigin.set(entry.originEntryId, [
+        ...(childrenByOrigin.get(entry.originEntryId) ?? []),
+        entry,
+      ]);
+    }
+
+    const assignTree = (entry: ScheduleEntry, offset: number) => {
+      offsets.set(entry.id, offset);
+      let childOffset = offset;
+      for (const child of [...(childrenByOrigin.get(entry.id) ?? [])].sort(
+        compareScheduleEntryOrder,
+      )) {
+        assignTree(child, childOffset);
+        childOffset += child.plannedMinutes;
+      }
+    };
+
+    let rootOffset = 0;
+    const roots = subjectEntries
+      .filter(
+        (entry) =>
+          !entry.originEntryId || !entryIds.has(entry.originEntryId),
+      )
+      .sort(compareScheduleEntryOrder);
+    for (const root of roots) {
+      assignTree(root, rootOffset);
+      rootOffset += root.plannedMinutes;
+    }
+  }
+  return offsets;
+}
+
 function fnv1a(value: string) {
   let hash = 0x811c9dc5;
   for (let index = 0; index < value.length; index += 1) {
@@ -213,12 +273,57 @@ function clockTime(workMinutes: number, sessionIndex: number) {
   ).padStart(2, "0")}`;
 }
 
+function weeklyAssignmentAtOffset(unit: LearningUnit, offsetMinutes: number) {
+  const assignments = unit.weeklyAssignments ?? [];
+  let boundary = 0;
+  for (const assignment of assignments) {
+    boundary += Math.round(assignment.estimatedHours * 60);
+    if (offsetMinutes < boundary) return assignment;
+  }
+  return assignments.at(-1);
+}
+
+function assessmentPhaseStartsAt(item: WorkItem) {
+  if (!item.assessment) return Number.POSITIVE_INFINITY;
+  if ((item.unit.weeklyAssignments ?? []).length === 0) return 0;
+  const assessmentMinutes = Math.min(
+    item.totalMinutes,
+    Math.max(1, Math.round(item.assessment.estimatedHours * 60)),
+  );
+  return item.totalMinutes - assessmentMinutes;
+}
+
+function minutesUntilAssessmentBoundary(item: WorkItem, offsetMinutes: number) {
+  const boundary = assessmentPhaseStartsAt(item);
+  return offsetMinutes < boundary
+    ? boundary - offsetMinutes
+    : Number.POSITIVE_INFINITY;
+}
+
+function minutesUntilWeeklyBoundary(item: WorkItem, offsetMinutes: number) {
+  const assignments = item.unit.weeklyAssignments ?? [];
+  if (assignments.length === 0) return Number.POSITIVE_INFINITY;
+  let boundary = 0;
+  for (const assignment of assignments) {
+    boundary += Math.round(assignment.estimatedHours * 60);
+    if (offsetMinutes < boundary) return boundary - offsetMinutes;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function firstHttpUrl(value: string | undefined) {
+  const match = value?.match(/https?:\/\/[^\s)\]}]+/u)?.[0];
+  return match?.replace(/[.,;:]$/u, "");
+}
+
 function taskKindFor(
   unit: LearningUnit,
   assessment: PublishedAssessmentVersion | undefined,
   assessmentKind: AssessmentKind | undefined,
   unitCount: number,
 ): AcademicTaskKind {
+  if (assessment?.stage === "final") return "final";
+  if (assessment?.stage === "midterm") return "midterm";
   const title = assessment?.title.toLowerCase() ?? "";
   if (title.includes("final") || (assessment && unit.order === unitCount)) {
     return "final";
@@ -442,22 +547,42 @@ function sessionFromEntry(
   workOffsetMinutes: number,
   completedMinutes: number,
 ): CalendarStudySession {
+  const weeklyAssignment = weeklyAssignmentAtOffset(item.unit, workOffsetMinutes);
+  const isAssessmentPhase = Boolean(
+    item.assessment && workOffsetMinutes >= assessmentPhaseStartsAt(item),
+  );
+  const exactResourceUrl = firstHttpUrl(weeklyAssignment?.resourceLocator);
   return {
     entry,
     courseVersionId: item.courseVersion.id,
     courseTitle: item.courseVersion.title,
     courseSlug: item.courseSlug,
     unitId: item.unit.id,
-    unitTitle: item.assessment?.title ?? item.unit.title,
+    unitTitle: isAssessmentPhase
+      ? item.assessment!.title
+      : weeklyAssignment
+      ? `Week ${weeklyAssignment.week}: ${weeklyAssignment.title}`
+      : item.assessment?.title ?? item.unit.title,
     unitTopic: item.unit.topic,
     unitKind: item.assessmentKind ?? item.unit.kindLabel ?? item.unit.kind,
     unitOrder: item.unit.order,
     periodLabel: item.periodLabel,
-    taskKind: item.taskKind,
-    activity: item.activity,
-    where: item.where,
-    ...(item.resourceUrl ? { resourceUrl: item.resourceUrl } : {}),
-    produce: item.produce,
+    taskKind:
+      item.assessment && !isAssessmentPhase
+        ? item.unit.kind === "project"
+          ? "project"
+          : "study"
+        : item.taskKind,
+    activity: isAssessmentPhase
+      ? item.assessment!.instructions
+      : weeklyAssignment?.activity ?? item.activity,
+    where: weeklyAssignment?.resourceLocator ?? item.where,
+    ...(exactResourceUrl || item.resourceUrl
+      ? { resourceUrl: exactResourceUrl ?? item.resourceUrl }
+      : {}),
+    produce: isAssessmentPhase
+      ? item.assessment!.submissionEvidence.join("; ")
+      : weeklyAssignment?.deliverable ?? item.produce,
     deadlineDate,
     workOffsetMinutes,
     totalWorkMinutes: item.totalMinutes,
@@ -785,6 +910,8 @@ export function buildAcademicCalendar(
           MAX_SESSION_MINUTES,
           item.remainingMinutes,
           availableMinutes,
+          minutesUntilWeeklyBoundary(item, item.offsetMinutes),
+          minutesUntilAssessmentBoundary(item, item.offsetMinutes),
         );
         const offsetStart = item.offsetMinutes;
         const entry: ScheduleEntry = {
@@ -869,14 +996,22 @@ export function buildAcademicCalendar(
     );
   }
 
+  const persistedWorkOffset = storedWorkOffsets([
+    ...storedEntries,
+    ...carriedEntries,
+  ]);
   const persistedSession = (entry: ScheduleEntry) => {
     const item = itemsBySubject.get(subjectKey(entry.subject));
     if (!item) return undefined;
+    const workOffsetMinutes =
+      persistedWorkOffset.get(entry.id) ??
+      completedMinutesBySubject.get(item.subjectKey) ??
+      0;
     return sessionFromEntry(
       entry,
       item,
       deadlineBySubject.get(item.subjectKey) ?? entry.scheduledDate,
-      completedMinutesBySubject.get(item.subjectKey) ?? 0,
+      workOffsetMinutes,
       completedMinutesBySubject.get(item.subjectKey) ?? 0,
     );
   };

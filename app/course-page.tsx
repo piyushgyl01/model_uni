@@ -28,6 +28,10 @@ function formatDate(value: string) {
   }).format(parsed);
 }
 
+function exactResourceUrl(value: string) {
+  return value.match(/https?:\/\/[^\s)\]}]+/u)?.[0]?.replace(/[.,;:]$/u, "");
+}
+
 export default function CoursePage({
   bundle,
   courseSlug,
@@ -271,6 +275,58 @@ export default function CoursePage({
           </section>
         </div>
 
+        {unit.weeklyAssignments && unit.weeklyAssignments.length > 0 && (
+          <section
+            aria-label={`${unit.title} weekly assignments`}
+            style={{ marginTop: "15px", borderTop: "1px solid #222", paddingTop: "12px" }}
+          >
+            <h4 style={{ margin: "0 0 8px 0" }}>Exact weekly assignments</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "10px" }}>
+              {unit.weeklyAssignments.map((assignment) => {
+                const resourceUrl = exactResourceUrl(assignment.resourceLocator);
+                return (
+                  <article
+                    key={assignment.week}
+                    style={{ border: "1px solid #ccc", padding: "10px", background: "#fafafa" }}
+                  >
+                    <header style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                      <strong>Week {assignment.week}: {assignment.title}</strong>
+                      <span style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                        {assignment.estimatedHours}h
+                      </span>
+                    </header>
+                    <p style={{ margin: "8px 0 4px", fontSize: "0.85rem" }}>
+                      <strong>Location:</strong> {assignment.resourceLocator}{" "}
+                      {resourceUrl && (
+                        <a href={resourceUrl} target="_blank" rel="noreferrer">
+                          Open exact source ↗
+                        </a>
+                      )}
+                    </p>
+                    <p style={{ margin: "4px 0", fontSize: "0.78rem", color: "#555" }}>
+                      <strong>Source check:</strong>{" "}
+                      {assignment.sourceEvidence.accessType === "free audit"
+                        ? "Free to audit"
+                        : "Free access"}
+                      {" · "}
+                      {assignment.sourceEvidence.licenseIdentifier ??
+                        assignment.sourceEvidence.rightsStatus}
+                      {" · checked "}
+                      {formatDate(assignment.sourceEvidence.checkedAt)}
+                    </p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+                      <strong>Assignment:</strong> {assignment.activity}
+                    </p>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
+                      <strong>Deliverable:</strong> {assignment.deliverable}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {children.length > 0 && (
           <div className="universal-unit-children" style={{ marginTop: "15px", paddingLeft: "15px", borderLeft: "2px solid #ddd" }}>
             {children.map((child) => renderLearningUnit(child, depth + 1))}
@@ -440,7 +496,11 @@ export default function CoursePage({
                     style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}
                   >
                     <header style={{ borderBottom: "1px solid #eee", paddingBottom: "6px" }}>
-                      <span style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#666" }}>{assessment?.kind ?? "assessment"}</span>
+                      <span style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#666" }}>
+                        {[assessmentVersion.stage, assessment?.kind ?? "assessment"]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                       <strong style={{ display: "block" }}>
                         {contribution
                           ? `${contribution.weight}% of final score`
@@ -451,6 +511,9 @@ export default function CoursePage({
                     <p style={{ fontSize: "0.85rem", color: "#444" }}>{assessmentVersion.instructions}</p>
                     <div style={{ fontSize: "0.85rem", fontFamily: "monospace", margin: "8px 0" }}>
                       Effort: {assessmentVersion.estimatedHours} hours | Max Score: {assessmentVersion.maximumScore}
+                      {assessmentVersion.passingScore !== undefined
+                        ? ` | Pass: ${assessmentVersion.passingScore}`
+                        : ""}
                     </div>
                     <strong style={{ fontSize: "0.85rem" }}>Submission evidence:</strong>
                     <ul style={{ paddingLeft: "18px", margin: "4px 0", fontSize: "0.85rem" }}>
@@ -458,6 +521,19 @@ export default function CoursePage({
                         <li key={evidence}>{evidence}</li>
                       ))}
                     </ul>
+                    {assessmentVersion.rubric && assessmentVersion.rubric.length > 0 && (
+                      <div style={{ marginTop: "10px" }}>
+                        <strong style={{ fontSize: "0.85rem" }}>Rubric:</strong>
+                        <ul style={{ paddingLeft: "18px", margin: "4px 0", fontSize: "0.85rem" }}>
+                          {assessmentVersion.rubric.map((criterion) => (
+                            <li key={criterion.criterion}>
+                              <strong>{criterion.criterion} ({criterion.points}):</strong>{" "}
+                              {criterion.description}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </article>
                 );
               })}

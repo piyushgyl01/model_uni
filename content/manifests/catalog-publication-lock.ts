@@ -37,6 +37,16 @@ export const catalogPublicationLock = [
       "18ff6d4d72e5e314d7d4f27d5bceed5219685ec7dd29249d2d29f49c2483930d",
   },
   {
+    bundleId: "bnd_01a00129-87d8-7e79-8c3b-1a7acfd5f1a7",
+    programId: "prg_019fab2b-c401-7277-90e3-350c6848e164",
+    programVersionId: "prv_01a00129-87d8-7332-8229-e55e8e2c6955",
+    version: "1.2.0",
+    publishedAt: "2026-08-14T00:00:00Z",
+    canonicalBytes: 1_635_811,
+    canonicalSha256:
+      "e12a003f75d1e4d2b050e451ee7c0c6955e937d1379e979fcb78687d1f28a985",
+  },
+  {
     bundleId: "bnd_course_atlas_ee_2026_1",
     programId: "prg_course_atlas_ee",
     programVersionId: "prv_course_atlas_ee_2026_1",

@@ -87,6 +87,31 @@ test("Computer Science renders as a complete six-term program and course classro
   assert.match(courseHtml, /Operating Systems: Three Easy Pieces/);
   assert.match(courseHtml, /What to learn/);
   assert.match(courseHtml, /Evidence to keep/);
+  assert.match(courseHtml, /Exact weekly assignments/);
+  assert.match(courseHtml, /Source check:/);
+  assert.match(courseHtml, /Free access(?:<!-- -->)? · (?:<!-- -->)?link only/);
+  assert.match(courseHtml, /Chapter 4 — The Abstraction: The Process/);
+  assert.match(courseHtml, /Homework — process-run\.py/);
+  assert.match(
+    courseHtml,
+    /<a[^>]+href="https:\/\/pages\.cs\.wisc\.edu\/~remzi\/OSTEP\/cpu-intro\.pdf"[^>]*>Open exact source ↗<\/a>/,
+  );
+  assert.match(
+    courseHtml,
+    /Trace fork, exec, wait, file-descriptor inheritance, and exit status/,
+  );
+  assert.match(courseHtml, /C program, process diagram, syscall trace/);
+  assert.match(courseHtml, /CS310 Scheduler and Virtual-Memory Kernel Simulation/);
+  assert.match(courseHtml, /CS310 Crash-Safe Concurrent Service Lab/);
+  assert.match(courseHtml, /midterm ·/i);
+  assert.match(courseHtml, /final ·/i);
+  assert.match(courseHtml, /Pass: 70/);
+  assert.match(courseHtml, /Rubric:/);
+  assert.match(courseHtml, /State-transition correctness/);
+  assert.doesNotMatch(
+    courseHtml,
+    /find the section|provider exercises where available|materials on the topic/i,
+  );
 });
 
 test("generic program route renders the EE publication without placeholders", async () => {
@@ -293,6 +318,10 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
     catalogReadModel,
     learnerReadModel,
     independentLearningRecord,
+    instructionalQuality,
+    runnableComputerScience,
+    resourceAudit,
+    packageJson,
     schema,
   ] = await Promise.all([
     readFile(new URL("../app/programs/[slug]/page.tsx", import.meta.url), "utf8"),
@@ -347,6 +376,19 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
       new URL("../app/domain/independent-learning-record.ts", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../app/domain/instructional-quality.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../content/programs/computer-science-v1-2.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../scripts/audit-runnable-resources.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
   ]);
 
@@ -362,6 +404,9 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.doesNotMatch(programPage, programSpecificHardcoding);
   assert.doesNotMatch(coursePage, /length === 16|Array\.from\(\{ length: 16/);
   assert.doesNotMatch(coursePage, programSpecificHardcoding);
+  assert.match(coursePage, /unit\.weeklyAssignments/);
+  assert.match(coursePage, /assessmentVersion\.passingScore/);
+  assert.match(coursePage, /assessmentVersion\.rubric/);
   assert.match(progress, /course-atlas-progress-v3/);
   assert.match(progress, /programVersionId/);
   assert.match(progress, /courseVersionId/);
@@ -370,6 +415,7 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   assert.match(progressStorage, /course-atlas-progress-v2/);
   assert.match(progressStorage, /owner-scoped-v1/);
   assert.match(catalog, /StaticCatalogRepository/);
+  assert.match(catalog, /computerScienceBundleV12/);
   assert.match(runtimeCatalog, /seedPublishedProgramBundles/);
   assert.match(runtimeCatalog, /compareCatalogBundleShadows/);
   assert.match(runtimeCatalog, /projectCatalogReadModels/);
@@ -414,6 +460,16 @@ test("source architecture has one renderer, stable progress, and D1 migrations",
   );
   assert.match(independentLearningRecord, /self-attested/);
   assert.match(independentLearningRecord, /instructor-reviewed/);
+  assert.match(instructionalQuality, /runnable-pathway-v1/);
+  assert.match(instructionalQuality, /VAGUE_LOCATION/);
+  assert.match(instructionalQuality, /repeated/i);
+  assert.match(runnableComputerScience, /weeklyAssignments/);
+  assert.match(runnableComputerScience, /qualityStandard: "runnable-pathway-v1"/);
+  assert.match(runnableComputerScience, /assertValidPublishedProgramBundle/);
+  assert.match(resourceAudit, /qualityStandard.*"runnable-pathway-v1"/);
+  assert.match(resourceAudit, /await fetch\(/);
+  assert.match(resourceAudit, /throw new Error/);
+  assert.match(packageJson, /catalog:audit-resources/);
   assert.match(schema, /programVersions/);
   assert.match(schema, /courseVersions/);
   assert.match(schema, /resourceRights/);

@@ -13,6 +13,7 @@ import type {
 import { catalogRepository } from "../content/catalog";
 import { computerScienceIdentities } from "../content/manifests/computer-science-identities";
 import { computerScienceV11Identities } from "../content/manifests/computer-science-v1-1-identities";
+import { computerScienceV12Identities } from "../content/manifests/computer-science-v1-2-identities";
 import { mechanicalEngineeringIdentities } from "../content/manifests/mechanical-engineering-identities";
 import { mathematicsIdentities } from "../content/manifests/mathematics-identities";
 import { physicsIdentities } from "../content/manifests/physics-identities";
@@ -22,6 +23,7 @@ import {
 } from "../content/programs/computer-science-course-specs";
 import { computerScienceCourseSpecsV1_1 } from "../content/programs/computer-science-course-specs-v1-1";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
+import { computerScienceBundleV12 } from "../content/programs/computer-science-v1-2";
 import { computerScienceBundleV1 } from "../content/programs/computer-science";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import {
@@ -84,7 +86,7 @@ function collectBundleEntityIds(bundle: PublishedProgramBundle): string[] {
   ];
 }
 
-test("publishes six structurally different programs from seven publication versions", () => {
+test("publishes six structurally different programs from eight publication versions", () => {
   const summaries = catalogRepository.listPrograms();
   assert.equal(summaries.length, 6);
   assert.equal(
@@ -93,7 +95,7 @@ test("publishes six structurally different programs from seven publication versi
         total + catalogRepository.listVersions(program.slug).length,
       0,
     ),
-    7,
+    8,
   );
 
   const ee = summaries.find((program) => program.slug === "electrical-engineering");
@@ -125,7 +127,7 @@ test("publishes six structurally different programs from seven publication versi
   assert.equal(computerScience.learningUnitCount, 240);
   assert.equal(computerScience.resourceCount, 34);
   assert.equal(computerScience.nominalHours, 4_800);
-  assert.equal(computerScience.latestVersion, "1.1.0");
+  assert.equal(computerScience.latestVersion, "1.2.0");
   assert.equal(mechanicalEngineering.courseCount, 30);
   assert.equal(mechanicalEngineering.availableCourseCount, 34);
   assert.equal(mechanicalEngineering.learningUnitCount, 240);
@@ -153,8 +155,10 @@ test("publishes six structurally different programs from seven publication versi
 test("the Computer Science publication is complete, coherent, and executable", () => {
   const bundle = catalogRepository.loadBySlug("computer-science");
   assert.ok(bundle);
-  assert.equal(bundle.programVersion.version, "1.1.0");
+  assert.equal(bundle.programVersion.version, "1.2.0");
+  assert.equal(bundle.programVersion.qualityStandard, "runnable-pathway-v1");
   assert.deepEqual(catalogRepository.listVersions("computer-science"), [
+    "1.2.0",
     "1.1.0",
     "1.0.0",
   ]);
@@ -175,7 +179,7 @@ test("the Computer Science publication is complete, coherent, and executable", (
   const concentrationRequirement = bundle.programVersion.requirements.find(
     (requirement) =>
       requirement.id ===
-      computerScienceV11Identities.requirementGroupIds.concentration,
+      computerScienceV12Identities.requirementGroupIds.concentration,
   );
   assert.ok(concentrationRequirement);
   assert.equal(
@@ -201,6 +205,12 @@ test("the Computer Science publication is complete, coherent, and executable", (
       ).length,
       240,
     );
+    assert.equal(
+      bundle.learningUnits
+        .filter((unit) => completed.has(unit.courseVersionId))
+        .flatMap((unit) => unit.weeklyAssignments ?? []).length,
+      480,
+    );
   }
 
   const placementPeriod = new Map(
@@ -218,11 +228,35 @@ test("the Computer Science publication is complete, coherent, and executable", (
     ]),
   );
   for (const course of bundle.courseVersions) {
+    const courseUnits = bundle.learningUnits
+      .filter((unit) => unit.courseVersionId === course.id)
+      .sort((left, right) => left.order - right.order);
     assert.equal(
-      bundle.learningUnits.filter(
-        (unit) => unit.courseVersionId === course.id,
-      ).length,
+      courseUnits.length,
       8,
+    );
+    const weeklyAssignments = courseUnits.flatMap(
+      (unit) => unit.weeklyAssignments ?? [],
+    );
+    assert.equal(weeklyAssignments.length, 16);
+    assert.deepEqual(
+      weeklyAssignments.map((assignment) => assignment.week),
+      Array.from({ length: 16 }, (_, index) => index + 1),
+    );
+    assert.equal(
+      weeklyAssignments.reduce(
+        (hours, assignment) => hours + assignment.estimatedHours,
+        0,
+      ),
+      160,
+    );
+    assert.ok(
+      weeklyAssignments.every(
+        (assignment) =>
+          assignment.resourceLocator.includes("https://") &&
+          assignment.activity.length >= 60 &&
+          assignment.deliverable.length >= 40,
+      ),
     );
     assert.equal(course.resourceReferences.length, 1);
     assert.equal(course.gradingPolicy.contributions.length, 2);
@@ -241,6 +275,67 @@ test("the Computer Science publication is complete, coherent, and executable", (
     }
   }
 
+  const weeklyAssignments = bundle.learningUnits.flatMap(
+    (unit) => unit.weeklyAssignments ?? [],
+  );
+  assert.equal(weeklyAssignments.length, 544);
+  assert.ok(
+    weeklyAssignments.every(
+      (assignment) =>
+        !/find (?:the )?(?:section|chapter|lecture)|where available|materials on|covering the topic|use (?:the )?(?:course )?resources/i.test(
+          assignment.resourceLocator,
+        ),
+    ),
+  );
+  assert.ok(
+    weeklyAssignments.every((assignment) => {
+      const urls = assignment.resourceLocator.match(
+        /https?:\/\/[^\s)\]}>]+/giu,
+      );
+      return (
+        urls?.length === 1 &&
+        assignment.sourceEvidence.url === urls[0] &&
+        assignment.sourceEvidence.accessType === "free" &&
+        assignment.sourceEvidence.accessNote.length >= 60 &&
+        assignment.sourceEvidence.rightsStatus === "link only" &&
+        assignment.sourceEvidence.rightsNote.length >= 60 &&
+        assignment.sourceEvidence.freshnessStatus === "healthy" &&
+        assignment.sourceEvidence.resolvedUrl.startsWith("https://") &&
+        assignment.sourceEvidence.checkedAt ===
+          "2026-08-14T00:00:00Z" &&
+        assignment.sourceEvidence.checkMethod === "manual-browser" &&
+        assignment.sourceEvidence.freshnessNote.length >= 60
+      );
+    }),
+    "all 544 weekly assignments need honest, dated evidence for their exact URL",
+  );
+
+  assert.equal(
+    bundle.assessmentVersions.filter(
+      (assessment) => assessment.stage === "midterm",
+    ).length,
+    34,
+  );
+  assert.equal(
+    bundle.assessmentVersions.filter(
+      (assessment) => assessment.stage === "final",
+    ).length,
+    34,
+  );
+  assert.ok(
+    bundle.assessmentVersions.every(
+      (assessment) =>
+        assessment.maximumScore === 100 &&
+        assessment.passingScore === 70 &&
+        assessment.rubric?.length === 4 &&
+        assessment.rubric.reduce(
+          (points, criterion) => points + criterion.points,
+          0,
+        ) === assessment.maximumScore &&
+        assessment.submissionEvidence.length >= 3,
+    ),
+  );
+
   assert.equal(
     new Set(
       bundle.resourceVersions.map((resource) => resource.canonicalUrl),
@@ -251,6 +346,63 @@ test("the Computer Science publication is complete, coherent, and executable", (
     bundle.resourceVersions.every((resource) =>
       resource.canonicalUrl.startsWith("https://"),
     ),
+  );
+  assert.equal(
+    new Set(bundle.accessOffers.map((offer) => offer.resourceVersionId)).size,
+    34,
+  );
+  assert.ok(
+    bundle.accessOffers.every(
+      (offer) =>
+        (offer.type === "free" || offer.type === "free audit") &&
+        offer.checkedAt === "2026-08-14T00:00:00Z",
+    ),
+  );
+  assert.equal(
+    new Set(bundle.rights.map((record) => record.resourceVersionId)).size,
+    34,
+  );
+  assert.ok(
+    bundle.rights.every(
+      (record) =>
+        record.status !== "unknown" &&
+        record.verifiedAt === "2026-08-14T00:00:00Z",
+    ),
+  );
+  assert.equal(
+    new Set(bundle.freshness.map((record) => record.resourceVersionId)).size,
+    34,
+  );
+  assert.ok(
+    bundle.freshness.every(
+      (record) =>
+        (record.status === "healthy" || record.status === "redirected") &&
+        record.checkedAt === "2026-08-14T00:00:00Z" &&
+        record.httpStatus !== undefined &&
+        record.httpStatus >= 200 &&
+        record.httpStatus < 400 &&
+        record.resolvedUrl?.startsWith("https://"),
+    ),
+  );
+
+  const programmingOne = bundle.learningUnits.filter(
+    (unit) =>
+      unit.courseVersionId ===
+      computerScienceV12Identities.courses["programming-1"].courseVersionId,
+  );
+  assert.ok(
+    programmingOne
+      .flatMap((unit) => unit.weeklyAssignments ?? [])
+      .some((assignment) => /cs50\.harvard\.edu\/python\/psets\/0\//.test(assignment.resourceLocator)),
+  );
+  const dataStructuresResource = bundle.resourceVersions.find(
+    (resource) =>
+      resource.id ===
+      computerScienceV12Identities.courses["data-structures"].resourceVersionId,
+  );
+  assert.match(
+    dataStructuresResource?.canonicalUrl ?? "",
+    /6-006-introduction-to-algorithms/,
   );
 });
 
@@ -760,6 +912,16 @@ function assertComputerScienceManifestParity(
   bundle: PublishedProgramBundle,
   identities: unknown,
   specs: readonly ComputerScienceCourseSpec[],
+  expectedUnitLabels: readonly string[] = [
+    "Unit 1",
+    "Unit 2",
+    "Unit 3",
+    "Unit 4",
+    "Unit 5",
+    "Unit 6",
+    "Unit 7",
+    "Unit 8",
+  ],
 ) {
   const bundleIds = collectBundleEntityIds(bundle);
   const manifestIds = collectManifestIdentityValues(identities);
@@ -809,16 +971,7 @@ function assertComputerScienceManifestParity(
         .filter((unit) => unit.courseVersionId === course.id)
         .sort((left, right) => left.order - right.order)
         .map((unit) => unit.label),
-      [
-        "Unit 1",
-        "Unit 2",
-        "Unit 3",
-        "Unit 4",
-        "Unit 5",
-        "Unit 6",
-        "Unit 7",
-        "Unit 8",
-      ],
+      expectedUnitLabels,
     );
   }
 }
@@ -833,6 +986,21 @@ test("every Computer Science identity is a unique manifest-owned UUIDv7", () => 
     computerScienceBundle,
     computerScienceV11Identities,
     computerScienceCourseSpecsV1_1,
+  );
+  assertComputerScienceManifestParity(
+    computerScienceBundleV12,
+    computerScienceV12Identities,
+    computerScienceCourseSpecsV1_1,
+    [
+      "Weeks 1–2",
+      "Weeks 3–4",
+      "Weeks 5–6",
+      "Weeks 7–8",
+      "Weeks 9–10",
+      "Weeks 11–12",
+      "Weeks 13–14",
+      "Weeks 15–16",
+    ],
   );
 });
 
@@ -1058,13 +1226,14 @@ test("every Mathematics identity is a unique manifest-owned UUIDv7", () => {
   );
 });
 
-test("all seven checked-in publication versions form one collision-free catalog", () => {
+test("all eight checked-in publication versions form one collision-free catalog", () => {
   assert.deepEqual(
     validateCatalogBundles([
       electricalEngineeringProgram,
       practicalSpreadsheetsProgram,
       computerScienceBundleV1,
       computerScienceBundle,
+      computerScienceBundleV12,
       mechanicalEngineeringBundle,
       physicsBundle,
       mathematicsBundle,
@@ -1073,6 +1242,33 @@ test("all seven checked-in publication versions form one collision-free catalog"
       valid: true,
       issues: [],
     },
+  );
+});
+
+test("Computer Science 1.2 preserves both prior publications and is the runnable latest version", () => {
+  assert.deepEqual(
+    validateCatalogBundles([
+      computerScienceBundleV1,
+      computerScienceBundle,
+      computerScienceBundleV12,
+    ]),
+    { valid: true, issues: [] },
+  );
+  assert.equal(
+    catalogRepository.loadBySlug("computer-science", "1.0.0"),
+    computerScienceBundleV1,
+  );
+  assert.equal(
+    catalogRepository.loadBySlug("computer-science", "1.1.0"),
+    computerScienceBundle,
+  );
+  assert.equal(
+    catalogRepository.loadBySlug("computer-science", "1.2.0"),
+    computerScienceBundleV12,
+  );
+  assert.equal(
+    catalogRepository.loadBySlug("computer-science"),
+    computerScienceBundleV12,
   );
 });
 

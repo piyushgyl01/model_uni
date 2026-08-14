@@ -15,6 +15,13 @@ bundles. The later editorial drafting, connector ingestion, and credential
 sections below remain target architecture, not claims about the live product.
 Indexed program/course discovery and learner-specific pathway, term, Today, and
 learning-record projections are implemented in the current release.
+Computer Science 1.2 additionally proves the opt-in runnable-pathway quality
+contract: exact weekly source locations, concrete deliverables, explicit
+midterms and finals, scored rubrics, passing thresholds, and dated evidence for
+free access, rights, freshness, and provenance. Its dated provider audit records
+HTTP successes and redirects separately from automation-indeterminate URLs;
+definitively broken locations fail the audit rather than inheriting a healthy
+claim.
 
 ## 1. Product boundary
 
@@ -554,8 +561,10 @@ courses/course versions, requirement groups/options, arbitrary content units,
 competencies and mappings, assessments, resources/resource versions,
 licenses/access offers, provenance, slug aliases, audit/outbox events, and the
 EE seed manifest. Computer Science proves a second complete six-term
-degree-equivalent structure, while the non-degree spreadsheet sprint proves
-that the model is not coupled to degrees or semesters.
+degree-equivalent structure; its immutable 1.2 publication also replaces vague
+instructional templates with sixteen runnable weekly assignments and two
+rubric-scored assessments in every course. The non-degree spreadsheet sprint
+proves that the model is not coupled to degrees or semesters.
 
 The active runtime path now idempotently seeds checked-in publications into
 D1, reads them through the D1 repository, verifies every checked-in publication

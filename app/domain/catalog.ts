@@ -39,6 +39,7 @@ export type IsoDateTime = `${number}-${number}-${number}T${string}`;
 export type LocaleTag = string;
 
 export type CatalogLifecycle = "active" | "retired";
+export type PublicationQualityStandard = "runnable-pathway-v1";
 export type ProgramKind =
   | "degree-equivalent pathway"
   | "certificate pathway"
@@ -114,6 +115,12 @@ export interface PublishedProgramVersion {
   readonly concentrationIds: readonly ConcentrationId[];
   readonly competencyIds: readonly CompetencyId[];
   readonly provenanceEvidenceIds: readonly ProvenanceEvidenceId[];
+  /**
+   * Opts this immutable publication into additional editorial checks. Older
+   * publications intentionally omit this field and retain their original
+   * structural validation contract.
+   */
+  readonly qualityStandard?: PublicationQualityStandard;
   readonly changelog?: string;
 }
 
@@ -225,6 +232,50 @@ export interface LearningUnit {
   readonly resourceVersionIds: readonly ResourceVersionId[];
   readonly competencyIds: readonly CompetencyId[];
   readonly assessmentKind?: AssessmentKind;
+  /**
+   * Concrete week-sized work inside a larger schedulable unit. The academic
+   * calendar continues to schedule the parent unit's nominal hours; these
+   * assignments make the learner's exact weekly work and output explicit.
+   */
+  readonly weeklyAssignments?: readonly WeeklyAssignment[];
+}
+
+export interface WeeklyAssignment {
+  readonly week: number;
+  readonly title: string;
+  readonly resourceLocator: string;
+  /**
+   * Dated editorial evidence for the exact URL named by resourceLocator.
+   * This is inline because a weekly location is not itself a stable catalog
+   * entity, while the parent resource version remains the durable identity.
+   */
+  readonly sourceEvidence: WeeklySourceEvidence;
+  readonly activity: string;
+  readonly deliverable: string;
+  readonly estimatedHours: number;
+}
+
+export type WeeklySourceCheckMethod =
+  | "automated-http"
+  | "manual-browser"
+  | "automated-http-and-editorial-review";
+
+export interface WeeklySourceEvidence {
+  /** Must exactly equal the single URL embedded in resourceLocator. */
+  readonly url: string;
+  readonly accessType: "free" | "free audit";
+  readonly accessNote: string;
+  /** Unknown rights are not publishable; link-only is the conservative default. */
+  readonly rightsStatus: RightsStatus;
+  readonly licenseIdentifier?: string;
+  readonly licenseUrl?: string;
+  readonly rightsNote: string;
+  readonly freshnessStatus: FreshnessStatus;
+  readonly resolvedUrl: string;
+  readonly httpStatus?: number;
+  readonly checkedAt: IsoDateTime;
+  readonly checkMethod: WeeklySourceCheckMethod;
+  readonly freshnessNote: string;
 }
 
 export type AssessmentKind =
@@ -260,9 +311,18 @@ export interface PublishedAssessmentVersion {
   readonly submissionEvidence: readonly string[];
   readonly estimatedHours: number;
   readonly maximumScore: number;
+  readonly stage?: "checkpoint" | "midterm" | "final";
+  readonly passingScore?: number;
+  readonly rubric?: readonly AssessmentRubricCriterion[];
   readonly resourceVersionIds: readonly ResourceVersionId[];
   readonly competencyIds: readonly CompetencyId[];
   readonly provenanceEvidenceIds: readonly ProvenanceEvidenceId[];
+}
+
+export interface AssessmentRubricCriterion {
+  readonly criterion: string;
+  readonly description: string;
+  readonly points: number;
 }
 
 export type CompetencyLevel =

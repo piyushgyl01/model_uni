@@ -10,6 +10,10 @@ import type {
   ResourceVersionId,
   ScheduledSubject,
 } from "./catalog";
+import {
+  validateRunnableProgramBundle,
+  type InstructionalQualityIssueCode,
+} from "./instructional-quality";
 
 export type ValidationIssueCode =
   | "invalid_id"
@@ -24,7 +28,8 @@ export type ValidationIssueCode =
   | "unsatisfiable_requirement"
   | "ambiguous_requirement"
   | "invalid_assessment_weights"
-  | "missing_resource_fact";
+  | "missing_resource_fact"
+  | InstructionalQualityIssueCode;
 
 export interface ValidationIssue {
   readonly code: ValidationIssueCode;
@@ -1229,6 +1234,8 @@ export function validatePublishedProgramBundle(
       }
     });
   });
+
+  issues.push(...validateRunnableProgramBundle(bundle));
 
   return { valid: issues.length === 0, issues };
 }

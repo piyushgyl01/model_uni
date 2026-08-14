@@ -26,19 +26,27 @@ test("immutable program publications remain directly reachable", async () => {
   const latest = await render("/programs/computer-science");
   assert.equal(latest.status, 200);
   const latestHtml = await latest.text();
-  assert.match(latestHtml, /Published curriculum v(?:<!-- -->)?1\.1\.0/);
+  assert.match(latestHtml, /Published curriculum v(?:<!-- -->)?1\.2\.0/);
   assert.match(
     latestHtml,
     /\/programs\/computer-science\/courses\/computer-architecture/,
   );
 
-  const currentVersion = await render(
+  const runnableVersion = await render(
+    "/programs/computer-science/versions/1.2.0/courses/computer-architecture",
+  );
+  assert.equal(runnableVersion.status, 200);
+  const runnableVersionHtml = await runnableVersion.text();
+  assert.match(runnableVersionHtml, /Exact weekly assignments/);
+  assert.match(runnableVersionHtml, /Rubric:/);
+
+  const priorVersion = await render(
     "/programs/computer-science/versions/1.1.0/courses/computer-architecture",
   );
-  assert.equal(currentVersion.status, 200);
-  const currentVersionHtml = await currentVersion.text();
-  assert.match(currentVersionHtml, /pipelining/i);
-  assert.match(currentVersionHtml, /MIT 6\.004/i);
+  assert.equal(priorVersion.status, 200);
+  const priorVersionHtml = await priorVersion.text();
+  assert.match(priorVersionHtml, /pipelining/i);
+  assert.match(priorVersionHtml, /MIT 6\.004/i);
 
   const program = await render(
     "/programs/computer-science/versions/1.0.0",
