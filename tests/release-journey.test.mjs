@@ -1,20 +1,23 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Miniflare } from "miniflare";
+import { seedPublishedProgramBundles } from "../app/catalog/d1-repository.ts";
+import { catalogRepository } from "../content/catalog.ts";
+import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets.ts";
 
 /**
  * The enrollment-to-completion release journey.
  *
  * This runs against the real built worker (`dist/server/index.js`) on a real
  * D1 binding, so it exercises routing, authentication, the mutation contract,
- * the projections and the read models exactly as a deployment would. A browser
- * cannot set the platform's `oai-authenticated-user-*` headers, so the signed
- * in journey lives here; the anonymous localStorage journey is covered by
- * manual browser QA.
+ * the projections and the read models exactly as a deployment would. The
+ * companion release-browser-journey test drives this built Worker through
+ * real Chrome, including localStorage, controls, refreshes, and a second
+ * browser context.
  */
 async function journeyEnvironment(d1Persist) {
   const modulesRoot = fileURLToPath(new URL("../dist/server/", import.meta.url));
@@ -55,6 +58,36 @@ async function journeyEnvironment(d1Persist) {
     miniflare,
     database: await miniflare.getD1Database("DB", "course-atlas"),
   };
+}
+
+async function phase6DatabaseEnvironment(d1Persist) {
+  const miniflare = new Miniflare({
+    d1Persist,
+    modules: true,
+    script: "export default { fetch() { return new Response('ok'); } }",
+    d1Databases: ["DB"],
+  });
+  const database = await miniflare.getD1Database("DB");
+  const migrationRoot = new URL("../drizzle/", import.meta.url);
+  const migrationFiles = (await readdir(migrationRoot))
+    .filter((file) => /^000[0-4]_.+\.sql$/u.test(file))
+    .sort();
+  assert.equal(
+    migrationFiles.length,
+    5,
+    "The deployed Phase 6 schema must be represented by migrations 0000–0004.",
+  );
+  for (const file of migrationFiles) {
+    const sql = await readFile(new URL(file, migrationRoot), "utf8");
+    for (const statement of sql
+      .split("--> statement-breakpoint")
+      .map((value) => value.trim())
+      .filter(Boolean)) {
+      const result = await database.prepare(statement).run();
+      assert.notEqual(result.success, false, result.error ?? statement);
+    }
+  }
+  return { miniflare, database };
 }
 
 const PROGRAM_VERSION_ID = "prv_practical_spreadsheets_2026_1";
@@ -603,7 +636,176 @@ test("criterion 11: learner views stay scoped to the active learner's program", 
   );
 });
 
-test("criterion 10: an existing installation restarts without disturbing its publications or learner state", async (t) => {
+test("criterion 10: the deployed Phase 6 D1 schema upgrades additively to the current release", async (t) => {
+  const persistRoot = await mkdtemp(join(tmpdir(), "course-atlas-phase6-upgrade-"));
+  t.after(() => rm(persistRoot, { recursive: true, force: true }));
+
+  const legacy = await phase6DatabaseEnvironment(persistRoot);
+  let legacyOpen = true;
+  t.after(async () => {
+    if (legacyOpen) await legacy.miniflare.dispose();
+  });
+  const phase6Bundles = catalogRepository.listPrograms().flatMap((program) =>
+    catalogRepository
+      .listVersions(program.slug)
+      .filter(
+        (version) =>
+          !(program.slug === "computer-science" && version === "1.2.0"),
+      )
+      .map((version) => catalogRepository.loadBySlug(program.slug, version))
+      .filter(Boolean),
+  );
+  assert.equal(phase6Bundles.length, 7);
+  await seedPublishedProgramBundles(legacy.database, phase6Bundles);
+
+  const learnerId = "lrn_release_phase6_upgrade_fixture";
+  const projectUnitId = PROJECT_UNIT_IDS[0];
+  await legacy.database.batch([
+    legacy.database
+      .prepare("INSERT INTO learners (id) VALUES (?)")
+      .bind(learnerId),
+    legacy.database
+      .prepare(
+        `INSERT INTO learner_program_progress (
+           learner_id, program_version_id, bundle_id
+         ) VALUES (?, ?, ?)`,
+      )
+      .bind(learnerId, PROGRAM_VERSION_ID, practicalSpreadsheetsProgram.id),
+    legacy.database
+      .prepare(
+        `INSERT INTO learner_program_states (
+           learner_id, program_version_id, revision, enrollment_status,
+           start_date, pace_hours_per_week, study_days_json,
+           timezone, enrolled_at
+         ) VALUES (?, ?, 3, 'enrolled', ?, 10, '[1,2,3,4,5]', 'UTC', ?)`,
+      )
+      .bind(learnerId, PROGRAM_VERSION_ID, TODAY, `${TODAY}T09:00:00.000Z`),
+    legacy.database
+      .prepare(
+        `INSERT INTO learner_unit_states (
+           learner_id, program_version_id, course_version_id,
+           learning_unit_id, status, completed_at
+         ) VALUES (?, ?, ?, ?, 'completed', ?)`,
+      )
+      .bind(
+        learnerId,
+        PROGRAM_VERSION_ID,
+        COURSE_VERSION_ID,
+        UNIT_IDS[0],
+        `${TODAY}T10:00:00.000Z`,
+      ),
+    legacy.database
+      .prepare(
+        `INSERT INTO learner_unit_evidence (
+           learner_id, program_version_id, course_version_id,
+           learning_unit_id, status, text_or_url, submitted_at
+         ) VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+      )
+      .bind(
+        learnerId,
+        PROGRAM_VERSION_ID,
+        COURSE_VERSION_ID,
+        projectUnitId,
+        "https://example.test/release/phase6-evidence",
+        `${TODAY}T10:05:00.000Z`,
+      ),
+  ]);
+
+  const oldPublications = await legacy.database
+    .prepare(
+      `SELECT id, program_version_id, payload_hash
+       FROM catalog_bundles
+       ORDER BY id`,
+    )
+    .all();
+  assert.equal(oldPublications.results.length, 7);
+  await legacy.miniflare.dispose();
+  legacyOpen = false;
+
+  const current = await journeyEnvironment(persistRoot);
+  t.after(() => current.miniflare.dispose());
+  const response = await current.miniflare.dispatchFetch(
+    "http://localhost/programs/practical-spreadsheets",
+    { headers: { accept: "text/html" } },
+  );
+  assert.equal(response.status, 200);
+
+  const preserved = await current.database
+    .prepare(
+      `SELECT id, program_version_id, payload_hash
+       FROM catalog_bundles
+       WHERE id IN (${oldPublications.results.map(() => "?").join(", ")})
+       ORDER BY id`,
+    )
+    .bind(...oldPublications.results.map((row) => row.id))
+    .all();
+  assert.deepEqual(preserved.results, oldPublications.results);
+  assert.equal(
+    (
+      await current.database
+        .prepare(
+          `SELECT COUNT(*) AS count
+           FROM catalog_bundles
+           WHERE canonical_slug = 'computer-science'
+             AND semantic_version = '1.2.0'`,
+        )
+        .first()
+    ).count,
+    1,
+    "The additive upgrade did not publish Computer Science 1.2.",
+  );
+  assert.deepEqual(
+    await current.database
+      .prepare(
+        `SELECT revision, enrollment_status, start_date, pace_hours_per_week,
+                study_days_json, timezone
+         FROM learner_program_states
+         WHERE learner_id = ? AND program_version_id = ?`,
+      )
+      .bind(learnerId, PROGRAM_VERSION_ID)
+      .first(),
+    {
+      revision: 3,
+      enrollment_status: "enrolled",
+      start_date: TODAY,
+      pace_hours_per_week: 10,
+      study_days_json: "[1,2,3,4,5]",
+      timezone: "UTC",
+    },
+  );
+  assert.deepEqual(
+    await current.database
+      .prepare(
+        `SELECT status, completed_at
+         FROM learner_unit_states
+         WHERE learner_id = ? AND program_version_id = ?
+           AND course_version_id = ? AND learning_unit_id = ?`,
+      )
+      .bind(learnerId, PROGRAM_VERSION_ID, COURSE_VERSION_ID, UNIT_IDS[0])
+      .first(),
+    { status: "completed", completed_at: `${TODAY}T10:00:00.000Z` },
+  );
+  assert.equal(
+    (
+      await current.database
+        .prepare(
+          `SELECT text_or_url
+           FROM learner_unit_evidence
+           WHERE learner_id = ? AND program_version_id = ?
+             AND course_version_id = ? AND learning_unit_id = ?`,
+        )
+        .bind(learnerId, PROGRAM_VERSION_ID, COURSE_VERSION_ID, projectUnitId)
+        .first()
+    ).text_or_url,
+    "https://example.test/release/phase6-evidence",
+  );
+  assert.deepEqual(
+    (await current.database.prepare("PRAGMA foreign_key_check").all()).results,
+    [],
+  );
+});
+
+test("criterion 10 restart guard: a current installation restarts without disturbing its publications or learner state", async (t) => {
   // A genuine restart: two Miniflare instances over one persisted D1
   // directory, exactly as a redeploy meets an existing database.
   const persistRoot = await mkdtemp(join(tmpdir(), "course-atlas-journey-"));

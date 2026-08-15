@@ -120,13 +120,25 @@ export async function loadCloudProgress(
 export async function patchCloudProgress(
   request: ProgressPatchRequest,
 ): Promise<AuthenticatedProgressResponse> {
+  // Stored outbox entries also carry local-only ordering metadata such as
+  // `createdAt`. Serialize the public wire contract explicitly so strict API
+  // parsing cannot be tripped by private browser bookkeeping fields.
+  const payload: ProgressPatchRequest = {
+    schemaVersion: request.schemaVersion,
+    programVersionId: request.programVersionId,
+    clientImportId: request.clientImportId,
+    deviceId: request.deviceId,
+    clientMutationId: request.clientMutationId,
+    baseRevision: request.baseRevision,
+    operations: request.operations,
+  };
   const response = await fetch("/api/learner-progress", {
     method: "PATCH",
     headers: {
       accept: "application/json",
       "content-type": "application/json",
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(payload),
   });
   if (response.status === 409) {
     const body = (await response.json().catch(() => null)) as unknown;

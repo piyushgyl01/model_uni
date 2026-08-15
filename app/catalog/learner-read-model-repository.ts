@@ -48,6 +48,7 @@ const MAX_DAY_ASSIGNMENTS = 512;
 const MAX_OPEN_ASSIGNMENTS = 512;
 const MAX_HISTORY_ASSIGNMENTS = 512;
 const IN_PROGRESS_CALENDAR_DATE = "1900-01-01";
+const projectionRebuilds = new Map<string, Promise<string>>();
 
 interface ProjectionMetadataRow {
   readonly bundle_id: string;
@@ -741,6 +742,40 @@ export class LearnerReadModelRepository {
     requestedDate?: string,
     attempt = 0,
   ): Promise<string> {
+    const rebuildKey = `${learnerId}:${programVersionId}`;
+    const existing = projectionRebuilds.get(rebuildKey);
+    if (existing) {
+      await existing;
+      return this.ensureProjection(
+        learnerId,
+        programVersionId,
+        requestedDate,
+        attempt,
+      );
+    }
+
+    const rebuild = this.ensureProjectionUnlocked(
+      learnerId,
+      programVersionId,
+      requestedDate,
+      attempt,
+    );
+    projectionRebuilds.set(rebuildKey, rebuild);
+    try {
+      return await rebuild;
+    } finally {
+      if (projectionRebuilds.get(rebuildKey) === rebuild) {
+        projectionRebuilds.delete(rebuildKey);
+      }
+    }
+  }
+
+  private async ensureProjectionUnlocked(
+    learnerId: string,
+    programVersionId: ProgramVersionId,
+    requestedDate?: string,
+    attempt = 0,
+  ): Promise<string> {
     const metadata = await this.loadProjectionMetadata(learnerId, programVersionId);
     if (!metadata) throw new LearnerReadModelNotFoundError(programVersionId);
     const date = requestedDate ?? todayInTimezone(metadata.timezone ?? "UTC");
@@ -787,7 +822,12 @@ export class LearnerReadModelRepository {
           "Learner progress changed repeatedly while rebuilding its read model.",
         );
       }
-      return this.ensureProjection(learnerId, programVersionId, date, attempt + 1);
+      return this.ensureProjectionUnlocked(
+        learnerId,
+        programVersionId,
+        date,
+        attempt + 1,
+      );
     }
     return date;
   }

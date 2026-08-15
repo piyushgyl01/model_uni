@@ -207,16 +207,18 @@ test("learner views rebuild one pinned pathway and hit bounded D1 projections", 
   });
 
   const readModels = new LearnerReadModelRepository(progress);
-  const firstToday = await readModels.getTodayView(
-    learner.learnerId,
-    programVersionId,
-    "2026-08-10",
-  );
-  const firstRecord = await readModels.getRecordView(
-    learner.learnerId,
-    programVersionId,
-    "2026-08-10",
-  );
+  const [firstToday, firstRecord] = await Promise.all([
+    readModels.getTodayView(
+      learner.learnerId,
+      programVersionId,
+      "2026-08-10",
+    ),
+    readModels.getRecordView(
+      learner.learnerId,
+      programVersionId,
+      "2026-08-10",
+    ),
+  ]);
   assert.equal(firstToday.program.programVersionId, programVersionId);
   assert.ok(firstToday.queue.blocks.length > 0);
   assert.equal(firstRecord.record.courses.length, 1);

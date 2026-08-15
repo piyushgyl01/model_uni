@@ -48,7 +48,6 @@ export default function CoursePage({
   if (!courseVersion) notFound();
 
   const programHref = routeBase;
-  const courseHref = `${programHref}/courses/${course.canonicalSlug}`;
   const coursesById = new Map(bundle.courses.map((item) => [item.id, item]));
   const courseVersionsById = new Map(
     bundle.courseVersions.map((item) => [item.id, item]),

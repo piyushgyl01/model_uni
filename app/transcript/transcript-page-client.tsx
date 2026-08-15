@@ -169,7 +169,6 @@ export function TranscriptPageClient() {
     }
     let active = true;
     const load = async () => {
-      await syncStoredProgram(selectedProgramVersionId);
       const query = new URLSearchParams({
         programVersionId: selectedProgramVersionId,
       });

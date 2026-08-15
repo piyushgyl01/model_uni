@@ -16,17 +16,6 @@ export interface ProgramPageProps {
   readonly availableVersions?: readonly SemanticVersion[];
 }
 
-function formatDate(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf())) return value;
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(parsed);
-}
-
 function courseHref(routeBase: string, courseSlug: string) {
   return `${routeBase}/courses/${courseSlug}`;
 }
@@ -64,7 +53,6 @@ function requirementRule(group: RequirementGroup) {
 export default function ProgramPage({
   bundle,
   routeBase = `/programs/${bundle.program.canonicalSlug}`,
-  availableVersions = [bundle.programVersion.version],
 }: ProgramPageProps) {
   const clientBundle = {
     ...bundle,
@@ -86,7 +74,6 @@ export default function ProgramPage({
     courseVersions,
     learningUnits,
   } = bundle;
-  const programSlug = program.canonicalSlug;
   const coursesById = new Map(bundle.courses.map((course) => [course.id, course]));
   const concentrationsById = new Map(
     bundle.concentrations.map((concentration) => [
@@ -135,17 +122,8 @@ export default function ProgramPage({
     .filter((competency): competency is NonNullable<typeof competency> =>
       Boolean(competency),
     );
-  const competencyMappings = bundle.competencyMappings.filter(
-    (mapping) =>
-      mapping.subject.kind === "programVersion" &&
-      mapping.subject.id === programVersion.id,
-  );
-
   const resourceVersionsById = new Map(
     bundle.resourceVersions.map((resource) => [resource.id, resource]),
-  );
-  const resourcesById = new Map(
-    bundle.resources.map((resource) => [resource.id, resource]),
   );
   const accessByResourceVersion = new Map<ResourceVersionId, typeof bundle.accessOffers>();
   const rightsByResourceVersion = new Map<ResourceVersionId, typeof bundle.rights>();
