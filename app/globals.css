@@ -606,7 +606,7 @@ footer, #catalog-footer {
   min-width: 0;
 }
 
-.universal-unit-check small {
+.universal-unit-check > span > small {
   font-family: monospace;
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -708,4 +708,53 @@ footer, #catalog-footer {
   .universal-assessment-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Week-sized work inside a unit. The published curriculum already breaks each
+   twenty-hour unit into weeks; this is what makes them finishable. */
+.universal-week-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-1);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-light);
+}
+
+.universal-week-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+}
+
+.universal-week-check > input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  margin: 3px 0 0;
+  flex: none;
+  accent-color: var(--state-done);
+}
+
+.universal-week-check label {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.universal-week-check em {
+  font-family: monospace;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.universal-week-check small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: inherit;
+  text-transform: none;
+}
+
+.universal-week-check:has(input:checked) label {
+  color: var(--state-done);
 }

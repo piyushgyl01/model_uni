@@ -6,8 +6,12 @@ import type {
   CourseVersionId,
   LearningUnitId,
   ProgramVersionId,
+  WeeklyAssignment,
 } from "./domain/catalog";
-import { PROGRESS_STORAGE_NAMESPACE } from "./learner-progress-contract";
+import {
+  PROGRESS_STORAGE_NAMESPACE,
+  type ProgressMutationOperation,
+} from "./learner-progress-contract";
 import {
   connectionFromResponse,
   importLocalProgress,
@@ -21,6 +25,7 @@ import { CourseAssessmentProgress } from "./course-assessment-progress";
 import { useCourseAccess } from "./course-access-context";
 import { COURSE_MASTERY_STATE_LABELS } from "./domain/mastery";
 import {
+  enqueueProgressOperations,
   makeImportRequest,
   PROGRESS_EVENT,
   writeLocalCourseUnits,
@@ -30,6 +35,16 @@ export interface CourseProgressUnit {
   readonly id: LearningUnitId;
   readonly label: string;
   readonly title: string;
+}
+
+/** Deterministic id for a week's schedule entry, so ticks are idempotent. */
+function weekEntryId(unitId: LearningUnitId, week: number) {
+  return `week-${unitId}-${week}`;
+}
+
+/** Published titles start "Week 3 · …", and the number is already shown. */
+function weekTitle(title: string) {
+  return title.replace(/^Week\s+\d+\s*[·:—–-]\s*/iu, "");
 }
 
 export interface CourseProgressProps {
@@ -44,6 +59,8 @@ export default function CourseProgress({
   units,
 }: CourseProgressProps) {
   const {
+    bundle,
+    progress,
     mastery,
     prerequisites,
     hydrated,
@@ -169,6 +186,83 @@ export default function CourseProgress({
     await refreshFromCloud(true);
   };
 
+  /**
+   * The published curriculum already breaks each 20-hour unit into week-sized
+   * work, and the scheduler already stores per-session completion. Surfacing
+   * that here gives a learner something to finish most days instead of one
+   * checkbox per twenty hours — and it reuses the existing schedule-entry
+   * contract, so nothing about mastery, the calendar or storage changes.
+   */
+  const weeklyWorkByUnit = useMemo(() => {
+    const byUnit = new Map<LearningUnitId, readonly WeeklyAssignment[]>();
+    for (const unit of bundle.learningUnits) {
+      if (unit.courseVersionId !== courseVersionId) continue;
+      if (unit.weeklyAssignments && unit.weeklyAssignments.length > 0) {
+        byUnit.set(unit.id, unit.weeklyAssignments);
+      }
+    }
+    return byUnit;
+  }, [bundle, courseVersionId]);
+
+  const completedWeekIds = useMemo(() => {
+    const done = new Set<string>();
+    for (const entry of Object.values(progress?.scheduleEntries ?? {})) {
+      if (entry.status === "completed") done.add(entry.id);
+    }
+    return done;
+  }, [progress]);
+
+  const toggleWeek = (unitId: LearningUnitId, week: number) => {
+    const weeks = weeklyWorkByUnit.get(unitId) ?? [];
+    const assignment = weeks.find((candidate) => candidate.week === week);
+    if (!assignment) return;
+    const entryId = weekEntryId(unitId, week);
+    const completing = !completedWeekIds.has(entryId);
+    const now = new Date().toISOString();
+
+    // Every other week of this unit, so we know whether the unit is now done.
+    const othersComplete = weeks
+      .filter((candidate) => candidate.week !== week)
+      .every((candidate) => completedWeekIds.has(weekEntryId(unitId, candidate.week)));
+
+    const operations: ProgressMutationOperation[] = [
+      {
+        type: "upsert-schedule-entry",
+        entry: {
+          id: entryId,
+          subject: { kind: "learningUnit", id: unitId },
+          scheduledDate: now.slice(0, 10),
+          plannedMinutes: Math.max(1, Math.round(assignment.estimatedHours * 60)),
+          position: week,
+          source: "manual",
+          status: completing ? "completed" : "planned",
+          ...(completing ? { completedAt: now } : {}),
+          updatedAt: now,
+        },
+      },
+    ];
+
+    // Finishing the last week completes the unit; undoing any week reopens it.
+    if (othersComplete) {
+      operations.push({
+        type: "set-unit-completion",
+        courseVersionId,
+        learningUnitId: unitId,
+        completed: completing,
+      });
+    }
+
+    if (!enqueueProgressOperations(programVersionId, operations)) {
+      setSaveState("error");
+      return;
+    }
+    // Deliberately no cloud refresh here. The queued mutation is the record;
+    // pulling the cloud snapshot back over it discards the tick for a learner
+    // who is not signed in. This mirrors how Today completes a session.
+    refreshFromLocal();
+    setSaveState(connection.kind === "signed-in" ? "saving" : "device-only");
+  };
+
   const toggle = (unitId: LearningUnitId) => {
     void update(
       completedSet.has(unitId)
@@ -273,6 +367,10 @@ export default function CourseProgress({
         <legend className="sr-only">Mark individual learning units complete</legend>
         {units.map((unit) => {
           const inputId = `progress-${courseVersionId}-${unit.id}`;
+          const weeks = weeklyWorkByUnit.get(unit.id) ?? [];
+          const doneWeeks = weeks.filter((week) =>
+            completedWeekIds.has(weekEntryId(unit.id, week.week)),
+          ).length;
           return (
             <div className="universal-unit-check" key={unit.id}>
               <input
@@ -282,8 +380,33 @@ export default function CourseProgress({
                 onChange={() => toggle(unit.id)}
               />
               <span>
-                <small>{unit.label}</small>
+                <small>
+                  {unit.label}
+                  {weeks.length > 0 ? ` · ${doneWeeks} of ${weeks.length} weeks done` : null}
+                </small>
                 <label htmlFor={inputId}>{unit.title}</label>
+                {weeks.length > 0 ? (
+                  <span className="universal-week-list">
+                    {weeks.map((week) => {
+                      const weekId = weekEntryId(unit.id, week.week);
+                      const weekInputId = `progress-${courseVersionId}-${weekId}`;
+                      return (
+                        <span className="universal-week-check" key={week.week}>
+                          <input
+                            id={weekInputId}
+                            type="checkbox"
+                            checked={completedWeekIds.has(weekId)}
+                            onChange={() => toggleWeek(unit.id, week.week)}
+                          />
+                          <label htmlFor={weekInputId}>
+                            <em>Week {week.week}</em> {weekTitle(week.title)}
+                            <small>{week.estimatedHours} hours · {week.deliverable}</small>
+                          </label>
+                        </span>
+                      );
+                    })}
+                  </span>
+                ) : null}
                 <a href={`#${unit.id}`}>View unit</a>
               </span>
             </div>
@@ -291,7 +414,9 @@ export default function CourseProgress({
         })}
       </fieldset>
       <small>
-        Unit checks record learning work only. Passing is pinned to this exact published course version and its grading policy.
+        Ticking every week of a unit completes it. Unit checks record learning
+        work only; passing is pinned to this exact published course version and
+        its grading policy.
       </small>
 
       <CourseAssessmentProgress
