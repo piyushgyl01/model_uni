@@ -4,7 +4,10 @@ import {
   getChatGPTUser,
   type ChatGPTUser,
 } from "./chatgpt-auth";
-import { getRuntimeLearnerProgressRepository } from "./catalog/cloudflare-catalog";
+import {
+  getCatalogD1Binding,
+  getRuntimeLearnerProgressRepository,
+} from "./catalog/cloudflare-catalog";
 import {
   LearnerProgressMutationConflictError,
   LearnerProgressRevisionConflictError,
@@ -221,11 +224,17 @@ export async function getAuthenticatedLearner(): Promise<
   return { user, learner, repository };
 }
 
-export function anonymousProgressResponse(returnTo: string) {
+export async function anonymousProgressResponse(returnTo: string) {
+  // No D1 binding means no durable learner store, and on such a deployment the
+  // platform's sign-in route does not exist either.
+  const cloudSyncAvailable = Boolean(await getCatalogD1Binding());
   return noStoreJson(
     {
       authenticated: false,
-      signInPath: chatGPTSignInPath(returnTo),
+      cloudSyncAvailable,
+      ...(cloudSyncAvailable
+        ? { signInPath: chatGPTSignInPath(returnTo) }
+        : {}),
     },
     { status: 401 },
   );

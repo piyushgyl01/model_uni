@@ -170,7 +170,7 @@ function richV3Import(
   };
 }
 
-test("progress reads require ChatGPT identity and return a safe sign-in route", async () => {
+test("progress reads require ChatGPT identity and offer sign-in only where accounts exist", async () => {
   const app = await worker();
   const response = await app.fetch(
     new Request(
@@ -185,8 +185,10 @@ test("progress reads require ChatGPT identity and return a safe sign-in route", 
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     authenticated: false,
-    signInPath:
-      "/signin-with-chatgpt?return_to=%2Fprograms%2Felectrical-engineering",
+    // This worker has no D1 binding, so there is nothing an account could
+    // hold — and the platform sign-in route does not exist either. Offering
+    // it here would send visitors to a 404.
+    cloudSyncAvailable: false,
   });
 });
 

@@ -261,7 +261,14 @@ export interface AuthenticatedProgressResponse {
 
 export interface AnonymousProgressResponse {
   readonly authenticated: false;
-  readonly signInPath: string;
+  /**
+   * Absent when the deployment has no durable store behind it. The sign-in
+   * route is provided by the hosting platform, not this app, so advertising it
+   * elsewhere sends visitors to a 404 for an account that could not hold
+   * anything anyway.
+   */
+  readonly signInPath?: string;
+  readonly cloudSyncAvailable: boolean;
 }
 
 export type ProgressResponse =

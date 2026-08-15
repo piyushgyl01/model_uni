@@ -65,12 +65,18 @@ export default function ProgressSyncStatus({
           <span>
             {saveState === "error"
               ? "This change may be lost when you leave the page."
-              : "Sign in to continue on other devices."}
+              : connection.signInPath
+                ? "Sign in to continue on other devices."
+                : "This browser is the only copy, so clearing site data clears it."}
           </span>
         </div>
-        <a className="button button-quiet" href={connection.signInPath}>
-          Sign in with ChatGPT
-        </a>
+        {/* Only offered where accounts exist. The sign-in route belongs to the
+            hosting platform, so linking it elsewhere is a 404. */}
+        {connection.signInPath ? (
+          <a className="button button-quiet" href={connection.signInPath}>
+            Sign in with ChatGPT
+          </a>
+        ) : null}
       </div>
     );
   }

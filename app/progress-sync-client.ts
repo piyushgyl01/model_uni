@@ -29,7 +29,8 @@ export type ProgressConnection =
   | { readonly kind: "checking" }
   | {
       readonly kind: "anonymous";
-      readonly signInPath: string;
+      /** Absent where the deployment offers no accounts at all. */
+      readonly signInPath?: string;
     }
   | {
       readonly kind: "signed-in";
@@ -190,7 +191,10 @@ export function connectionFromResponse(
   response: ProgressResponse,
 ): ProgressConnection {
   if (!response.authenticated) {
-    return { kind: "anonymous", signInPath: response.signInPath };
+    return {
+      kind: "anonymous",
+      ...(response.signInPath ? { signInPath: response.signInPath } : {}),
+    };
   }
   return {
     kind: "signed-in",

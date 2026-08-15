@@ -233,6 +233,8 @@ test("criteria 6 and 12: one learner goes from enrollment to a completed pathway
   assert.equal(anonymous.status, 401);
   assert.deepEqual(await anonymous.json(), {
     authenticated: false,
+    // A D1-backed deployment can hold an account, so sign-in is offered.
+    cloudSyncAvailable: true,
     signInPath:
       "/signin-with-chatgpt?return_to=%2Fprograms%2Fpractical-spreadsheets",
   });
