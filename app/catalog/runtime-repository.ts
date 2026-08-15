@@ -27,6 +27,12 @@ export interface RuntimeCatalogRepositoryOptions {
   readonly database?: D1DatabaseLike | null;
   readonly staticRepository: CatalogRepository;
   readonly verifyShadow?: boolean;
+  /**
+   * "all" re-reads every publication out of D1 and field-compares it. "seeded"
+   * checks only what this call wrote, which keeps a cold-start upgrade
+   * proportional to the new content instead of the whole catalog.
+   */
+  readonly shadowScope?: "all" | "seeded";
   readonly programSupersessions?: readonly CatalogProgramSupersession[];
 }
 
@@ -39,6 +45,7 @@ export async function createRuntimeCatalogRepository({
   database,
   staticRepository,
   verifyShadow = true,
+  shadowScope = "all",
   programSupersessions = [],
 }: RuntimeCatalogRepositoryOptions): Promise<AsyncCatalogRepository> {
   if (!database) return new AsyncStaticCatalogRepository(staticRepository);
@@ -46,13 +53,18 @@ export async function createRuntimeCatalogRepository({
   await initializeCatalogRuntimeSchema(database);
   await registerCatalogProgramSupersessions(database, programSupersessions);
   const checkedInBundles = collectStaticCatalogBundles(staticRepository);
-  await seedPublishedProgramBundles(database, checkedInBundles);
+  const seed = await seedPublishedProgramBundles(database, checkedInBundles);
   await projectCatalogReadModels(database, checkedInBundles);
   const repository = new D1CatalogRepository(database);
-  if (verifyShadow) {
+  const seededBundleIds = new Set(seed.seededBundleIds);
+  const shadowBundles =
+    shadowScope === "seeded"
+      ? checkedInBundles.filter((bundle) => seededBundleIds.has(bundle.id))
+      : checkedInBundles;
+  if (verifyShadow && shadowBundles.length > 0) {
     const runtimeBundles = (
       await Promise.all(
-        checkedInBundles.map((bundle) =>
+        shadowBundles.map((bundle) =>
           repository.loadByProgramId(
             bundle.program.id,
             bundle.programVersion.version,
@@ -60,10 +72,7 @@ export async function createRuntimeCatalogRepository({
         ),
       )
     ).filter((bundle) => bundle !== undefined);
-    const report = compareCatalogBundleShadows(
-      checkedInBundles,
-      runtimeBundles,
-    );
+    const report = compareCatalogBundleShadows(shadowBundles, runtimeBundles);
     if (!report.matches) throw new CatalogShadowMismatchError(report);
   }
   const releaseBundleIds = new Set<string>(

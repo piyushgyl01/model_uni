@@ -65,6 +65,8 @@ export interface CatalogSeedResult {
   readonly inserted: number;
   readonly unchanged: number;
   readonly bundleIds: readonly string[];
+  /** Only the publications written by this call. */
+  readonly seededBundleIds: readonly string[];
 }
 
 interface CatalogBundleRow {
@@ -355,6 +357,13 @@ function seedDifferences(
 }
 
 function identityLookup(database: D1DatabaseLike, seed: PreparedBundleSeed) {
+  return identityLookupForBundle(database, seed.bundle);
+}
+
+function identityLookupForBundle(
+  database: D1DatabaseLike,
+  bundle: PublishedProgramBundle,
+) {
   return database
     .prepare(
       `SELECT ${BUNDLE_ROW_COLUMNS}
@@ -364,10 +373,10 @@ function identityLookup(database: D1DatabaseLike, seed: PreparedBundleSeed) {
           OR (program_id = ? AND semantic_version = ?)`,
     )
     .bind(
-      seed.bundle.id,
-      seed.bundle.programVersion.id,
-      seed.bundle.program.id,
-      seed.bundle.programVersion.version,
+      bundle.id,
+      bundle.programVersion.id,
+      bundle.program.id,
+      bundle.programVersion.version,
     );
 }
 
@@ -375,33 +384,69 @@ function identityLookup(database: D1DatabaseLike, seed: PreparedBundleSeed) {
  * Inserts immutable publications. Re-running the same exact bundle is a no-op;
  * reusing an identity for changed content is a hard, actionable conflict.
  */
+/**
+ * Everything needed to detect drift in a publication that is already stored,
+ * and nothing needed to write one. Validation and chunking are what make a
+ * full seed expensive, and neither affects whether stored content still
+ * matches the source.
+ */
+async function prepareComparison(
+  bundle: PublishedProgramBundle,
+): Promise<PreparedBundleSeed> {
+  const payloadJson = canonicalJson(bundle);
+  const summary = summaryFor(bundle);
+  return {
+    bundle,
+    payloadJson,
+    payloadChunks: [],
+    payloadHash: await sha256Hex(payloadJson),
+    summary,
+    summaryJson: canonicalJson(summary),
+  };
+}
+
 export async function seedPublishedProgramBundles(
   database: D1DatabaseLike,
   bundles: readonly PublishedProgramBundle[],
 ): Promise<CatalogSeedResult> {
   assertValidCatalogSet(bundles);
-  const prepared = await Promise.all(bundles.map(prepareSeed));
 
+  // Identity lookup needs only raw identifiers, so the preflight runs before
+  // any bundle is canonicalised. Seeding cost then scales with what is actually
+  // missing rather than with the size of the whole catalog.
   const preflight = await d1Batch(
     database,
-    prepared.map((seed) => identityLookup(database, seed)),
+    bundles.map((bundle) => identityLookupForBundle(database, bundle)),
     "catalog seed preflight",
   );
-  const missing: PreparedBundleSeed[] = [];
-  let unchanged = 0;
 
-  prepared.forEach((seed, index) => {
+  const absent: PublishedProgramBundle[] = [];
+  const present: PublishedProgramBundle[] = [];
+  const presentRows = new Map<string, readonly CatalogBundleRow[]>();
+
+  bundles.forEach((bundle, index) => {
     const rows = rowsFromBatchResult<CatalogBundleRow>(preflight[index]);
     if (rows.length === 0) {
-      missing.push(seed);
+      absent.push(bundle);
       return;
     }
-    const differences = seedDifferences(rows, seed);
+    present.push(bundle);
+    presentRows.set(bundle.id, rows);
+  });
+
+  const compared = await Promise.all(present.map(prepareComparison));
+  for (const seed of compared) {
+    const differences = seedDifferences(
+      presentRows.get(seed.bundle.id) ?? [],
+      seed,
+    );
     if (differences.length > 0) {
       throw new CatalogSeedConflictError(seed.bundle.id, differences);
     }
-    unchanged += 1;
-  });
+  }
+  const unchanged = compared.length;
+
+  const missing = await Promise.all(absent.map(prepareSeed));
 
   const insertionBatches: Array<ReturnType<D1DatabaseLike["prepare"]>[]> = [];
   let insertionBatch: ReturnType<D1DatabaseLike["prepare"]>[] = [];
@@ -485,10 +530,10 @@ export async function seedPublishedProgramBundles(
 
   const verification = await d1Batch(
     database,
-    prepared.map((seed) => identityLookup(database, seed)),
+    missing.map((seed) => identityLookup(database, seed)),
     "catalog seed verification",
   );
-  prepared.forEach((seed, index) => {
+  missing.forEach((seed, index) => {
     const differences = seedDifferences(
       rowsFromBatchResult<CatalogBundleRow>(verification[index]),
       seed,
@@ -501,7 +546,8 @@ export async function seedPublishedProgramBundles(
   return {
     inserted: missing.length,
     unchanged,
-    bundleIds: prepared.map((seed) => seed.bundle.id),
+    bundleIds: bundles.map((bundle) => bundle.id),
+    seededBundleIds: missing.map((seed) => seed.bundle.id),
   };
 }
 

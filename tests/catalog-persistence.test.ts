@@ -599,6 +599,8 @@ test("D1 seed is idempotent and reconstructs a complete validated bundle", async
     inserted: 1,
     unchanged: 0,
     bundleIds: [practicalSpreadsheetsProgram.id],
+    // A first seed writes the publication, so it is the one to verify.
+    seededBundleIds: [practicalSpreadsheetsProgram.id],
   });
   const second = await seedPublishedProgramBundles(database, [
     practicalSpreadsheetsProgram,
@@ -607,6 +609,8 @@ test("D1 seed is idempotent and reconstructs a complete validated bundle", async
     inserted: 0,
     unchanged: 1,
     bundleIds: [practicalSpreadsheetsProgram.id],
+    // A repeat seed writes nothing, so nothing needs re-verifying.
+    seededBundleIds: [],
   });
 
   const repository = new D1CatalogRepository(database);

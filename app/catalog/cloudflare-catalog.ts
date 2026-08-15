@@ -89,6 +89,11 @@ export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
     return createRuntimeCatalogRepository({
       database,
       staticRepository: checkedInCatalog,
+      // A deployed isolate re-reads only what it just wrote. Publications
+      // already present were shadow-verified when they were seeded and are
+      // immutable, so re-comparing the whole catalog on every cold start is
+      // work that grows with the catalog and cannot finish inside a request.
+      shadowScope: "seeded",
       programSupersessions: catalogProgramSupersessions,
     });
   })();

@@ -5,7 +5,11 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Miniflare } from "miniflare";
-import { seedPublishedProgramBundles } from "../app/catalog/d1-repository.ts";
+import {
+  collectStaticCatalogBundles,
+  seedPublishedProgramBundles,
+} from "../app/catalog/d1-repository.ts";
+import { createRuntimeCatalogRepository } from "../app/catalog/runtime-repository.ts";
 import { catalogRepository } from "../content/catalog.ts";
 import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets.ts";
 
@@ -920,5 +924,141 @@ test("criterion 10 restart guard: a current installation restarts without distur
   assert.deepEqual(
     continued.progress.courses[COURSE_VERSION_ID].completedUnitIds.slice().sort(),
     [UNIT_IDS[0], UNIT_IDS[1]].sort(),
+  );
+});
+
+
+/**
+ * Counts D1 round trips, not prepared statements. Cloudflare bills each D1
+ * call as a subrequest and caps them per request, so a batch of fifty
+ * statements costs one — which is the number a release has to stay under.
+ */
+function withRoundTripSpy(database) {
+  const calls = [];
+  const record = (label) => calls.push(label);
+  return {
+    calls,
+    database: {
+      ...database,
+      batch(statements) {
+        record(`batch(${statements.length})`);
+        return database.batch(statements);
+      },
+      exec(sql) {
+        record("exec");
+        return database.exec(sql);
+      },
+      prepare(sql) {
+        const statement = database.prepare(sql);
+        const label = sql.trim().split(/\s+/u).slice(0, 4).join(" ");
+        return new Proxy(statement, {
+          get(target, property, receiver) {
+            const value = Reflect.get(target, property, receiver);
+            if (property === "bind") {
+              return (...args) => {
+                const bound = target.bind(...args);
+                return new Proxy(bound, this);
+              };
+            }
+            if (
+              property === "run" ||
+              property === "all" ||
+              property === "first" ||
+              property === "raw"
+            ) {
+              return (...args) => {
+                record(label);
+                return value.apply(target, args);
+              };
+            }
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+      },
+    },
+  };
+}
+
+test("criterion 10 budget: a cold-start upgrade costs what is new, not the whole catalog", async (t) => {
+  // Production hung because every cold isolate re-seeded, re-projected and
+  // re-shadow-verified all eight publications — 5.5 MB of curriculum — on the
+  // request path, and cleared its singleton on failure so the next request did
+  // it again. The upgrade has to scale with the new content, not the catalog.
+  const persistRoot = await mkdtemp(join(tmpdir(), "course-atlas-budget-"));
+  t.after(() => rm(persistRoot, { recursive: true, force: true }));
+
+  const legacy = await phase6DatabaseEnvironment(persistRoot);
+  t.after(() => legacy.miniflare.dispose());
+
+  const allBundles = collectStaticCatalogBundles(catalogRepository);
+  const currentComputerScience = allBundles
+    .filter((bundle) => bundle.program.canonicalSlug === "computer-science")
+    .sort((left, right) =>
+      left.programVersion.version.localeCompare(right.programVersion.version),
+    )
+    .at(-1);
+  assert.ok(currentComputerScience);
+
+  // The deployed database holds the previous release: everything except the
+  // newest Computer Science publication.
+  const deployed = allBundles.filter(
+    (bundle) => bundle.id !== currentComputerScience.id,
+  );
+  await seedPublishedProgramBundles(legacy.database, deployed);
+
+  const spy = withRoundTripSpy(legacy.database);
+  const started = Date.now();
+  await createRuntimeCatalogRepository({
+    database: spy.database,
+    staticRepository: catalogRepository,
+    shadowScope: "seeded",
+  });
+  const elapsed = Date.now() - started;
+
+  // The new publication really landed: assert the stored row, not the shape of
+  // the calls that wrote it.
+  const stored = await legacy.database
+    .prepare("SELECT payload_hash FROM catalog_bundles WHERE id = ?")
+    .bind(currentComputerScience.id)
+    .first();
+  assert.ok(stored, "The new publication was never written.");
+  const breakdown = new Map();
+  for (const sql of spy.calls) {
+    const key = (sql.trim().split(/\s+/u).slice(0, 4).join(" ")).slice(0, 60);
+    breakdown.set(key, (breakdown.get(key) ?? 0) + 1);
+  }
+  console.error(
+    [...breakdown.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
+      .map(([k, v]) => `${String(v).padStart(5)}  ${k}`).join("\n"),
+  );
+  assert.ok(
+    spy.calls.length < 200,
+    `Cold-start upgrade made ${spy.calls.length} D1 round trips against a 1,000 subrequest ceiling; the budget is 200.`,
+  );
+  assert.ok(
+    elapsed < 20_000,
+    `Cold-start upgrade took ${elapsed}ms; a Worker request cannot wait that long.`,
+  );
+
+  // A second cold start against the now-current database must be near-free:
+  // nothing is missing, so nothing is prepared, projected or verified.
+  const warm = withRoundTripSpy(legacy.database);
+  const warmStarted = Date.now();
+  await createRuntimeCatalogRepository({
+    database: warm.database,
+    staticRepository: catalogRepository,
+    shadowScope: "seeded",
+  });
+  const warmElapsed = Date.now() - warmStarted;
+  assert.equal(
+    warm.calls.filter((label) =>
+      label.includes("INSERT INTO catalog_bundle_payload_chunks"),
+    ).length,
+    0,
+    "A steady-state cold start rewrote publication chunks.",
+  );
+  assert.ok(
+    warmElapsed < elapsed,
+    `A steady-state start (${warmElapsed}ms) should cost less than an upgrade (${elapsed}ms).`,
   );
 });

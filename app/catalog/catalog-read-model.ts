@@ -537,11 +537,69 @@ export async function refreshCatalogProjectionStats(database: D1DatabaseLike) {
 }
 
 /** Rebuilds disposable indexed rows from exact immutable publication payloads. */
-export async function projectCatalogReadModels(
+interface ProjectionFreshnessRow {
+  readonly program_id: string;
+  readonly program_version_id: string;
+  readonly source_payload_hash: string;
+  readonly projection_version: number;
+  readonly payload_hash: string;
+}
+
+/**
+ * Narrows a projection run to the programs that actually changed.
+ *
+ * Projecting a bundle validates it and resolves its learner path, so doing it
+ * for the whole catalog on every cold start costs time proportional to the
+ * catalog rather than to the new content — which is how a release stops being
+ * able to finish inside a request. Scoping by program (not by bundle) keeps
+ * cross-version activation correct, since only one version of a program is
+ * active at a time.
+ */
+async function programsNeedingProjection(
   database: D1DatabaseLike,
   bundles: readonly PublishedProgramBundle[],
+): Promise<ReadonlySet<string>> {
+  const stale = new Set<string>();
+  const placeholders = bundles.map(() => "?").join(", ");
+  const result = await database
+    .prepare(
+      `SELECT s.program_id, s.program_version_id, s.source_payload_hash,
+              s.projection_version, b.payload_hash
+       FROM catalog_program_summaries s
+       JOIN catalog_bundles b
+         ON b.program_version_id = s.program_version_id
+       WHERE s.program_version_id IN (${placeholders})`,
+    )
+    .bind(...bundles.map((bundle) => bundle.programVersion.id))
+    .all<ProjectionFreshnessRow>();
+  const current = new Map(
+    (result.results ?? []).map((row) => [row.program_version_id, row]),
+  );
+  for (const bundle of bundles) {
+    const row = current.get(bundle.programVersion.id);
+    if (
+      !row ||
+      row.projection_version !== CATALOG_READ_MODEL_VERSION ||
+      row.source_payload_hash !== row.payload_hash
+    ) {
+      stale.add(bundle.program.id);
+    }
+  }
+  return stale;
+}
+
+const SEARCH_TERM_ROWS_PER_STATEMENT = 14;
+
+export async function projectCatalogReadModels(
+  database: D1DatabaseLike,
+  allBundles: readonly PublishedProgramBundle[],
 ): Promise<void> {
-  if (bundles.length === 0) return;
+  if (allBundles.length === 0) return;
+  const stalePrograms = await programsNeedingProjection(database, allBundles);
+  if (stalePrograms.size === 0) return;
+  const bundles = allBundles.filter((bundle) =>
+    stalePrograms.has(bundle.program.id),
+  );
   const validation = validateCatalogBundles(bundles);
   if (!validation.valid) {
     throw new CatalogValidationError(
@@ -650,6 +708,7 @@ export async function projectCatalogReadModels(
     assertD1Success(deleteResult, `clear catalog course projection ${bundle.id}`);
 
     const courseById = new Map(bundle.courses.map((course) => [course.id, course]));
+    const courseStatements = [];
     for (let position = 0; position < bundle.courseVersions.length; position += 1) {
       const version = bundle.courseVersions[position];
       const course = courseById.get(version.courseId);
@@ -659,7 +718,8 @@ export async function projectCatalogReadModels(
         ]);
       }
       const primaryCode = course.codes[0]?.value;
-      const courseResult = await database
+      courseStatements.push(
+        database
         .prepare(
           `INSERT INTO catalog_course_search_rows (
              program_version_id, course_version_id, bundle_id, program_id,
@@ -701,33 +761,45 @@ export async function projectCatalogReadModels(
           ),
           hash,
           CATALOG_READ_MODEL_VERSION,
-        )
-        .run();
-      assertD1Success(courseResult, `project catalog course ${version.id}`);
+        ),
+      );
 
+      // D1 caps bound variables per statement, so rows stay chunked. The cost
+      // that mattered was awaiting each chunk separately: one publication took
+      // ~1,080 round trips, past the Worker subrequest ceiling. Batching keeps
+      // the writes ordered while collapsing the round trips.
       const terms = courseTerms(bundle, course, version);
-      for (let offset = 0; offset < terms.length; offset += 14) {
-        const chunk = terms.slice(offset, offset + 14);
+      for (
+        let offset = 0;
+        offset < terms.length;
+        offset += SEARCH_TERM_ROWS_PER_STATEMENT
+      ) {
+        const chunk = terms.slice(offset, offset + SEARCH_TERM_ROWS_PER_STATEMENT);
         const placeholders = chunk.map(() => "(?, ?, ?, ?, ?)").join(", ");
-        const termResult = await database
-          .prepare(
-            `INSERT INTO catalog_course_search_terms (
-               program_version_id, course_version_id, term, field, weight
-             ) VALUES ${placeholders}`,
-          )
-          .bind(
-            ...chunk.flatMap((term) => [
-              bundle.programVersion.id,
-              version.id,
-              term.term,
-              term.field,
-              term.weight,
-            ]),
-          )
-          .run();
-        assertD1Success(termResult, `project catalog search terms ${version.id}`);
+        courseStatements.push(
+          database
+            .prepare(
+              `INSERT INTO catalog_course_search_terms (
+                 program_version_id, course_version_id, term, field, weight
+               ) VALUES ${placeholders}`,
+            )
+            .bind(
+              ...chunk.flatMap((term) => [
+                bundle.programVersion.id,
+                version.id,
+                term.term,
+                term.field,
+                term.weight,
+              ]),
+            ),
+        );
       }
     }
+    await d1Batch(
+      database,
+      courseStatements,
+      `project catalog courses ${bundle.id}`,
+    );
   }
 
   const activationStatements = [...activeByProgram.entries()].flatMap(
