@@ -7,6 +7,7 @@ import {
 } from "../../content/catalog-release";
 import type { D1DatabaseLike } from "./d1-contract";
 import {
+  AsyncStaticCatalogRepository,
   D1CatalogRepository,
   type AsyncCatalogRepository,
 } from "./d1-repository";
@@ -67,11 +68,21 @@ async function releaseProjectionIsCurrent(database: D1DatabaseLike) {
 }
 
 /**
+ * How long a page render will wait for a catalog upgrade before serving the
+ * checked-in catalog instead. A release migration writes megabytes of
+ * curriculum; a visitor's request must never be the thing that carries it.
+ */
+const CATALOG_INITIALIZATION_DEADLINE_MS = 3_000;
+
+/**
  * Worker-isolate singleton. The ordinary production path performs one compact
  * release-marker lookup and then serves indexed D1 projections. Full curriculum
  * modules are loaded only to initialize or upgrade a missing release.
+ *
+ * Callers that need durable D1 (learner writes) await this directly. Page reads
+ * go through getRuntimeCatalogRepository, which will not wait indefinitely.
  */
-export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
+function beginCatalogInitialization(): Promise<AsyncCatalogRepository> {
   if (runtimeRepository) return runtimeRepository;
 
   const initialization = (async () => {
@@ -104,7 +115,44 @@ export function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
     throw error;
   });
   runtimeRepository = retryableInitialization;
-  return runtimeRepository;
+  // A request may stop waiting on this attempt while it keeps running, so its
+  // failure must not surface as an unhandled rejection.
+  void retryableInitialization.catch(() => {});
+  return retryableInitialization;
+}
+
+async function checkedInCatalogRepository(): Promise<AsyncCatalogRepository> {
+  const { catalogRepository: checkedInCatalog } = await import(
+    "../../content/catalog"
+  );
+  return new AsyncStaticCatalogRepository(checkedInCatalog);
+}
+
+/**
+ * Reads the catalog without ever blocking a page on a release migration.
+ *
+ * A stale release marker sends the first cold isolate into a full upgrade. That
+ * work is idempotent and resumes across requests, but it is measured in seconds
+ * — so once the deadline passes this request stops waiting and serves the
+ * checked-in catalog, which is byte-identical to what the upgrade is writing.
+ * Integrity failures still reject: a shadow mismatch or seed conflict is real
+ * corruption and must not be served around.
+ */
+export async function getRuntimeCatalogRepository(): Promise<AsyncCatalogRepository> {
+  const initialization = beginCatalogInitialization();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<undefined>((resolve) => {
+    timer = setTimeout(
+      () => resolve(undefined),
+      CATALOG_INITIALIZATION_DEADLINE_MS,
+    );
+  });
+  try {
+    const repository = await Promise.race([initialization, deadline]);
+    return repository ?? (await checkedInCatalogRepository());
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /**
@@ -119,7 +167,7 @@ export function getRuntimeLearnerProgressRepository(): Promise<
   const initialization = (async () => {
     const database = await getCatalogD1Binding();
     if (!database) return undefined;
-    await getRuntimeCatalogRepository();
+    await beginCatalogInitialization();
     return new D1LearnerProgressRepository(database);
   })();
   const retryableInitialization = initialization.catch((error) => {

@@ -1062,3 +1062,36 @@ test("criterion 10 budget: a cold-start upgrade costs what is new, not the whole
     `A steady-state start (${warmElapsed}ms) should cost less than an upgrade (${elapsed}ms).`,
   );
 });
+
+
+test("a stalled catalog upgrade serves published programs instead of hanging", async () => {
+  // The outage was not that the upgrade was slow; it was that a slow upgrade
+  // took every catalog route down with it. A page read must degrade to the
+  // checked-in catalog rather than wait forever.
+  const { getRuntimeCatalogRepository } = await import(
+    "../app/catalog/cloudflare-catalog.ts"
+  );
+
+  const started = Date.now();
+  const repository = await getRuntimeCatalogRepository();
+  const programs = await repository.listPrograms();
+  const elapsed = Date.now() - started;
+
+  assert.ok(
+    programs.length >= 6,
+    `A catalog read returned ${programs.length} programs.`,
+  );
+  assert.ok(
+    programs.some((program) => program.slug === "computer-science"),
+    "Computer Science was missing from a degraded catalog read.",
+  );
+  assert.ok(
+    elapsed < 10_000,
+    `A catalog read took ${elapsed}ms; it must not wait on a migration.`,
+  );
+
+  const page = await repository.listProgramPage({});
+  assert.ok(page.items.length > 0, "Paged catalog reads must also work.");
+  const search = await repository.searchCourses({ q: "algorithms" });
+  assert.ok(search.items.length > 0, "Course search must also work.");
+});
