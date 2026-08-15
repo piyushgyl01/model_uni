@@ -87,7 +87,7 @@ export function UnitEvidenceInput({
           htmlFor={`evidence-${unitId}`}
           style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#333" }}
         >
-          📎 Submit Work Evidence / Project Link:
+          Submit Work Evidence / Project Link:
         </label>
         {savedTime && (
           <span style={{ fontSize: "0.75rem", color: "#006600", fontWeight: "bold" }}>

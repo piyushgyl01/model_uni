@@ -14,7 +14,7 @@ export default async function TranscriptPage() {
           ← Back to All Degree Programs
         </Link>
         <h1 style={{ margin: "0.5rem 0 0.2rem 0", fontSize: "1.8rem" }}>
-          📜 Independent Learning Record
+          Independent Learning Record
         </h1>
         <p style={{ margin: 0, color: "#444" }}>
           A transparent, non-accredited record of pathway progress, assessment results, projects, hours, and evidence provenance.

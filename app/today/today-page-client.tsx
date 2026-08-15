@@ -129,7 +129,7 @@ export function TodayPageClient() {
           marginBottom: "1.5rem",
         }}
       >
-        ℹ️ <strong>You are not enrolled in a program yet.</strong>{" "}
+        <strong>You are not enrolled in a program yet.</strong>{" "}
         <Link href="/#programs">Choose a published pathway</Link> to set a
         start date and weekly pace.
         {signInPath && (

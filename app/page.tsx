@@ -68,8 +68,7 @@ export default async function Home({
       <header className="topbar catalog-topbar">
         <a className="brand" href="#top" aria-label="Course Atlas home">
           <span className="brand-mark" aria-hidden="true" />
-          <span>
-            <strong>Course Atlas</strong>
+          <span><strong>Course Atlas</strong>
             <small>Self-Study University Degrees</small>
           </span>
         </a>
@@ -182,14 +181,14 @@ export default async function Home({
                 </div>
 
                 <div className="degree-card-facts">
-                  <span>🗓️ <strong>Duration:</strong> {program.nominalDuration}</span>
-                  <span>📚 <strong>Curriculum:</strong> {program.courseCount}-course minimum path</span>
+                  <span><strong>Duration:</strong> {program.nominalDuration}</span>
+                  <span><strong>Curriculum:</strong> {program.courseCount}-course minimum path</span>
                   {program.availableCourseCount !== program.courseCount && (
-                    <span>🔀 <strong>Options:</strong> {program.availableCourseCount} course options</span>
+                    <span><strong>Options:</strong> {program.availableCourseCount} course options</span>
                   )}
-                  <span>📖 <strong>Units:</strong> {program.learningUnitCount} learning units</span>
-                  <span>🔗 <strong>Free Resources:</strong> {program.resourceCount} reviewed resources</span>
-                  <span>⏱️ <strong>Est. Workload:</strong> {hoursLabel(program.nominalHours)}</span>
+                  <span><strong>Units:</strong> {program.learningUnitCount} learning units</span>
+                  <span><strong>Free Resources:</strong> {program.resourceCount} reviewed resources</span>
+                  <span><strong>Est. Workload:</strong> {hoursLabel(program.nominalHours)}</span>
                 </div>
 
                 <div style={{ marginTop: "15px" }}>

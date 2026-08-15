@@ -328,7 +328,7 @@ export function TranscriptPageClient() {
             fontSize: "0.85rem",
           }}
         >
-          🖨️ Print / Save PDF Record
+          Print / Save PDF Record
         </button>
       </div>
 
@@ -451,7 +451,7 @@ export function TranscriptPageClient() {
         </div>
 
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
-          📊 Pathway Requirement Audit
+          Pathway Requirement Audit
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "2rem" }}>
           {requirementGroups.map((group) => {
@@ -487,7 +487,7 @@ export function TranscriptPageClient() {
         </div>
 
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
-          📚 Course and Hours Record
+          Course and Hours Record
         </h3>
         <div style={{ overflowX: "auto" }}>
           <table
@@ -547,7 +547,7 @@ export function TranscriptPageClient() {
         </div>
 
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
-          📝 Assessment Record ({record.totals.assessmentAttempts} attempts · {record.totals.assessments} published assessments)
+          Assessment Record ({record.totals.assessmentAttempts} attempts · {record.totals.assessments} published assessments)
         </h3>
         <p style={{ margin: "0 0 0.75rem", color: "#555", fontSize: "0.85rem" }}>
           Published assessment workload: {record.totals.assessmentHours} nominal hours. Results report the evaluation method stored with each attempt; they are not silently treated as institutionally reviewed.
@@ -598,7 +598,7 @@ export function TranscriptPageClient() {
         )}
 
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
-          🧰 Project and Practical Work ({recordedProjects.length} recorded · {record.totals.projects} required)
+          Project and Practical Work ({recordedProjects.length} recorded · {record.totals.projects} required)
         </h3>
         {recordedProjects.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
@@ -618,7 +618,7 @@ export function TranscriptPageClient() {
         )}
 
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
-          📎 Evidence and Provenance ({record.evidence.length} records)
+          Evidence and Provenance ({record.evidence.length} records)
         </h3>
         {record.evidence.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>

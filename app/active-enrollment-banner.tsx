@@ -51,7 +51,7 @@ export function ActiveEnrollmentBanner() {
     >
       <div>
         <strong style={{ fontSize: "1.1rem" }}>
-          ⚡ Active Enrollment ({activePrograms.length} {activePrograms.length === 1 ? "Degree" : "Degrees"})
+          Active Enrollment ({activePrograms.length} {activePrograms.length === 1 ? "Degree" : "Degrees"})
         </strong>
         <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>
           Your daily study tasks are ready.

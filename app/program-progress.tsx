@@ -359,7 +359,7 @@ export default function ProgramProgress({
             <strong style={{ fontSize: "0.95rem" }}>
               {requirementEvaluation.satisfied
                 ? "Pathway requirements completed"
-                : "📊 Pathway Requirement Status"}
+                : "Pathway Requirement Status"}
             </strong>
             <span
               style={{

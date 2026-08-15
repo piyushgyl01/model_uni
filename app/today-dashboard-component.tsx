@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CourseVersionId, PublishedProgramBundle } from "./domain/catalog";
+import { resolveLearnerPath } from "./domain/learner-path";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
 import { syncStoredProgram } from "./progress-sync-client";
@@ -33,6 +34,10 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
   const programTitle = bundle?.programVersion.title ?? projectedView!.program.title;
   const programSlug = bundle?.program.canonicalSlug ?? projectedView!.program.slug;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Real hours for this programme, so the pace options quote a true estimate.
+  const programHours = bundle
+    ? resolveLearnerPath(bundle).totals.nominalHours
+    : undefined;
   const [mounted, setMounted] = useState(Boolean(projectedView));
   const [projectedTerms, setProjectedTerms] = useState(
     projectedView?.queue.terms ?? [],
@@ -181,7 +186,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
         >
           <div>
             <h2 style={{ margin: "0 0 0.4rem 0", fontSize: "1.2rem" }}>
-              ⚡ Start Studying {programTitle}
+              Start Studying {programTitle}
             </h2>
             <p style={{ margin: 0, fontSize: "0.95rem" }}>
               Enroll to generate your daily <strong>&quot;What do I do today?&quot;</strong> study queue based on your weekly pace.
@@ -199,12 +204,13 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
               fontSize: "1rem",
             }}
           >
-            🎓 Enroll & Generate Schedule
+            Enroll & Generate Schedule
           </button>
         </div>
         <EnrollmentModal
           programVersionId={programVersionId}
           programTitle={programTitle}
+          programHours={programHours}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
@@ -269,7 +275,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
             fontSize: "0.85rem",
           }}
         >
-          ⚙️ Manage Pace ({queue.enrollment?.paceHoursPerWeek ?? 40} hrs/wk)
+          Manage Pace ({queue.enrollment?.paceHoursPerWeek ?? 40} hrs/wk)
         </button>
       </div>
 
@@ -374,13 +380,13 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
             fontSize: "0.95rem",
           }}
         >
-          🎉 <strong>Daily Goal Achieved!</strong> You finished all {queue.totalBlocksToday} study blocks for today. Great job!
+          <strong>Daily Goal Achieved!</strong> You finished all {queue.totalBlocksToday} study blocks for today. Great job!
         </div>
       )}
 
       {/* Study Blocks List */}
       <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
-        📅 Today&apos;s Study Tasks ({queue.blocks.length} Sessions)
+        Today&apos;s Study Tasks ({queue.blocks.length} Sessions)
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -439,7 +445,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                           fontWeight: "bold",
                         }}
                       >
-                        📎 Proof Attached
+                        Proof Attached
                       </span>
                     )}
                   </h4>
@@ -488,7 +494,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
               </label>
               {block.lockedReason && (
                 <div style={{ color: "#aa0000", fontSize: "0.8rem", marginTop: "0.35rem", maxWidth: "18rem" }}>
-                  🔒 {block.lockedReason}
+                  {block.lockedReason}
                 </div>
               )}
             </div>
@@ -513,6 +519,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
       <EnrollmentModal
         programVersionId={programVersionId}
         programTitle={programTitle}
+        programHours={programHours}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />

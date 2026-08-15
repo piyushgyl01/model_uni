@@ -14,7 +14,7 @@ export default async function TodayPage() {
           ← Back to All Degree Programs
         </Link>
         <h1 style={{ margin: "0.5rem 0 0.2rem 0", fontSize: "1.8rem" }}>
-          ⚡ Today&apos;s Study Queue
+          Today&apos;s Study Queue
         </h1>
         <p style={{ margin: 0, color: "#444" }}>
           Your daily schedule generated from your enrolled degree programs and study pace.

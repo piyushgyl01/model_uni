@@ -135,7 +135,7 @@ export function PrerequisiteLockBanner() {
     >
       <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.15rem" }}>
         {missingPrerequisites.length > 0
-          ? "🔒 Prerequisite controls locked"
+          ? "Prerequisite controls locked"
           : "Prerequisite waiver on record"}
       </h3>
 

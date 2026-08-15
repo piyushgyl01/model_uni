@@ -14,16 +14,34 @@ import {
 interface EnrollmentModalProps {
   readonly programVersionId: ProgramVersionId;
   readonly programTitle: string;
+  /** Total guided hours in this programme's selected path, when known. */
+  readonly programHours?: number;
   readonly isOpen: boolean;
   readonly onClose: () => void;
 }
 
 const PACE_PRESETS = [
-  { hours: 40, label: "Full-Time (40 hrs/week)", desc: "~3 years completion" },
-  { hours: 30, label: "Intensive (30 hrs/week)", desc: "~4 years completion" },
-  { hours: 20, label: "Part-Time (20 hrs/week)", desc: "~6 years completion" },
-  { hours: 10, label: "Casual (10 hrs/week)", desc: "~9 years completion" },
+  { hours: 40, label: "Full-Time (40 hrs/week)" },
+  { hours: 30, label: "Intensive (30 hrs/week)" },
+  { hours: 20, label: "Part-Time (20 hrs/week)" },
+  { hours: 10, label: "Casual (10 hrs/week)" },
 ];
+
+/**
+ * These estimates used to be hardcoded degree lengths, so a 40-hour course
+ * offered "~9 years completion" at a casual pace. Derive them from the
+ * programme actually being enrolled in, and say nothing when it is unknown.
+ */
+function completionEstimate(
+  programHours: number | undefined,
+  paceHoursPerWeek: number,
+): string | undefined {
+  if (!programHours || programHours <= 0) return undefined;
+  const weeks = Math.ceil(programHours / paceHoursPerWeek);
+  if (weeks <= 12) return `about ${weeks} week${weeks === 1 ? "" : "s"}`;
+  if (weeks < 78) return `about ${Math.round(weeks / 4.345)} months`;
+  return `about ${(weeks / 52).toFixed(1)} years`;
+}
 
 const STUDY_DAY_OPTIONS: readonly { readonly value: StudyDay; readonly label: string }[] = [
   { value: 1, label: "Mon" },
@@ -38,6 +56,7 @@ const STUDY_DAY_OPTIONS: readonly { readonly value: StudyDay; readonly label: st
 export function EnrollmentModal({
   programVersionId,
   programTitle,
+  programHours,
   isOpen,
   onClose,
 }: EnrollmentModalProps) {
@@ -124,7 +143,7 @@ export function EnrollmentModal({
       >
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2 style={{ margin: 0, fontSize: "1.3rem" }}>
-            🎓 {isCurrentlyEnrolled ? "Manage Enrollment" : "Enroll in Degree"}
+            {isCurrentlyEnrolled ? "Manage Enrollment" : "Enroll in Degree"}
           </h2>
           <button
             onClick={onClose}
@@ -194,10 +213,15 @@ export function EnrollmentModal({
                   onChange={() => setPaceHours(preset.hours)}
                 />
                 <div>
-                  <strong>{preset.label}</strong> —{" "}
-                  <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                    {preset.desc}
-                  </span>
+                  <strong>{preset.label}</strong>
+                  {completionEstimate(programHours, preset.hours) ? (
+                    <>
+                      {" — "}
+                      <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                        {completionEstimate(programHours, preset.hours)}
+                      </span>
+                    </>
+                  ) : null}
                 </div>
               </label>
             ))}
@@ -234,7 +258,7 @@ export function EnrollmentModal({
               fontSize: "0.85rem",
             }}
           >
-            💡 <strong>Daily Target:</strong> ~
+            <strong>Daily Target:</strong> ~
             {Math.round(
               (Math.min(paceHours, Math.max(1, studyDays.length) * 8) /
                 Math.max(1, studyDays.length)) *

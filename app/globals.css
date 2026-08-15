@@ -13,6 +13,23 @@
   --tag-bg: #e8e8e8;
   --card-bg: #ffffff;
   --radius: 0px;
+
+  /* Spacing scale. Gaps were previously chosen ad hoc per component, which is
+     why nothing lined up vertically. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* State colours. Progress was previously legible only by reading the words. */
+  --state-done: #14622f;
+  --state-done-bg: #eef6f0;
+  --state-active: #8a4b00;
+  --state-active-bg: #fbf3e8;
+  --state-locked: #6b6b6b;
+  --state-locked-bg: #f2f2f2;
 }
 
 * {
@@ -463,6 +480,232 @@ footer, #catalog-footer {
     flex-wrap: wrap;
   }
   .degree-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Component styles
+   These class names were already in the markup but had no rules, so the course
+   page, unit checklist and progress panels rendered as unspaced raw HTML.
+   They extend the existing language: hairline borders, square corners,
+   monospace for labels, navy for emphasis.
+--------------------------------------------------------------------------- */
+
+/* Accessibility helpers. Both were referenced but undefined, so screen-reader
+   text was rendering on screen and the skip link was permanently visible. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+}
+
+.skip-link:focus {
+  left: var(--space-3);
+  top: var(--space-3);
+}
+
+/* Progress readout. The label and its value are a row, not run-on text. */
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.progress-label strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-rail {
+  width: 100%;
+  height: 10px;
+  background: var(--highlight-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-rail > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.universal-progress-detail {
+  margin: var(--space-2) 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.universal-course-progress,
+.universal-program-progress {
+  display: block;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+/* The learning-unit checklist: the one surface a learner actually touches.
+   Previously each row ran together as "checkbox, week label, title, link"
+   with no separation at all. */
+.universal-unit-checklist {
+  border: 0;
+  margin: var(--space-4) 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.universal-unit-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-light);
+  background: var(--card-bg);
+}
+
+.universal-unit-check:hover {
+  border-color: var(--border);
+}
+
+.universal-unit-check > input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.universal-unit-check > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.universal-unit-check small {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.universal-unit-check label {
+  cursor: pointer;
+}
+
+.universal-unit-check a {
+  font-size: 0.8rem;
+}
+
+/* A disabled fieldset means a prerequisite is unmet; say so visually as well
+   as in the banner above it. */
+.universal-unit-checklist:disabled .universal-unit-check {
+  background: var(--state-locked-bg);
+  color: var(--state-locked);
+  border-style: dashed;
+}
+
+.universal-unit-checklist:disabled .universal-unit-check label {
+  cursor: not-allowed;
+}
+
+/* Completed work should be readable at a glance rather than by reading. */
+.universal-unit-check:has(input:checked) {
+  border-left: 3px solid var(--state-done);
+  background: var(--state-done-bg);
+}
+
+/* Assessments */
+.universal-course-assessments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.universal-assessment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Term and requirement cards reuse the hairline card treatment. */
+.universal-period-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.universal-period-card,
+.universal-requirement-group {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: var(--space-4);
+}
+
+.universal-learning-unit {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.universal-outcome-list,
+.universal-prerequisite-list,
+.universal-resource-list,
+.universal-provenance-list {
+  margin: var(--space-2) 0 0;
+  padding-left: 18px;
+}
+
+.universal-outcome-list li,
+.universal-prerequisite-list li,
+.universal-resource-list li {
+  margin-bottom: var(--space-1);
+}
+
+/* Recognition notice: honest, but it should read as a footnote rather than a
+   warning banner competing with the programme title. */
+.universal-recognition-notice {
+  border: 1px solid var(--border-light);
+  background: var(--highlight-bg);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: var(--space-5) 0;
+}
+
+@media (max-width: 640px) {
+  .universal-unit-check {
+    padding: var(--space-2);
+  }
+  .universal-period-grid,
+  .universal-assessment-grid {
     grid-template-columns: 1fr;
   }
 }

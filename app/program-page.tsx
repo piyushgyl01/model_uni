@@ -155,8 +155,7 @@ export default function ProgramPage({
       <header className="topbar universal-topbar">
         <Link className="brand" href="/" aria-label="Course Atlas home">
           <span className="brand-mark" aria-hidden="true" />
-          <span>
-            <strong>Course Atlas</strong>
+          <span><strong>Course Atlas</strong>
             <small>Independent Study Pathway</small>
           </span>
         </Link>
@@ -188,24 +187,20 @@ export default function ProgramPage({
           </div>
 
           <div className="program-meta-strip">
-            <span>
-              🗓️ <strong>Duration:</strong> {programVersion.nominalDuration}
+            <span><strong>Duration:</strong> {programVersion.nominalDuration}
+              {/* Most published durations already read "3 years · 6 terms", so
+                  appending the term count unconditionally printed it twice. */}
               {representativeCalendar?.structure === "terms" &&
+                !/\bterms?\b/i.test(programVersion.nominalDuration) &&
                 ` · ${representativePeriods.length} terms`}
             </span>
-            <span>
-              📚 <strong>Path:</strong> {representativePathIds.size}
+            <span><strong>Path:</strong> {representativePathIds.size}
               {courseRecords.length !== representativePathIds.size
                 ? ` selected from ${courseRecords.length} options`
                 : ""}
             </span>
-            <span>⏱️ <strong>Workload:</strong> {representativePathHours} guided hours</span>
-            <span>🏷️ <strong>Degree Level:</strong> {programVersion.credentialLabel}</span>
-          </div>
-
-          <div className="notice-strip universal-recognition-notice" role="note" style={{ margin: "15px 0", padding: "10px", background: "#f5f5f5", border: "1px solid #ccc", fontSize: "0.85rem" }}>
-            <strong>Recognition and Transfer Notice:</strong>
-            <p style={{ margin: "4px 0 0 0" }}>{programVersion.recognitionNotice}</p>
+            <span><strong>Workload:</strong> {representativePathHours} guided hours</span>
+            <span><strong>Degree Level:</strong> {programVersion.credentialLabel}</span>
           </div>
 
           {/* Interactive Student Progress Checklist Tracker */}
@@ -223,6 +218,14 @@ export default function ProgramPage({
             />
           </div>
         </section>
+
+          {/* Kept in full, but placed after the overview. It answers a question
+              a visitor has not asked yet when it sits under the title. */}
+          <div className="notice-strip universal-recognition-notice" role="note">
+            <strong>Recognition and Transfer Notice:</strong>
+            <p style={{ margin: "4px 0 0 0" }}>{programVersion.recognitionNotice}</p>
+          </div>
+
 
         {/* TODAY'S STUDY QUEUE & ENROLLMENT DASHBOARD */}
         <TodayDashboardComponent bundle={clientBundle} />
@@ -266,7 +269,7 @@ export default function ProgramPage({
                     <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{version.summary}</p>
                     {version.prerequisites && version.prerequisites.length > 0 && (
                       <p style={{ fontSize: "0.8rem", color: "#666", marginTop: "4px", margin: 0 }}>
-                        📌 <strong>Prerequisites:</strong>{" "}
+                        <strong>Prerequisites:</strong>{" "}
                         {version.prerequisites
                           .map((prereq) => {
                             const prereqCv = courseVersions.find(

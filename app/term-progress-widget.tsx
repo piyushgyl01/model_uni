@@ -175,10 +175,9 @@ function TermProgressFrame({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ fontSize: "1.2rem" }}>📍</span>
-          <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
             {allTermsSatisfied
-              ? "🎉 All Terms Completed!"
+              ? "All Terms Completed!"
               : `Current Journey Status: You are in ${activeTermLabel} of ${totalTerms}`}
           </h3>
         </div>
@@ -236,7 +235,7 @@ function TermProgressFrame({
           }}
         >
           <strong style={{ color: "#555" }}>
-            ⏭️ Coming Up Next in {nextLabel}:
+            ⏭ Coming Up Next in {nextLabel}:
           </strong>{" "}
           <span style={{ color: "#444" }}>
             {nextCourseTitles.length > 0

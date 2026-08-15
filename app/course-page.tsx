@@ -164,7 +164,7 @@ export default function CoursePage({
           </p>
         </header>
         {"note" in reference && reference.note && <p style={{ fontSize: "0.85rem" }}>{reference.note}</p>}
-        
+
         <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", fontSize: "0.8rem", fontFamily: "monospace", marginTop: "6px", background: "#f5f5f5", padding: "4px 8px" }}>
           <div>
             <strong>Access:</strong>{" "}
@@ -345,8 +345,7 @@ export default function CoursePage({
       <header className="topbar universal-topbar">
         <Link className="brand" href="/" aria-label="Course Atlas home">
           <span className="brand-mark" aria-hidden="true" />
-          <span>
-            <strong>Course Atlas</strong>
+          <span><strong>Course Atlas</strong>
             <small>Course Syllabus</small>
           </span>
         </Link>
@@ -384,10 +383,10 @@ export default function CoursePage({
           </div>
 
           <div className="course-meta-strip">
-            <span>⏱️ <strong>Guided Workload:</strong> {courseVersion.nominalHours} hours</span>
-            <span>📖 <strong>Syllabus:</strong> {orderedUnits.length} learning units</span>
-            <span>🎯 <strong>Passing Score:</strong> {courseVersion.gradingPolicy.passingPercentage}%</span>
-            <span>🏷️ <strong>Format:</strong> {courseVersion.format}</span>
+            <span><strong>Guided Workload:</strong> {courseVersion.nominalHours} hours</span>
+            <span><strong>Syllabus:</strong> {orderedUnits.length} learning units</span>
+            <span><strong>Passing Score:</strong> {courseVersion.gradingPolicy.passingPercentage}%</span>
+            <span><strong>Format:</strong> {courseVersion.format}</span>
           </div>
 
           {/* Interactive Unit Progress Checklist Tracker */}
