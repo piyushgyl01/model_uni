@@ -119,7 +119,10 @@ export default function CourseProgress({
 
   useEffect(() => {
     let active = true;
-    const hydrationFrame = window.requestAnimationFrame(() => {
+    // Not requestAnimationFrame: it never fires in a hidden document, which
+    // left the connection stuck on "checking" and the whole checklist
+    // disabled for any page that started in a background tab.
+    queueMicrotask(() => {
       if (!active) return;
       refreshFromLocal();
       refreshFromCloud().catch(() => {
@@ -147,7 +150,6 @@ export default function CourseProgress({
     window.addEventListener("storage", storedProgressChanged);
     return () => {
       active = false;
-      window.cancelAnimationFrame(hydrationFrame);
       window.removeEventListener("online", reconnect);
       window.removeEventListener(PROGRESS_EVENT, localProgressChanged);
       window.removeEventListener("storage", storedProgressChanged);

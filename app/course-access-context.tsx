@@ -68,12 +68,18 @@ export function CourseAccessProvider({
   }, [bundle.programVersion.id]);
 
   useEffect(() => {
-    const hydrationFrame = window.requestAnimationFrame(refresh);
+    let active = true;
+    // A microtask, not requestAnimationFrame: rAF never fires while the
+    // document is hidden, so gating hydration on it left a course page opened
+    // in a background tab unhydrated and its controls disabled forever.
+    queueMicrotask(() => {
+      if (active) refresh();
+    });
     window.addEventListener(PROGRESS_EVENT, refresh);
     const storageChanged = () => refresh();
     window.addEventListener("storage", storageChanged);
     return () => {
-      window.cancelAnimationFrame(hydrationFrame);
+      active = false;
       window.removeEventListener(PROGRESS_EVENT, refresh);
       window.removeEventListener("storage", storageChanged);
     };

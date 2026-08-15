@@ -143,7 +143,9 @@ export default function ProgramProgress({
 
   useEffect(() => {
     let active = true;
-    const hydrationFrame = window.requestAnimationFrame(() => {
+    // Not requestAnimationFrame: it never fires in a hidden document, so a
+    // page opened in a background tab stayed on "checking" indefinitely.
+    queueMicrotask(() => {
       if (!active) return;
       refreshFromLocal();
       refreshFromCloud().catch(() => {
@@ -171,7 +173,6 @@ export default function ProgramProgress({
     window.addEventListener("storage", storedProgressChanged);
     return () => {
       active = false;
-      window.cancelAnimationFrame(hydrationFrame);
       window.removeEventListener("online", reconnect);
       window.removeEventListener(PROGRESS_EVENT, localProgressChanged);
       window.removeEventListener("storage", storedProgressChanged);

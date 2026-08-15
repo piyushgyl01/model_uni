@@ -93,12 +93,19 @@ async function browserEnvironment(persistRoot) {
   return { miniflare, origin: (await miniflare.ready).origin };
 }
 
-function watchPage(page, failures) {
+function watchPage(page, failures, { allowAnonymous = false } = {}) {
   page.releaseFailures = failures;
   page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
   page.on("response", (response) => {
     const url = new URL(response.url());
+    // A signed-out visitor is *supposed* to get 401 from the progress API;
+    // that is the anonymous answer the client needs, not a failure.
+    const expectedAnonymous =
+      allowAnonymous &&
+      response.status() === 401 &&
+      url.pathname.startsWith("/api/learner-");
     if (
+      !expectedAnonymous &&
       response.status() >= 400 &&
       url.origin === new URL(page.url() || "http://invalid").origin
     ) {
@@ -331,6 +338,119 @@ test(
 
     await contextB.close();
     await contextA.close();
+    assert.deepEqual(failures, [], failures.join("\n"));
+  },
+);
+
+
+test(
+  "signed-out gate: a learner with no account can tick week-sized work and keep it",
+  { timeout: 120_000 },
+  async (t) => {
+    // The authenticated gate above never exercised this path, which is how a
+    // permanently disabled checklist shipped: hydration was gated on
+    // requestAnimationFrame, and that never fires in a hidden document, so a
+    // signed-out page sat on "Checking cloud progress…" with every control
+    // disabled.
+    const persistRoot = await mkdtemp(join(tmpdir(), "course-atlas-guest-"));
+    const { miniflare, origin } = await browserEnvironment(persistRoot);
+    const browser = await chromium.launch({
+      executablePath: await chromeExecutable(),
+      headless: true,
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    });
+    t.after(async () => {
+      await browser.close();
+      await miniflare.dispose();
+      await rm(persistRoot, { recursive: true, force: true });
+    });
+
+    const failures = [];
+    // No auth headers: this is a visitor who never signs in.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    watchPage(page, failures, { allowAnonymous: true });
+
+    // Week-sized work exists only in the runnable Computer Science publication,
+    // and CS101 has no prerequisites, so its checklist should be open.
+    // The runnable Computer Science publication is large and this runs on a
+    // cold Miniflare, so the default 30s navigation budget is too tight when
+    // the suite is under load.
+    await page.goto(
+      `${origin}/programs/computer-science/courses/programming-1`,
+      { waitUntil: "domcontentloaded", timeout: 90_000 },
+    );
+    const checklist = page.locator("fieldset.universal-unit-checklist");
+    await checklist.waitFor();
+
+    // The sync must settle rather than hang, or everything below is disabled.
+    await page.waitForFunction(
+      () => {
+        const fieldset = document.querySelector("fieldset.universal-unit-checklist");
+        return Boolean(fieldset) && !fieldset.disabled;
+      },
+      undefined,
+      { timeout: 20_000 },
+    );
+    assert.equal(
+      await page.locator("text=Checking cloud progress").count(),
+      0,
+      "A signed-out course page never finished checking for cloud progress.",
+    );
+
+    const unitBox = checklist.locator(".universal-unit-check > input").first();
+    assert.equal(await unitBox.isDisabled(), false);
+    assert.equal(await unitBox.isChecked(), false);
+
+    const weekBoxes = checklist.locator(".universal-week-check input");
+    const weekCount = await weekBoxes.count();
+    assert.ok(weekCount > 0, "The course page exposed no week-sized work.");
+
+    // Finishing every week of the first unit must complete that unit.
+    const firstUnit = checklist.locator(".universal-unit-check").first();
+    const firstUnitWeeks = firstUnit.locator(".universal-week-check input");
+    const firstUnitWeekCount = await firstUnitWeeks.count();
+    assert.ok(firstUnitWeekCount >= 2);
+    for (let index = 0; index < firstUnitWeekCount; index += 1) {
+      await firstUnitWeeks.nth(index).click();
+    }
+    await page.waitForTimeout(500);
+    assert.equal(await unitBox.isChecked(), true);
+
+    // The whole point: it is still there after a refresh.
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 90_000 });
+    await checklist.waitFor();
+    await page.waitForFunction(
+      () => {
+        const fieldset = document.querySelector("fieldset.universal-unit-checklist");
+        return Boolean(fieldset) && !fieldset.disabled;
+      },
+      undefined,
+      { timeout: 20_000 },
+    );
+    assert.equal(
+      await checklist.locator(".universal-unit-check > input").first().isChecked(),
+      true,
+      "A signed-out learner's completed unit did not survive a refresh.",
+    );
+    for (let index = 0; index < firstUnitWeekCount; index += 1) {
+      assert.equal(
+        await checklist
+          .locator(".universal-unit-check")
+          .first()
+          .locator(".universal-week-check input")
+          .nth(index)
+          .isChecked(),
+        true,
+        `Week ${index + 1} did not survive a refresh.`,
+      );
+    }
+    assert.match(
+      await page.locator("p.universal-progress-detail").innerText(),
+      /1 of \d+ learning units complete/u,
+    );
+
+    await context.close();
     assert.deepEqual(failures, [], failures.join("\n"));
   },
 );
