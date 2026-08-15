@@ -72,11 +72,35 @@ npm run lint
 npm run catalog:audit-resources
 ```
 
-The dated Computer Science 1.2 provider-check report is kept at
-`content/audits/computer-science-v1-2-resources-2026-08-14.json`. It separates
-successful HTTP checks and redirects from provider-blocked URLs that retain
-manual editorial evidence; any definitive DNS/400/404/410 failure makes the
-audit command fail.
+The dated Computer Science 1.2 provider-check reports are kept in
+`content/audits/`. They separate successful HTTP checks and redirects from
+provider-blocked URLs that retain manual editorial evidence; any definitive
+DNS/400/404/410 failure makes the audit command fail. The most recent run
+(`computer-science-v1-2-resources-2026-08-15.json`) verified 375 of 402 unique
+URLs over HTTP, classified 27 as indeterminate/manual-only, and found zero
+definitively broken locations.
+
+### Release verification
+
+Two suites hold the published release criteria, so the whole contract can be
+read in one place instead of being inferred from twenty-odd files:
+
+- `tests/release-acceptance.test.ts` names one assertion per criterion and runs
+  against the **latest** publication resolved through the repository boundary,
+  so a newly published version inherits the gate rather than leaving it pinned
+  to a superseded bundle. It proves the selected path is exactly 30 courses and
+  240 units, that every surface — Today, calendar, terms, record, prerequisites,
+  mastery, study plan — agrees on one resolved pathway, that start dates and
+  study days move the schedule, that no day or rolling week exceeds the chosen
+  capacity, that completed assignments stay in their own day's history, that
+  assessments rather than checkboxes pass a course, that prerequisites lock the
+  controls until passed or explicitly waived, and that record claims and links
+  come only from the shared resolver.
+- `tests/release-journey.test.mjs` drives the real built worker on Miniflare D1
+  through one continuous learner journey: enrol, study, fail an assessment,
+  retry, pass, and reach a completed pathway — then proves the state survives a
+  refresh, appears on a second device without clobbering the first, and outlives
+  a genuine restart against a persisted database.
 
 Database schema changes use Drizzle:
 

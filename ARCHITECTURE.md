@@ -577,3 +577,34 @@ This slice proves universal identity, reuse, provenance, versioning,
 requirements, arbitrary course shape, immutable persistence, cross-device
 progress, and publication rules—the decisions that are expensive to retrofit
 after thousands of courses have been ingested.
+
+### Release verification
+
+The published release criteria are held in two suites rather than being spread
+implicitly across the whole test directory.
+
+`tests/release-acceptance.test.ts` is the release gate. It states one named
+assertion per criterion and resolves its publication through
+`catalogRepository.loadBySlug`, asserting that it received the latest version.
+Pinning the gate to the repository boundary rather than to a
+`content/programs/*` module means publishing a new version re-points the
+criteria at the shipping bundle instead of silently leaving them on a
+superseded one. Two of its checks close gaps the per-feature suites could not:
+a single learner fixture is resolved once and every consumer—Today, the
+calendar, terms, the record, prerequisites, mastery and the study plan—must
+name exactly the resolved course set; and the generated schedule is swept for
+capacity, where any seven consecutive days must stay inside the weekly pace,
+which holds without an arbitrary week anchor because each weekday occurs once
+in any such window.
+
+`tests/release-journey.test.mjs` runs the built worker (`dist/server/index.js`)
+on a Miniflare D1 binding and drives one continuous learner journey through
+real HTTP: enrol, complete the learning work, submit project evidence, fail an
+assessment, retry, pass, and reach a completed pathway. It then proves the
+three durability properties that only a deployed system can show—an unchanged
+state across a fresh read, a second device that inherits the record and cannot
+clobber the first, and a genuine restart in which a second Miniflare instance
+opens the same persisted database without re-seeding a publication or losing
+learner work. The signed-in journey lives here rather than in a browser because
+a browser cannot set the platform's `oai-authenticated-user-*` headers; the
+anonymous localStorage journey is covered by manual browser QA instead.

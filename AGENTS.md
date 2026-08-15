@@ -49,8 +49,17 @@
 | `tests/catalog-persistence.test.ts` | D1 persistence + shadow comparison | Uses Miniflare D1; seeds idempotently; tests conflict rejection, chunked bundles, fallback rules |
 | `tests/progress-api.test.mjs` | Auth + progress API | Spins up built worker (`dist/server/index.js`); tests ChatGPT auth gate, CORS, import consent |
 | `tests/rendered-html.test.mjs` | Source-level architecture guards | Greps route/page files for forbidden patterns (EE-specific imports, hardcoded semesters, etc.) |
+| `tests/release-acceptance.test.ts` | **Release gate** — one named assertion per published verification criterion | Resolves the *latest* publication through `catalogRepository`, never a direct `content/programs/*` import, so a new version inherits the criteria automatically |
+| `tests/release-journey.test.mjs` | End-to-end enrollment → completion journey | Real built worker on Miniflare D1; covers refresh survival, a second device, and a persisted-D1 restart |
 
 **Run single test file**: `node --import tsx --test tests/catalog-contract.test.ts`
+
+**Release criteria**: `tests/release-acceptance.test.ts` covers the selected-path
+size, cross-surface pathway agreement, start-date/study-day scheduling, capacity
+ceilings, Today history, assessment-driven mastery, prerequisite locking and
+record honesty. `tests/release-journey.test.mjs` covers cloud round-trips, safe
+restarts, learner-page scoping and the full browser-equivalent journey. Between
+them every criterion is asserted by name — keep it that way when adding one.
 
 ## Environment Gotchas
 
