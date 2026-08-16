@@ -3,8 +3,8 @@
 Status: D1-backed catalog, publication, and learner-progress foundation, August 2026
 
 The current release implements the universal publication contract, validation,
-repository boundary, stable seed identities, six program families spanning
-engineering, Computer Science, Physics, Mathematics, and a spreadsheet sprint,
+repository boundary, stable seed identities, five degree families spanning
+engineering, Computer Science, Physics, and Mathematics,
 generic program/course renderers, D1-backed catalog reads, and authenticated
 version-aware progress. Checked-in
 publications are the reviewed seed inputs; D1 stores the immutable runtime
@@ -563,8 +563,13 @@ licenses/access offers, provenance, slug aliases, audit/outbox events, and the
 EE seed manifest. Computer Science proves a second complete six-term
 degree-equivalent structure; its immutable 1.2 publication also replaces vague
 instructional templates with sixteen runnable weekly assignments and two
-rubric-scored assessments in every course. The non-degree spreadsheet sprint
-proves that the model is not coupled to degrees or semesters.
+rubric-scored assessments in every course.
+
+A one-course, eight-week spreadsheet sprint previously demonstrated that the
+model is not coupled to degrees or semesters. It has been withdrawn from the
+catalog, so that property no longer has a published example — the arbitrary
+course-length case is still covered by a sixteen-unit Electrical Engineering
+course, but nothing published now exercises a non-degree programme shape.
 
 The active runtime path now idempotently seeds checked-in publications into
 D1, reads them through the D1 repository, verifies every checked-in publication

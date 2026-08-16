@@ -41,7 +41,7 @@ import {
   type PhysicsCourseSpec,
 } from "../content/programs/physics-course-specs";
 import { physicsBundle } from "../content/programs/physics";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 function collectManifestIdentityValues(value: unknown): string[] {
   if (typeof value === "string") return [value];
@@ -86,16 +86,16 @@ function collectBundleEntityIds(bundle: PublishedProgramBundle): string[] {
   ];
 }
 
-test("publishes six structurally different programs from eight publication versions", () => {
+test("publishes five structurally different degrees from seven publication versions", () => {
   const summaries = catalogRepository.listPrograms();
-  assert.equal(summaries.length, 6);
+  assert.equal(summaries.length, 5);
   assert.equal(
     summaries.reduce(
       (total, program) =>
         total + catalogRepository.listVersions(program.slug).length,
       0,
     ),
-    8,
+    7,
   );
 
   const ee = summaries.find((program) => program.slug === "electrical-engineering");
@@ -109,15 +109,11 @@ test("publishes six structurally different programs from eight publication versi
   const mathematics = summaries.find(
     (program) => program.slug === "mathematics",
   );
-  const spreadsheets = summaries.find(
-    (program) => program.slug === "practical-spreadsheets",
-  );
   assert.ok(ee);
   assert.ok(computerScience);
   assert.ok(mechanicalEngineering);
   assert.ok(physics);
   assert.ok(mathematics);
-  assert.ok(spreadsheets);
   assert.equal(ee.courseCount, 31);
   assert.equal(ee.availableCourseCount, 37);
   assert.equal(ee.learningUnitCount, 496);
@@ -146,10 +142,6 @@ test("publishes six structurally different programs from eight publication versi
   assert.equal(mathematics.resourceCount, 34);
   assert.equal(mathematics.nominalHours, 4_800);
   assert.equal(mathematics.latestVersion, "1.0.0");
-  assert.equal(spreadsheets.courseCount, 1);
-  assert.equal(spreadsheets.availableCourseCount, 1);
-  assert.equal(spreadsheets.learningUnitCount, 8);
-  assert.equal(spreadsheets.resourceCount, 9);
 });
 
 test("the Computer Science publication is complete, coherent, and executable", () => {
@@ -1443,8 +1435,7 @@ test("extra specialization study does not invalidate a valid pathway", () => {
 });
 
 test("the same model accepts an eight-unit intensive without degree assumptions", () => {
-  const bundle = catalogRepository.loadBySlug("practical-spreadsheets");
-  assert.ok(bundle);
+  const bundle = practicalSpreadsheetsProgram;
   assert.deepEqual(validatePublishedProgramBundle(bundle), {
     valid: true,
     issues: [],
@@ -1465,8 +1456,7 @@ test("the same model accepts an eight-unit intensive without degree assumptions"
 });
 
 test("titles and URLs are attributes rather than relationship identities", () => {
-  const original = catalogRepository.loadBySlug("practical-spreadsheets");
-  assert.ok(original);
+  const original = practicalSpreadsheetsProgram;
   const changed = structuredClone(original) as PublishedProgramBundle;
   const mutableVersion = changed.resourceVersions[0] as {
     title: string;

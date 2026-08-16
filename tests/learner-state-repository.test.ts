@@ -10,7 +10,7 @@ import {
 } from "../app/catalog/learner-progress-repository";
 import { seedPublishedProgramBundles } from "../app/catalog/d1-repository";
 import { computerScienceBundleV1 } from "../content/programs/computer-science";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 async function createDatabase() {
   const miniflare = new Miniflare({

@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Miniflare } from "miniflare";
+import { projectCatalogReadModels } from "../app/catalog/catalog-read-model.ts";
+import { seedPublishedProgramBundles } from "../app/catalog/d1-repository.ts";
+import { initializeCatalogRuntimeSchema } from "../app/catalog/d1-runtime-schema.ts";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets.ts";
 
 async function worker() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -58,10 +62,13 @@ async function progressEnvironment() {
       },
     ],
   });
-  return {
-    miniflare,
-    database: await miniflare.getD1Database("DB", "course-atlas"),
-  };
+  const database = await miniflare.getD1Database("DB", "course-atlas");
+  // These tests write progress against a small publication. It is a fixture
+  // rather than a checked-in programme now, so the worker never seeds it.
+  await initializeCatalogRuntimeSchema(database);
+  await seedPublishedProgramBundles(database, [practicalSpreadsheetsProgram]);
+  await projectCatalogReadModels(database, [practicalSpreadsheetsProgram]);
+  return { miniflare, database };
 }
 
 const authenticatedHeaders = {

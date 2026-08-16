@@ -1,3 +1,13 @@
+/**
+ * Test fixture only. This was once a published programme; it was withdrawn
+ * from the catalog because it is not a degree and was never wanted in the
+ * product.
+ *
+ * It survives here because it is the suite's only small publication — one
+ * course, eight units — which keeps persistence, journey and read-model tests
+ * fast and readable next to the thirty-course degrees. It is not registered in
+ * the catalog, not in the publication lock, and is never served.
+ */
 import type {
   PublishedProgramBundle,
   ResourceVersionId,

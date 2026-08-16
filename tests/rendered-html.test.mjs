@@ -35,24 +35,22 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.match(html, /Mechanical Engineering/);
   assert.match(html, /Physics/);
   assert.match(html, /Mathematics/);
-  assert.match(html, /Practical Spreadsheets/);
   assert.match(html, /\/programs\/computer-science/);
   assert.match(html, /\/programs\/electrical-engineering/);
   assert.match(html, /\/programs\/mechanical-engineering/);
   assert.match(html, /\/programs\/physics/);
   assert.match(html, /\/programs\/mathematics/);
-  assert.match(html, /\/programs\/practical-spreadsheets/);
   assert.match(
     html,
-    /<strong>6<\/strong>(?:<!-- -->)?\s*complete programs/,
+    /<strong>5<\/strong>(?:<!-- -->)?\s*complete programs/,
   );
   assert.match(
     html,
-    /<strong>152<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
+    /<strong>151<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
   );
   assert.match(
     html,
-    /<strong>1,464<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
+    /<strong>1,456<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
   );
   assert.match(html, /31/);
   assert.match(html, /course minimum path/);
@@ -226,22 +224,9 @@ test("Mathematics renders as a complete six-term program and real-analysis class
   assert.match(courseHtml, /Evidence to keep/);
 });
 
-test("the same program route renders a one-course eight-week intensive", async () => {
-  const response = await render("/programs/practical-spreadsheets");
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /Practical Spreadsheets &amp; Decision Modeling/);
-  assert.match(html, /8 weeks/);
-  assert.match(html, /1/);
-  assert.match(html, /Eight-week self-directed schedule/);
-  assert.match(html, /Power Query/);
-  assert.doesNotMatch(html, /id="concentrations"/);
-  assert.doesNotMatch(html, /six semesters/i);
-});
-
 test("standalone course route is an executable arbitrary-length classroom", async () => {
   const response = await render(
-    "/programs/practical-spreadsheets/courses/practical-spreadsheets-and-decision-modeling",
+    "/programs/electrical-engineering/courses/calculus-i-models-and-change",
   );
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -252,27 +237,16 @@ test("standalone course route is an executable arbitrary-length classroom", asyn
     "Evidence to keep",
     "Course resources",
     "Assessments and grading",
-    "Unit 8",
-    "8 learning units",
+    "Calculus I",
+    "16 learning units",
+    "Unit 16",
+    "Cumulative",
   ]) {
     assert.match(html, new RegExp(phrase));
   }
   assert.match(html, /Access/);
   assert.match(html, /Rights/);
   assert.match(html, /Freshness/);
-  assert.doesNotMatch(html, /Week 16/);
-});
-
-test("a sixteen-unit EE course uses the same standalone classroom", async () => {
-  const response = await render(
-    "/programs/electrical-engineering/courses/calculus-i-models-and-change",
-  );
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /Calculus I/);
-  assert.match(html, /16 learning units/);
-  assert.match(html, /Unit 16/);
-  assert.match(html, /Cumulative/);
 });
 
 test("the learner record is explicitly independent and makes no institutional claim", async () => {

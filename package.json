@@ -9,7 +9,7 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "test": "npm run build && npm run typecheck && node --import tsx --test --test-skip-pattern=\"criterion 12 browser gate\" tests/*.test.ts tests/*.test.mjs && node --test tests/release-browser-journey.test.mjs",
+    "test": "npm run build && npm run typecheck && node --import tsx --test --test-skip-pattern=\"criterion 12 browser gate\" tests/*.test.ts tests/*.test.mjs && node --import tsx --test tests/release-browser-journey.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",

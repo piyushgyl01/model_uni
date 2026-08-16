@@ -33,7 +33,7 @@ import {
   catalogRepository,
 } from "../content/catalog";
 import { catalogPublicationLock } from "../content/manifests/catalog-publication-lock";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
 import { computerScienceBundleV12 } from "../content/programs/computer-science-v1-2";
@@ -835,7 +835,7 @@ test("an existing EE deployment upgrades without rewriting its publication or le
     programSupersessions: catalogProgramSupersessions,
   });
   const programSummaries = await runtimeRepository.listPrograms();
-  assert.equal(programSummaries.length, 6);
+  assert.equal(programSummaries.length, 5);
   let publicationCount = 0;
   for (const program of programSummaries) {
     publicationCount += (

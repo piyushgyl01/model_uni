@@ -9,7 +9,7 @@ import { evaluateTermProgress } from "../app/domain/term-evaluator";
 import { calculateTodayQueue } from "../app/domain/today-queue";
 import type { StoredProgramProgress } from "../app/progress-storage";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 const bundle = computerScienceBundle;
 

@@ -14,7 +14,7 @@ import { d1Batch, type D1DatabaseLike } from "../app/catalog/d1-contract";
 import { seedPublishedProgramBundles } from "../app/catalog/d1-repository";
 import type { PublishedProgramBundle } from "../app/domain/catalog";
 import { catalogRepository } from "../content/catalog";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 async function createDatabase() {
   const miniflare = new Miniflare({
@@ -215,15 +215,15 @@ test("catalog projections rebuild idempotently from the exact immutable hash", a
 test("indexed catalog reads stay fixed at 1,000 programs and keyset-page near row 900", async (t) => {
   const { database, miniflare } = await createDatabase();
   t.after(() => miniflare.dispose());
-  const bundles = currentProgramBundles() as readonly PublishedProgramBundle[];
-  assert.equal(bundles.length, 6);
+  const published = currentProgramBundles() as readonly PublishedProgramBundle[];
+  assert.equal(published.length, 5);
+  // The distinctive small publication this search targets is a fixture rather
+  // than a checked-in degree, so it is seeded alongside them here.
+  const bundles = [...published, practicalSpreadsheetsProgram];
   await seedPublishedProgramBundles(database, bundles);
   await projectCatalogReadModels(database, bundles);
 
-  const practical = bundles.find(
-    (bundle) => bundle.program.canonicalSlug === "practical-spreadsheets",
-  );
-  assert.ok(practical);
+  const practical = practicalSpreadsheetsProgram;
   const beforeCounter = countingDatabase(database);
   const beforeProgram = await listD1ProgramPage(beforeCounter.database, {
     q: "Practical",

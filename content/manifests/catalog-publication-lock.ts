@@ -86,14 +86,4 @@ export const catalogPublicationLock = [
     canonicalSha256:
       "fd6005a6d61478461f977452cf83e2967ab0a2d58e048a8cd846641600a55380",
   },
-  {
-    bundleId: "bnd_practical_spreadsheets_2026_1",
-    programId: "prg_practical_spreadsheets",
-    programVersionId: "prv_practical_spreadsheets_2026_1",
-    version: "1.0.0",
-    publishedAt: "2026-07-29T00:00:00Z",
-    canonicalBytes: 37_030,
-    canonicalSha256:
-      "d72890cafddc4dbf72bf94f0a86838b6072e69d397990114819cde571423ba63",
-  },
 ] as const satisfies readonly CatalogPublicationLockRecord[];

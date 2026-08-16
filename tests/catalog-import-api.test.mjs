@@ -10,7 +10,7 @@ import {
 import { D1CatalogRepository } from "../app/catalog/d1-repository.ts";
 import { createRuntimeCatalogRepository } from "../app/catalog/runtime-repository.ts";
 import { catalogRepository } from "../content/catalog.ts";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets.ts";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets.ts";
 
 const ownerId = "acct_course_atlas_catalog_publisher";
 const authenticatedHeaders = {
@@ -195,6 +195,16 @@ test("publisher-gated catalog imports are durable, idempotent, and immediately v
     ),
   );
 
+  // This publication is no longer checked in, so importing it is a genuine
+  // insert; importing it a second time must still be a no-op.
+  const firstImport = await importPublishedCatalogBundles(
+    [practicalSpreadsheetsProgram],
+    storage,
+  );
+  assert.deepEqual(firstImport, {
+    insertedBundleIds: [practicalSpreadsheetsProgram.id],
+    unchangedBundleIds: [],
+  });
   const checkedInReimport = await importPublishedCatalogBundles(
     [practicalSpreadsheetsProgram],
     storage,

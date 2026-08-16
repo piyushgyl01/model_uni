@@ -11,7 +11,7 @@ import { catalogPublicationLock } from "./manifests/catalog-publication-lock";
  */
 export const CATALOG_RELEASE_KEY = "checked-in-publications";
 export const CATALOG_RELEASE_MANIFEST_SHA256 =
-  "c49d3029afd0a4f24fb7d948869e7eb919fc3cedd6e155c63a55a8367aeed27e";
+  "4e4f38a3cc043c3b40ba2b4f62e07ad6a13345a271dbb507222a6eada72fc708";
 export const CATALOG_READ_MODEL_VERSION = 1;
 export const CATALOG_RELEASE_BUNDLE_COUNT = catalogPublicationLock.length;
 

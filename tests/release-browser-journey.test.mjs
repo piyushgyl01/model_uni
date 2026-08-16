@@ -7,6 +7,10 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Miniflare } from "miniflare";
 import { chromium } from "playwright-core";
+import { projectCatalogReadModels } from "../app/catalog/catalog-read-model.ts";
+import { initializeCatalogRuntimeSchema } from "../app/catalog/d1-runtime-schema.ts";
+import { seedPublishedProgramBundles } from "../app/catalog/d1-repository.ts";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets.ts";
 
 const PROGRAM_PATH = "/programs/practical-spreadsheets";
 const COURSE_PATH = `${PROGRAM_PATH}/courses/practical-spreadsheets-and-decision-modeling`;
@@ -90,6 +94,12 @@ async function browserEnvironment(persistRoot) {
       },
     ],
   });
+  // A small completable publication for the browser journey. It is a fixture
+  // rather than a checked-in programme, so the worker never seeds it itself.
+  const database = await miniflare.getD1Database("DB", "course-atlas");
+  await initializeCatalogRuntimeSchema(database);
+  await seedPublishedProgramBundles(database, [practicalSpreadsheetsProgram]);
+  await projectCatalogReadModels(database, [practicalSpreadsheetsProgram]);
   return { miniflare, origin: (await miniflare.ready).origin };
 }
 

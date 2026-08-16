@@ -6,7 +6,7 @@ import type {
 } from "../app/domain/catalog";
 import { validateCatalogBundles } from "../app/domain/validation";
 import { electricalEngineeringProgram } from "../content/programs/electrical-engineering";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 test("catalog validation rejects cross-program identity drift", () => {
   const changed = structuredClone(

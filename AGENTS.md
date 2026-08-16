@@ -22,13 +22,15 @@
 - **Catalog contract**: `app/domain/catalog.ts` — universal publication types, stable IDs (`crs_*`, `crv_*`, `unt_*`, etc.)
 - **Validation**: `app/domain/validation.ts` — publication integrity + program requirement evaluation
 - **Repository boundary**: `app/catalog/` — `StaticCatalogRepository` (checked-in bundles) ↔ `D1CatalogRepository` (runtime D1) ↔ `runtime-repository.ts` (shadow-verified runtime)
-- **Programs**: `content/programs/` — six published program families across eight checked-in, immutable publication bundles:
+- **Programs**: `content/programs/` — five published degree families across seven checked-in, immutable publication bundles:
   - `electrical-engineering.ts` (37 courses, 4 concentrations, 496 units)
   - `computer-science.ts` + `computer-science-v1-1.ts` + `computer-science-v1-2.ts` (34 courses, 3 concentrations, 240 selected topic blocks and 480 exact weekly assignments)
   - `mechanical-engineering.ts` (34 courses, 3 concentrations, 240 selected units)
   - `physics.ts` (34 courses, 3 concentrations, 240 selected units)
   - `mathematics.ts` (34 courses, 3 concentrations, 240 selected units)
-  - `practical-spreadsheets.ts` (1 course, 8 units, 1 sprint)
+- **Withdrawn**: the one-course spreadsheet sprint was removed from the catalog.
+  Its bundle survives at `tests/fixtures/practical-spreadsheets.ts` purely as the
+  suite's small publication; it is not registered, not locked, and never served.
 - **Routes**: `app/programs/[slug]/` (canonical), legacy `/degrees/[slug]` redirects
 - **Renderers**: `app/program-page.tsx`, `app/course-page.tsx` — generic, no program-specific imports
 - **Learner progress**: D1-backed, version-pinned, ChatGPT-authenticated (`app/api/learner-progress/`)

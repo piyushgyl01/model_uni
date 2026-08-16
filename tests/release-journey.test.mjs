@@ -9,9 +9,10 @@ import {
   collectStaticCatalogBundles,
   seedPublishedProgramBundles,
 } from "../app/catalog/d1-repository.ts";
+import { projectCatalogReadModels } from "../app/catalog/catalog-read-model.ts";
 import { createRuntimeCatalogRepository } from "../app/catalog/runtime-repository.ts";
 import { catalogRepository } from "../content/catalog.ts";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets.ts";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets.ts";
 
 /**
  * The enrollment-to-completion release journey.
@@ -58,10 +59,20 @@ async function journeyEnvironment(d1Persist) {
       },
     ],
   });
-  return {
-    miniflare,
-    database: await miniflare.getD1Database("DB", "course-atlas"),
-  };
+  const database = await miniflare.getD1Database("DB", "course-atlas");
+  // A small completable publication for the journeys. It is a fixture rather
+  // than a checked-in programme, so the worker never seeds it itself.
+  await installJourneyFixture(database);
+  return { miniflare, database };
+}
+
+async function installJourneyFixture(database) {
+  const { initializeCatalogRuntimeSchema } = await import(
+    "../app/catalog/d1-runtime-schema.ts"
+  );
+  await initializeCatalogRuntimeSchema(database);
+  await seedPublishedProgramBundles(database, [practicalSpreadsheetsProgram]);
+  await projectCatalogReadModels(database, [practicalSpreadsheetsProgram]);
 }
 
 async function phase6DatabaseEnvironment(d1Persist) {
@@ -661,8 +672,14 @@ test("criterion 10: the deployed Phase 6 D1 schema upgrades additively to the cu
       .map((version) => catalogRepository.loadBySlug(program.slug, version))
       .filter(Boolean),
   );
-  assert.equal(phase6Bundles.length, 7);
-  await seedPublishedProgramBundles(legacy.database, phase6Bundles);
+  assert.equal(phase6Bundles.length, 6);
+  // The Phase 6 database also held the spreadsheets publication, which has
+  // since been withdrawn from the catalog. The learner rows below reference
+  // it, so an accurate deployed-state fixture still includes it.
+  await seedPublishedProgramBundles(legacy.database, [
+    ...phase6Bundles,
+    practicalSpreadsheetsProgram,
+  ]);
 
   const learnerId = "lrn_release_phase6_upgrade_fixture";
   const projectUnitId = PROJECT_UNIT_IDS[0];
@@ -1080,7 +1097,7 @@ test("a stalled catalog upgrade serves published programs instead of hanging", a
   const elapsed = Date.now() - started;
 
   assert.ok(
-    programs.length >= 6,
+    programs.length >= 5,
     `A catalog read returned ${programs.length} programs.`,
   );
   assert.ok(

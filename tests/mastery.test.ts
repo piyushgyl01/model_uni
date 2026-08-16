@@ -17,7 +17,7 @@ import type {
 } from "../app/learner-progress-contract";
 import type { StoredProgramProgress } from "../app/progress-storage";
 import { computerScienceBundle } from "../content/programs/computer-science-v1-1";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 const bundle = practicalSpreadsheetsProgram;
 const course = bundle.courseVersions[0];

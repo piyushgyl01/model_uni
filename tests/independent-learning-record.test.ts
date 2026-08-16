@@ -3,7 +3,7 @@ import test from "node:test";
 import { buildIndependentLearningRecord } from "../app/domain/independent-learning-record";
 import type { AssessmentEvaluationMethod } from "../app/learner-progress-contract";
 import type { StoredProgramProgress } from "../app/progress-storage";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 const bundle = practicalSpreadsheetsProgram;
 const courseVersion = bundle.courseVersions[0];

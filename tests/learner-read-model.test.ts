@@ -8,7 +8,7 @@ import {
 } from "../app/catalog/learner-read-model-repository";
 import { seedPublishedProgramBundles } from "../app/catalog/d1-repository";
 import { D1LearnerProgressRepository } from "../app/catalog/learner-progress-repository";
-import { practicalSpreadsheetsProgram } from "../content/programs/practical-spreadsheets";
+import { practicalSpreadsheetsProgram } from "./fixtures/practical-spreadsheets";
 
 const migrationDirectoryUrl = new URL("../drizzle/", import.meta.url);
 
