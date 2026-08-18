@@ -1,10 +1,32 @@
 # Course Atlas
 
+> `model_uni` is the repository. The site it builds is called Course Atlas.
+
 **Choose an outcome. Get the whole path.**
 
-Course Atlas is an independent learning-path catalog. A published program tells
-the learner what to learn, in what order, where to learn it for free, what work
-to produce, and how that work is assessed.
+## The idea
+
+A degree is not a mystery. It is a handful of terms, each holding five or six
+courses, taken in an order where each one prepares you for the next, across
+three or four years. That is the whole shape of it.
+
+The material is already free and already online. MIT, Stanford, Harvard,
+Berkeley and others publish the lectures, the readings, the problem sets and
+the exams. What almost nobody publishes is the *shape* — which courses, in
+which order, over how long, and what to do in week three.
+
+Course Atlas is that shape. Five degrees, six terms each, prerequisites
+respected, every course pointing at real free material. The point is to let
+someone study what a university student studies, in the order a university
+teaches it, without enrolling anywhere.
+
+It is deliberately not a university. It awards nothing, verifies nothing, and
+says so on every page.
+
+## What a published program contains
+
+A published program tells the learner what to learn, in what order, where to
+learn it for free, what work to produce, and how that work is assessed.
 
 The product is not tied to electrical engineering. The homepage is a catalog,
 each program has its own route, and every course has a standalone classroom:
@@ -17,8 +39,8 @@ each program has its own route, and every course has a standalone classroom:
         └── courses/{course-slug}
 ```
 
-The same versioned model and generic renderers currently publish six
-deliberately different programs:
+The same versioned model and generic renderers currently publish five
+deliberately different degrees:
 
 - **Electrical Engineering** — 37 available courses, four real concentrations,
   592 authored learning units, and 78 reviewed resources. A coherent selected
@@ -44,10 +66,6 @@ deliberately different programs:
   primary resources. A selected six-term path contains 30 courses, 240 units,
   120 Course Atlas credits, proof portfolios, computational work, expository
   writing, and a defended research thesis.
-- **Practical Spreadsheets & Decision Modeling** — one 40-hour short course,
-  eight learning units, two assessments, no concentration, and a one-sprint
-  schedule.
-
 That range is a contract test: new programs join the catalog as validated
 content bundles rather than through new degree-specific pages.
 
