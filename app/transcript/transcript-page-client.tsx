@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ProgressBackupControls } from "../progress-backup-controls";
 import type {
   LearnerProgramReference,
   LearnerRecordView,
@@ -219,10 +220,15 @@ export function TranscriptPageClient() {
   }
   if (!activeBundle && !selectedCloudRecord) {
     return (
-      <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
-        No learner pathways have progress yet. Start from a program page, enroll,
-        and your Independent Learning Record will appear here.
-      </div>
+      <>
+        <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+          No learner pathways have progress yet. Start from a program page, enroll,
+          and your Independent Learning Record will appear here.
+        </div>
+        {/* Restore matters most to someone whose browser is empty, so the
+            controls must be reachable from the empty state too. */}
+        <ProgressBackupControls />
+      </>
     );
   }
 
@@ -331,6 +337,8 @@ export function TranscriptPageClient() {
           Print / Save PDF Record
         </button>
       </div>
+
+      <ProgressBackupControls />
 
       <div
         style={{
