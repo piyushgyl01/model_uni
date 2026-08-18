@@ -592,11 +592,12 @@ footer, #catalog-footer {
 }
 
 .universal-unit-check > input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 3px 0 0;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
   flex: none;
   accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .universal-unit-check > span {
@@ -729,11 +730,12 @@ footer, #catalog-footer {
 }
 
 .universal-week-check > input[type="checkbox"] {
-  width: 13px;
-  height: 13px;
-  margin: 3px 0 0;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
   flex: none;
   accent-color: var(--state-done);
+  cursor: pointer;
 }
 
 .universal-week-check label {
@@ -757,4 +759,37 @@ footer, #catalog-footer {
 
 .universal-week-check:has(input:checked) label {
   color: var(--state-done);
+}
+
+
+/* Touch input. A checkbox sized for a mouse is a miss-prone target for a
+   thumb, and ticking work off is the main thing a learner does on a phone.
+   The labels beside these boxes are already large and toggle them, so this
+   only has to bring the boxes themselves up to a thumb-sized target. */
+@media (pointer: coarse) {
+  .universal-unit-check > input[type="checkbox"],
+  .universal-week-check > input[type="checkbox"] {
+    width: 26px;
+    height: 26px;
+    margin-top: 0;
+  }
+
+  .universal-unit-check {
+    padding: var(--space-4) var(--space-3);
+    gap: var(--space-4);
+  }
+
+  /* Separate adjacent week rows so neighbouring targets are not confusable. */
+  .universal-week-list {
+    gap: var(--space-3);
+  }
+
+  .universal-week-check {
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+  }
+
+  .btn {
+    padding: 0.6rem 1rem;
+  }
 }
