@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import { ServiceWorkerRegistration } from "./service-worker-registration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +13,16 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fffff8" },
+    { media: "(prefers-color-scheme: dark)", color: "#000080" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -63,9 +74,20 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Complete, executable self-study routes built from free resources.",
       images: ["/og-v2.png"],
     },
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      title: "Course Atlas",
+      statusBarStyle: "default",
+    },
     icons: {
-      icon: "/favicon.svg",
-      shortcut: "/favicon.svg",
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      shortcut: "/icon.svg",
+      apple: "/apple-touch-icon.png",
     },
   };
 }
@@ -80,6 +102,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ServiceWorkerRegistration />
         {children}
       </body>
     </html>
