@@ -17,7 +17,7 @@
  * rather than allowed to grow until the browser evicts the lot.
  */
 const MAX_CACHED_PAGES = 60;
-const VERSION = "v2";
+const VERSION = "v3";
 const ASSET_CACHE = `course-atlas-assets-${VERSION}`;
 const PAGE_CACHE = `course-atlas-pages-${VERSION}`;
 const OFFLINE_URL = "/";
@@ -103,6 +103,20 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, PAGE_CACHE));
+    return;
+  }
+
+  // Cache-first is only safe for a URL whose content can never change under it.
+  // A development module graph is the opposite of that: the dev server hands
+  // out /node_modules/.vite/deps/react.js?v=<hash> and rewrites the hash on
+  // every reoptimize, so pinning one generation leaves two Reacts answering in
+  // the same page. Anything versioned by query string, or served out of the
+  // dev server's own paths, goes to the network untouched.
+  if (
+    url.search.includes("v=") ||
+    url.search.includes("t=") ||
+    /^\/(?:node_modules|src|app|@vite|@id|@fs|__vite|__debug)\//.test(url.pathname)
+  ) {
     return;
   }
 

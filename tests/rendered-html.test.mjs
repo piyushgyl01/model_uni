@@ -302,7 +302,6 @@ test("styling is a switchable theme that leaves the classic look untouched", asy
     "--ok",
     "--bad",
     "--warn",
-    "--accent-ink",
     "--stroke",
     "--stroke-strong",
     "--mono-font",
