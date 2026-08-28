@@ -169,8 +169,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
     return (
       <div
         style={{
-          border: "2px solid #000",
-          background: "#fff",
+          border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+          background: "var(--paper, #fff)",
           padding: "1.25rem",
           marginBottom: "1.5rem",
         }}
@@ -196,9 +196,9 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
             onClick={() => setIsModalOpen(true)}
             style={{
               padding: "0.6rem 1.25rem",
-              background: "#0000ee",
-              color: "#fff",
-              border: "2px solid #000",
+              background: "var(--link-ink, #0000ee)",
+              color: "var(--paper, #fff)",
+              border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
               fontWeight: "bold",
               cursor: "pointer",
               fontSize: "1rem",
@@ -228,11 +228,11 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
   return (
     <section
       style={{
-        border: "2px solid #000",
-        background: "#ffffff",
+        border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+        background: "var(--paper, #ffffff)",
         padding: "1.25rem",
         marginBottom: "2rem",
-        boxShadow: "4px 4px 0px #000",
+        boxShadow: "4px 4px 0px var(--ink, #000)",
       }}
     >
       {/* Header bar */}
@@ -242,7 +242,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          borderBottom: "1px solid #000",
+          borderBottom: "var(--stroke, 1px) solid var(--ink, #000)",
           paddingBottom: "0.75rem",
           marginBottom: "1rem",
           gap: "0.5rem",
@@ -251,8 +251,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
         <div>
           <span
             style={{
-              background: "#000",
-              color: "#fff",
+              background: "var(--ink, #000)",
+              color: "var(--paper, #fff)",
               padding: "0.2rem 0.5rem",
               fontWeight: "bold",
               fontSize: "0.85rem",
@@ -268,8 +268,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
         <button
           onClick={() => setIsModalOpen(true)}
           style={{
-            background: "#fff",
-            border: "1px solid #000",
+            background: "var(--paper, #fff)",
+            border: "var(--stroke, 1px) solid var(--ink, #000)",
             padding: "0.3rem 0.75rem",
             cursor: "pointer",
             fontSize: "0.85rem",
@@ -298,7 +298,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
           style={{
             marginBottom: "1rem",
             padding: "0.65rem 0.75rem",
-            border: "1px solid #aaa",
+            border: "var(--stroke, 1px) solid var(--ink-faint, #aaa)",
             fontSize: "0.85rem",
           }}
         >
@@ -323,31 +323,31 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
           gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
           gap: "0.75rem",
           marginBottom: "1.25rem",
-          background: "#f4f4f4",
+          background: "var(--paper-soft, #f4f4f4)",
           padding: "0.75rem",
-          border: "1px solid #ccc",
+          border: "var(--stroke, 1px) solid var(--rule, #ccc)",
         }}
       >
         <div>
-          <div style={{ fontSize: "0.8rem", color: "#555" }}>Daily Target</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Daily Target</div>
           <strong>~{queue.dailyTargetHours} hrs / day</strong>
         </div>
         <div>
-          <div style={{ fontSize: "0.8rem", color: "#555" }}>Today&apos;s Progress</div>
-          <strong style={{ color: allBlocksDone ? "#008800" : "#000" }}>
+          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Today&apos;s Progress</div>
+          <strong style={{ color: allBlocksDone ? "var(--ok, #008800)" : "var(--ink, #000)" }}>
             {queue.completedBlocksToday} / {queue.totalBlocksToday} Blocks Completed
           </strong>
         </div>
         <div>
-          <div style={{ fontSize: "0.8rem", color: "#555" }}>Overall Degree Progress</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Overall Degree Progress</div>
           <strong>
             {queue.totalCompletedUnits} / {queue.totalUnits} Units
           </strong>
         </div>
         <div>
-          <div style={{ fontSize: "0.8rem", color: "#555" }}>Est. Finish</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Est. Finish</div>
           <strong>{queue.estimatedCompletionDate}</strong>
-          <div style={{ fontSize: "0.75rem", color: "#555" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--ink-soft, #555)" }}>
             {queue.remainingHours.toLocaleString()} hours · ~{queue.estimatedWeeksRemaining} weeks
           </div>
         </div>
@@ -356,8 +356,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
       {queue.capacityLimited && (
         <div
           style={{
-            background: "#fff8e6",
-            border: "1px solid #8a5a00",
+            background: "var(--warn-soft, #fff8e6)",
+            border: "var(--stroke, 1px) solid var(--warn, #8a5a00)",
             padding: "0.75rem",
             marginBottom: "1.25rem",
             fontSize: "0.9rem",
@@ -373,8 +373,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
       {allBlocksDone && (
         <div
           style={{
-            background: "#e6ffe6",
-            border: "1px solid #008800",
+            background: "var(--ok-soft, #e6ffe6)",
+            border: "var(--stroke, 1px) solid var(--ok, #008800)",
             padding: "0.75rem",
             marginBottom: "1.25rem",
             fontSize: "0.95rem",
@@ -391,7 +391,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {queue.blocks.length === 0 && (
-          <div style={{ border: "1px solid #aaa", padding: "0.85rem", background: "#f9f9f9" }}>
+          <div style={{ border: "var(--stroke, 1px) solid var(--ink-faint, #aaa)", padding: "0.85rem", background: "var(--paper-soft, #f9f9f9)" }}>
             {queue.todayIsStudyDay
               ? "No work is due today. Your remaining plan has been recalculated."
               : "Today is not one of your chosen study days. Your work resumes on the next study day."}
@@ -407,8 +407,8 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
             <div
               key={block.scheduleEntryId}
               style={{
-                border: block.completed ? "1px solid #aaa" : "2px solid #000",
-                background: block.completed ? "#f9f9f9" : "#fff",
+                border: block.completed ? "var(--stroke, 1px) solid var(--ink-faint, #aaa)" : "var(--stroke-strong, 2px) solid var(--ink, #000)",
+                background: block.completed ? "var(--paper-soft, #f9f9f9)" : "var(--paper, #fff)",
                 padding: "0.85rem",
                 opacity: block.completed ? 0.75 : 1,
               }}
@@ -423,7 +423,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#555" }}>
+                  <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "var(--ink-soft, #555)" }}>
                     Session {index + 1} of {queue.blocks.length} · {block.scheduleEntry.startTime ?? "Flexible"} · {block.courseTitle} ({block.periodLabel})
                   </div>
                   <h4 style={{ margin: "0.2rem 0 0.4rem", fontSize: "1.1rem" }}>
@@ -439,9 +439,9 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                           marginLeft: "0.5rem",
                           fontSize: "0.75rem",
                           padding: "0.1rem 0.4rem",
-                          background: "#e6ffe6",
-                          color: "#006600",
-                          border: "1px solid #008800",
+                          background: "var(--ok-soft, #e6ffe6)",
+                          color: "var(--ok, #006600)",
+                          border: "var(--stroke, 1px) solid var(--ok, #008800)",
                           fontWeight: "bold",
                         }}
                       >
@@ -449,10 +449,10 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                       </span>
                     )}
                   </h4>
-                <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--ink, #333)", marginBottom: "0.4rem" }}>
                   <strong>What:</strong> {block.activity}
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--ink, #333)", marginBottom: "0.4rem" }}>
                   <strong>Where:</strong>{" "}
                   {block.resourceUrl ? (
                     <a href={block.resourceUrl} target="_blank" rel="noreferrer">
@@ -462,10 +462,10 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                     block.where
                   )}
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "#333", marginBottom: "0.4rem" }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--ink, #333)", marginBottom: "0.4rem" }}>
                   <strong>Produce:</strong> {block.produce}
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "#555" }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>
                   {block.unitTopic} · {block.taskKind} · {block.plannedMinutes} minutes · deadline {block.deadlineDate}
                 </div>
               </div>
@@ -476,9 +476,9 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                   alignItems: "center",
                   gap: "0.4rem",
                   padding: "0.4rem 0.75rem",
-                  background: block.completed ? "#e6ffe6" : "#0000ee",
-                  color: block.completed ? "#006600" : "#fff",
-                  border: "1px solid #000",
+                  background: block.completed ? "var(--ok-soft, #e6ffe6)" : "var(--link-ink, #0000ee)",
+                  color: block.completed ? "var(--ok, #006600)" : "var(--paper, #fff)",
+                  border: "var(--stroke, 1px) solid var(--ink, #000)",
                   cursor: "pointer",
                   fontWeight: "bold",
                   fontSize: "0.9rem",
@@ -493,7 +493,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                 {block.completed ? "Completed ✓" : "Complete Session"}
               </label>
               {block.lockedReason && (
-                <div style={{ color: "#aa0000", fontSize: "0.8rem", marginTop: "0.35rem", maxWidth: "18rem" }}>
+                <div style={{ color: "var(--bad, #aa0000)", fontSize: "0.8rem", marginTop: "0.35rem", maxWidth: "18rem" }}>
                   {block.lockedReason}
                 </div>
               )}
@@ -504,7 +504,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
       </div>
 
       {queue.recentHistory.length > 0 && (
-        <div style={{ marginTop: "1.25rem", borderTop: "1px solid #000", paddingTop: "1rem" }}>
+        <div style={{ marginTop: "1.25rem", borderTop: "var(--stroke, 1px) solid var(--ink, #000)", paddingTop: "1rem" }}>
           <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
             Recent Daily History
           </h3>

@@ -132,12 +132,12 @@ export function EnrollmentModal({
     >
       <div
         style={{
-          background: "#fff",
-          border: "2px solid #000",
+          background: "var(--paper, #fff)",
+          border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
           maxWidth: "500px",
           width: "100%",
           padding: "1.5rem",
-          boxShadow: "4px 4px 0px #000",
+          boxShadow: "4px 4px 0px var(--ink, #000)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -149,7 +149,7 @@ export function EnrollmentModal({
             onClick={onClose}
             style={{
               background: "none",
-              border: "1px solid #000",
+              border: "var(--stroke, 1px) solid var(--ink, #000)",
               cursor: "pointer",
               fontWeight: "bold",
             }}
@@ -179,7 +179,7 @@ export function EnrollmentModal({
               style={{
                 width: "100%",
                 padding: "0.4rem",
-                border: "1px solid #000",
+                border: "var(--stroke, 1px) solid var(--ink, #000)",
                 fontFamily: "inherit",
               }}
             />
@@ -199,10 +199,10 @@ export function EnrollmentModal({
                   alignItems: "center",
                   gap: "0.5rem",
                   padding: "0.5rem",
-                  border: "1px solid #ccc",
+                  border: "var(--stroke, 1px) solid var(--rule, #ccc)",
                   marginBottom: "0.4rem",
                   cursor: "pointer",
-                  background: paceHours === preset.hours ? "#f0f4ff" : "#fff",
+                  background: paceHours === preset.hours ? "var(--accent-soft, #f0f4ff)" : "var(--paper, #fff)",
                 }}
               >
                 <input
@@ -217,7 +217,7 @@ export function EnrollmentModal({
                   {completionEstimate(programHours, preset.hours) ? (
                     <>
                       {" — "}
-                      <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                      <span style={{ fontSize: "0.85rem", color: "var(--ink-soft, #555)" }}>
                         {completionEstimate(programHours, preset.hours)}
                       </span>
                     </>
@@ -227,7 +227,7 @@ export function EnrollmentModal({
             ))}
           </div>
 
-          <fieldset style={{ margin: "0 0 1.25rem", padding: "0.75rem", border: "1px solid #000" }}>
+          <fieldset style={{ margin: "0 0 1.25rem", padding: "0.75rem", border: "var(--stroke, 1px) solid var(--ink, #000)" }}>
             <legend style={{ fontWeight: "bold" }}>Study Days</legend>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {STUDY_DAY_OPTIONS.map((day) => (
@@ -251,8 +251,8 @@ export function EnrollmentModal({
 
           <div
             style={{
-              background: "#f9f9f9",
-              borderLeft: "3px solid #0000ee",
+              background: "var(--paper-soft, #f9f9f9)",
+              borderLeft: "var(--stroke-strong, 3px) solid var(--link-ink, #0000ee)",
               padding: "0.5rem 0.75rem",
               marginBottom: "1.25rem",
               fontSize: "0.85rem",
@@ -274,9 +274,9 @@ export function EnrollmentModal({
                 onClick={handleUnenroll}
                 style={{
                   padding: "0.5rem 1rem",
-                  border: "1px solid #cc0000",
-                  color: "#cc0000",
-                  background: "#fff",
+                  border: "var(--stroke, 1px) solid var(--bad, #cc0000)",
+                  color: "var(--bad, #cc0000)",
+                  background: "var(--paper, #fff)",
                   cursor: "pointer",
                 }}
               >
@@ -288,8 +288,8 @@ export function EnrollmentModal({
               onClick={onClose}
               style={{
                 padding: "0.5rem 1rem",
-                border: "1px solid #000",
-                background: "#fff",
+                border: "var(--stroke, 1px) solid var(--ink, #000)",
+                background: "var(--paper, #fff)",
                 cursor: "pointer",
               }}
             >
@@ -300,9 +300,9 @@ export function EnrollmentModal({
               disabled={studyDays.length === 0}
               style={{
                 padding: "0.5rem 1.25rem",
-                border: "2px solid #000",
-                background: "#0000ee",
-                color: "#fff",
+                border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+                background: "var(--link-ink, #0000ee)",
+                color: "var(--paper, #fff)",
                 fontWeight: "bold",
                 cursor: "pointer",
               }}

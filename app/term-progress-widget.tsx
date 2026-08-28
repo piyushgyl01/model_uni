@@ -157,11 +157,11 @@ function TermProgressFrame({
   return (
     <div
       style={{
-        border: "2px solid #000",
-        background: allTermsSatisfied ? "#e6ffe6" : "#ffffff",
+        border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+        background: allTermsSatisfied ? "var(--ok-soft, #e6ffe6)" : "var(--paper, #ffffff)",
         padding: "1.25rem",
         marginBottom: "1.5rem",
-        boxShadow: "3px 3px 0px #000",
+        boxShadow: "3px 3px 0px var(--ink, #000)",
       }}
     >
       <div
@@ -186,10 +186,10 @@ function TermProgressFrame({
           style={{
             fontSize: "0.8rem",
             padding: "0.2rem 0.5rem",
-            background: "#000",
-            color: "#fff",
+            background: "var(--ink, #000)",
+            color: "var(--paper, #fff)",
             fontWeight: "bold",
-            fontFamily: "monospace",
+            fontFamily: "var(--mono-font, monospace)",
           }}
         >
           {completed} / {total} {unitLabel} ({percentage}%)
@@ -200,8 +200,8 @@ function TermProgressFrame({
       <div
         style={{
           height: "10px",
-          background: "#eee",
-          border: "1px solid #000",
+          background: "var(--paper-soft, #eee)",
+          border: "var(--stroke, 1px) solid var(--ink, #000)",
           marginBottom: "0.85rem",
           overflow: "hidden",
         }}
@@ -210,13 +210,13 @@ function TermProgressFrame({
           style={{
             height: "100%",
             width: `${percentage}%`,
-            background: allTermsSatisfied ? "#008800" : "#0000ee",
+            background: allTermsSatisfied ? "var(--ok, #008800)" : "var(--link-ink, #0000ee)",
             transition: "width 0.3s ease",
           }}
         />
       </div>
 
-      <div style={{ fontSize: "0.9rem", color: "#333", marginBottom: "0.5rem" }}>
+      <div style={{ fontSize: "0.9rem", color: "var(--ink, #333)", marginBottom: "0.5rem" }}>
         <strong>Current {activeTermLabel} Subjects:</strong>{" "}
         {courseTitles.length > 0
           ? courseTitles.join(" · ")
@@ -229,15 +229,15 @@ function TermProgressFrame({
           style={{
             marginTop: "0.85rem",
             padding: "0.65rem 0.85rem",
-            background: "#f9f9f9",
-            border: "1px solid #ddd",
+            background: "var(--paper-soft, #f9f9f9)",
+            border: "var(--stroke, 1px) solid var(--rule, #ddd)",
             fontSize: "0.85rem",
           }}
         >
-          <strong style={{ color: "#555" }}>
+          <strong style={{ color: "var(--ink-soft, #555)" }}>
             ⏭ Coming Up Next in {nextLabel}:
           </strong>{" "}
-          <span style={{ color: "#444" }}>
+          <span style={{ color: "var(--ink-soft, #444)" }}>
             {nextCourseTitles.length > 0
               ? nextCourseTitles.join(" · ")
               : "The next term in your exact pathway"}

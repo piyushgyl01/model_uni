@@ -4,6 +4,7 @@ import { futureDirections } from "../content/catalog-release";
 
 import { ActiveEnrollmentBanner } from "./active-enrollment-banner";
 import type { ProgramKind } from "./domain/catalog";
+import { ThemeSwitch } from "./theme";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +82,12 @@ export default async function Home({
           ))}
         </nav>
 
-        <a className="header-cta" href="#programs">
-          Select a Degree ↓
-        </a>
+        <div className="topbar-actions">
+          <ThemeSwitch />
+          <a className="header-cta" href="#programs">
+            Select a Degree ↓
+          </a>
+        </div>
       </header>
 
       <main id="top">
@@ -99,7 +103,7 @@ export default async function Home({
               Free Open Curriculum · Self-Paced University Study
             </p>
             <h1>Choose an outcome.<br />Get the whole degree path.</h1>
-            <p style={{ fontSize: "1.1rem", marginTop: "10px", color: "#333" }}>
+            <p style={{ fontSize: "1.1rem", marginTop: "10px", color: "var(--ink, #333)" }}>
               Study complete university degree programs on your own. We organize free textbooks, MIT & Stanford video lectures, assignments, and exams into step-by-step course sequences you can follow and complete.
             </p>
             <div className="hero-actions" style={{ marginTop: "20px" }}>
@@ -135,7 +139,7 @@ export default async function Home({
           <div className="catalog-section-heading">
             <p className="section-index">01 / Degree Catalog</p>
             <h2>Select a University Degree Program</h2>
-            <p style={{ color: "#555" }}>
+            <p style={{ color: "var(--ink-soft, #555)" }}>
               Different structures. One learning engine. Choose a degree program below to open its term-by-term curriculum, free learning materials, and progress tracker.
             </p>
             <form action="/" method="get" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "1rem" }}>
@@ -148,7 +152,7 @@ export default async function Home({
                 type="search"
                 defaultValue={filters.q ?? ""}
                 placeholder="Program title"
-                style={{ flex: "1 1 260px", minWidth: 0, padding: "0.55rem", border: "2px solid #000" }}
+                style={{ flex: "1 1 260px", minWidth: 0, padding: "0.55rem", border: "var(--stroke-strong, 2px) solid var(--ink, #000)" }}
               />
               <button className="button button-primary" type="submit">
                 Search
@@ -173,11 +177,11 @@ export default async function Home({
                 </div>
 
                 <div className="degree-card-title">
-                  <span style={{ fontSize: "0.85rem", textTransform: "uppercase", color: "#666", fontWeight: "bold" }}>
+                  <span style={{ fontSize: "0.85rem", textTransform: "uppercase", color: "var(--ink-soft, #666)", fontWeight: "bold" }}>
                     {program.credentialLabel}
                   </span>
                   <h3>{program.title}</h3>
-                  <p style={{ fontSize: "0.9rem", color: "#444", margin: "6px 0" }}>{program.summary}</p>
+                  <p style={{ fontSize: "0.9rem", color: "var(--ink-soft, #444)", margin: "6px 0" }}>{program.summary}</p>
                 </div>
 
                 <div className="degree-card-facts">
@@ -201,7 +205,7 @@ export default async function Home({
           </div>
 
           {programs.length === 0 && (
-            <div style={{ border: "1px solid #000", background: "#fff", padding: "1rem" }}>
+            <div style={{ border: "var(--stroke, 1px) solid var(--ink, #000)", background: "var(--paper, #fff)", padding: "1rem" }}>
               No published programs match this catalog search.
             </div>
           )}
@@ -228,13 +232,13 @@ export default async function Home({
           {/* Research Roadmap */}
           <div className="catalog-roadmap" style={{ marginTop: "35px" }}>
             <h3 style={{ marginTop: 0 }}>Upcoming Programs in Research</h3>
-            <p style={{ fontSize: "0.85rem", color: "#666" }}>In research—not advertised as published</p>
+            <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #666)" }}>In research—not advertised as published</p>
             {futureDirections.map((direction) => (
-              <article key={direction.title} style={{ padding: "10px 0", borderTop: "1px solid #e0e0e0" }}>
-                <small style={{ color: "#666" }}>{direction.school} · {direction.discipline}</small>
+              <article key={direction.title} style={{ padding: "10px 0", borderTop: "var(--stroke, 1px) solid var(--rule, #e0e0e0)" }}>
+                <small style={{ color: "var(--ink-soft, #666)" }}>{direction.school} · {direction.discipline}</small>
                 <div style={{ fontWeight: "bold", fontSize: "1rem" }}>{direction.title}</div>
                 <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>{direction.description}</p>
-                <small className="direction-status" style={{ color: "#888" }}>{direction.status} · {direction.note}</small>
+                <small className="direction-status" style={{ color: "var(--ink-faint, #888)" }}>{direction.status} · {direction.note}</small>
               </article>
             ))}
           </div>
@@ -259,10 +263,10 @@ export default async function Home({
               ["05", "Evidence", "Portfolio projects, code repositories, and lab reports"],
               ["06", "Mastery", "Track your progress unit-by-unit as you complete courses"],
             ].map(([number, title, note]) => (
-              <article key={number} style={{ padding: "12px", border: "1px solid #ccc", background: "#fff" }}>
-                <span style={{ fontFamily: "monospace", color: "#0000ee", fontWeight: "bold" }}>{number}</span>
+              <article key={number} style={{ padding: "12px", border: "var(--stroke, 1px) solid var(--rule, #ccc)", background: "var(--paper, #fff)" }}>
+                <span style={{ fontFamily: "var(--mono-font, monospace)", color: "var(--link-ink, #0000ee)", fontWeight: "bold" }}>{number}</span>
                 <h3 style={{ margin: "4px 0" }}>{title}</h3>
-                <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{note}</p>
+                <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #444)", margin: 0 }}>{note}</p>
               </article>
             ))}
           </div>
@@ -282,15 +286,15 @@ export default async function Home({
             {schools.map((school, index) => {
               const schoolPrograms = programs.filter((p) => p.school === school);
               return (
-                <article key={school} style={{ padding: "12px", border: "1px solid #ccc", background: "#fff" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#666", fontFamily: "monospace" }}>
+                <article key={school} style={{ padding: "12px", border: "var(--stroke, 1px) solid var(--rule, #ccc)", background: "var(--paper, #fff)" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--ink-soft, #666)", fontFamily: "var(--mono-font, monospace)" }}>
                     School {String(index + 1).padStart(2, "0")}
                   </span>
                   <h3 style={{ margin: "4px 0" }}>{school}</h3>
-                  <p style={{ fontSize: "0.85rem", color: "#444" }}>
+                  <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #444)" }}>
                     {schoolPrograms.map((p) => p.discipline).join(" · ")}
                   </p>
-                  <small style={{ color: "#666" }}>
+                  <small style={{ color: "var(--ink-soft, #666)" }}>
                     {schoolPrograms.length} complete {schoolPrograms.length === 1 ? "program" : "programs"}
                   </small>
                 </article>
@@ -300,7 +304,7 @@ export default async function Home({
         </section>
 
         {/* Scope & Notice */}
-        <section className="catalog-about" id="scope" style={{ padding: "20px", border: "1px solid #222", background: "#fafafa" }}>
+        <section className="catalog-about" id="scope" style={{ padding: "20px", border: "var(--stroke, 1px) solid var(--ink, #222)", background: "var(--paper-soft, #fafafa)" }}>
           <p className="section-index">04 / Honest scope</p>
           <h2>Rebuild the learning. Never fake the credential.</h2>
           <p style={{ fontSize: "0.95rem" }}>
@@ -318,7 +322,7 @@ export default async function Home({
           <a className="brand" href="#top">
             <strong>Course Atlas</strong> — <small>Self-Study Degree Catalog</small>
           </a>
-          <p style={{ color: "#666", marginTop: "6px" }}>
+          <p style={{ color: "var(--ink-soft, #666)", marginTop: "6px" }}>
             Programs are immutable publications loaded by one universal engine. Their calendars, courses, assessments and resources remain data.
           </p>
         </div>

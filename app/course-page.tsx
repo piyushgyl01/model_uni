@@ -4,6 +4,7 @@ import CourseProgress from "./course-progress";
 import { CourseAccessProvider } from "./course-access-context";
 import { PrerequisiteLockBanner } from "./prerequisite-lock-banner";
 import { UnitEvidenceInput } from "./unit-evidence-input";
+import { ThemeSwitch } from "./theme";
 import type {
   CourseResourceReference,
   LearningUnit,
@@ -141,10 +142,10 @@ export default function CoursePage({
       <article
         className={`universal-course-resource${compact ? " is-compact" : ""}`}
         key={`${reference.resourceVersionId}-${role ?? "unit"}`}
-        style={{ border: "1px solid #ccc", padding: "10px", margin: "8px 0", background: "#fff" }}
+        style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "10px", margin: "8px 0", background: "var(--paper, #fff)" }}
       >
         <header>
-          <span style={{ fontSize: "0.8rem", color: "#666", textTransform: "uppercase" }}>{role ?? resource?.kind ?? "resource"}</span>
+          <span style={{ fontSize: "0.8rem", color: "var(--ink-soft, #666)", textTransform: "uppercase" }}>{role ?? resource?.kind ?? "resource"}</span>
           {compact ? (
             <h5 style={{ margin: "2px 0 4px 0" }}>
               <a href={version.canonicalUrl} target="_blank" rel="noreferrer">
@@ -158,14 +159,14 @@ export default function CoursePage({
               </a>
             </h3>
           )}
-          <p style={{ margin: 0, fontSize: "0.85rem", color: "#444" }}>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--ink-soft, #444)" }}>
             {resource?.provider ?? "Unknown provider"}
             {version.authors.length ? ` · ${version.authors.join(", ")}` : ""}
           </p>
         </header>
         {"note" in reference && reference.note && <p style={{ fontSize: "0.85rem" }}>{reference.note}</p>}
 
-        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", fontSize: "0.8rem", fontFamily: "monospace", marginTop: "6px", background: "#f5f5f5", padding: "4px 8px" }}>
+        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", fontSize: "0.8rem", fontFamily: "var(--mono-font, monospace)", marginTop: "6px", background: "var(--paper-soft, #f5f5f5)", padding: "4px 8px" }}>
           <div>
             <strong>Access:</strong>{" "}
             {offers.length
@@ -214,11 +215,11 @@ export default function CoursePage({
         id={unit.id}
         key={unit.id}
         aria-labelledby={`${unit.id}-title`}
-        style={{ border: "1px solid #222", padding: "16px", background: "#ffffff", marginBottom: "15px" }}
+        style={{ border: "var(--stroke, 1px) solid var(--ink, #222)", padding: "16px", background: "var(--paper, #ffffff)", marginBottom: "15px" }}
       >
-        <header className="universal-unit-heading" style={{ borderBottom: "1px solid #ddd", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <header className="universal-unit-heading" style={{ borderBottom: "var(--stroke, 1px) solid var(--rule, #ddd)", paddingBottom: "8px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <span style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#666" }}>
+            <span style={{ fontFamily: "var(--mono-font, monospace)", fontSize: "0.85rem", color: "var(--ink-soft, #666)" }}>
               {[
                 `Unit ${unit.order}`,
                 unit.kindLabel ?? unit.kind,
@@ -227,17 +228,17 @@ export default function CoursePage({
             </span>
             <h3 id={`${unit.id}-title`} style={{ margin: "2px 0 0 0" }}>{unit.title}</h3>
           </div>
-          <strong style={{ fontFamily: "monospace" }}>{unit.nominalHours} hours</strong>
+          <strong style={{ fontFamily: "var(--mono-font, monospace)" }}>{unit.nominalHours} hours</strong>
         </header>
 
         <div className="universal-unit-workspace" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
-            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>What to learn</h4>
+          <section style={{ border: "var(--stroke, 1px) solid var(--paper-soft, #eee)", padding: "10px", background: "var(--paper-soft, #fafafa)" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "var(--link-ink, #0000ee)" }}>What to learn</h4>
             <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.topic}</p>
           </section>
 
-          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
-            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>Where to learn it</h4>
+          <section style={{ border: "var(--stroke, 1px) solid var(--paper-soft, #eee)", padding: "10px", background: "var(--paper-soft, #fafafa)" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "var(--link-ink, #0000ee)" }}>Where to learn it</h4>
             {unit.resourceLocator && <p style={{ margin: "0 0 6px 0", fontSize: "0.9rem" }}>{unit.resourceLocator}</p>}
             {unitResources.length > 0 ? (
               <div className="universal-unit-resources">
@@ -247,21 +248,21 @@ export default function CoursePage({
               </div>
             ) : (
               !unit.resourceLocator && (
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>Use course resources.</p>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--ink-soft, #666)" }}>Use course resources.</p>
               )
             )}
           </section>
 
-          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
-            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>What to do</h4>
+          <section style={{ border: "var(--stroke, 1px) solid var(--paper-soft, #eee)", padding: "10px", background: "var(--paper-soft, #fafafa)" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "var(--link-ink, #0000ee)" }}>What to do</h4>
             <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.activity}</p>
           </section>
 
-          <section style={{ border: "1px solid #eee", padding: "10px", background: "#fafafa" }}>
-            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#0000ee" }}>Evidence to keep</h4>
+          <section style={{ border: "var(--stroke, 1px) solid var(--paper-soft, #eee)", padding: "10px", background: "var(--paper-soft, #fafafa)" }}>
+            <h4 style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "var(--link-ink, #0000ee)" }}>Evidence to keep</h4>
             <p style={{ margin: 0, fontSize: "0.9rem" }}>{unit.evidence}</p>
             {unit.assessmentKind && (
-              <small style={{ color: "#666", display: "block", marginTop: "4px" }}>
+              <small style={{ color: "var(--ink-soft, #666)", display: "block", marginTop: "4px" }}>
                 Assessment mode: {unit.assessmentKind}
               </small>
             )}
@@ -277,7 +278,7 @@ export default function CoursePage({
         {unit.weeklyAssignments && unit.weeklyAssignments.length > 0 && (
           <section
             aria-label={`${unit.title} weekly assignments`}
-            style={{ marginTop: "15px", borderTop: "1px solid #222", paddingTop: "12px" }}
+            style={{ marginTop: "15px", borderTop: "var(--stroke, 1px) solid var(--ink, #222)", paddingTop: "12px" }}
           >
             <h4 style={{ margin: "0 0 8px 0" }}>Exact weekly assignments</h4>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "10px" }}>
@@ -286,11 +287,11 @@ export default function CoursePage({
                 return (
                   <article
                     key={assignment.week}
-                    style={{ border: "1px solid #ccc", padding: "10px", background: "#fafafa" }}
+                    style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "10px", background: "var(--paper-soft, #fafafa)" }}
                   >
                     <header style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
                       <strong>Week {assignment.week}: {assignment.title}</strong>
-                      <span style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      <span style={{ fontFamily: "var(--mono-font, monospace)", whiteSpace: "nowrap" }}>
                         {assignment.estimatedHours}h
                       </span>
                     </header>
@@ -302,7 +303,7 @@ export default function CoursePage({
                         </a>
                       )}
                     </p>
-                    <p style={{ margin: "4px 0", fontSize: "0.78rem", color: "#555" }}>
+                    <p style={{ margin: "4px 0", fontSize: "0.78rem", color: "var(--ink-soft, #555)" }}>
                       <strong>Source check:</strong>{" "}
                       {assignment.sourceEvidence.accessType === "free audit"
                         ? "Free to audit"
@@ -327,7 +328,7 @@ export default function CoursePage({
         )}
 
         {children.length > 0 && (
-          <div className="universal-unit-children" style={{ marginTop: "15px", paddingLeft: "15px", borderLeft: "2px solid #ddd" }}>
+          <div className="universal-unit-children" style={{ marginTop: "15px", paddingLeft: "15px", borderLeft: "var(--stroke-strong, 2px) solid var(--rule, #ddd)" }}>
             {children.map((child) => renderLearningUnit(child, depth + 1))}
           </div>
         )}
@@ -355,9 +356,12 @@ export default function CoursePage({
           <a href="#assessments">Assessments</a>
           <a href="#start">Prerequisites & Setup</a>
         </nav>
-        <Link className="header-cta" href={programHref}>
-          Degree ←
-        </Link>
+        <div className="topbar-actions">
+          <ThemeSwitch />
+          <Link className="header-cta" href={programHref}>
+            Degree ←
+          </Link>
+        </div>
       </header>
 
       <main id="course-main">
@@ -370,16 +374,16 @@ export default function CoursePage({
 
         {/* Course Header Banner */}
         <section className="hero universal-course-hero" aria-labelledby="course-title">
-          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
+          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "var(--ink-soft, #666)", marginBottom: "8px" }}>
             <Link href="/">Degrees</Link> / <Link href={programHref}>{bundle.programVersion.title}</Link> / <span>Course</span>
           </div>
 
-          <div style={{ borderBottom: "2px solid #222", paddingBottom: "15px", marginBottom: "15px" }}>
-            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#555" }}>
+          <div style={{ borderBottom: "var(--stroke-strong, 2px) solid var(--ink, #222)", paddingBottom: "15px", marginBottom: "15px" }}>
+            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "var(--mono-font, monospace)", color: "var(--ink-soft, #555)" }}>
               {course.codes.map((code) => `${code.namespace} ${code.value}`).join(" · ") || course.discipline}
             </p>
             <h1 id="course-title" style={{ margin: "4px 0 8px 0" }}>{courseVersion.title}</h1>
-            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "#333" }}>{courseVersion.summary}</p>
+            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "var(--ink, #333)" }}>{courseVersion.summary}</p>
           </div>
 
           <div className="course-meta-strip">
@@ -415,7 +419,7 @@ export default function CoursePage({
               <span className="section-index">01 / Executable Syllabus</span>
               <h2 id="learning-units-title">Learning plan</h2>
             </div>
-            <p className="section-intro" style={{ color: "#555" }}>
+            <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
               Complete units in sequence. {orderedUnits.length} learning units designed for self-directed study.
             </p>
           </div>
@@ -425,7 +429,7 @@ export default function CoursePage({
               {roots.map((unit) => renderLearningUnit(unit))}
             </div>
           ) : (
-            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
               This course version does not contain learning units yet.
             </div>
           )}
@@ -443,7 +447,7 @@ export default function CoursePage({
               <span className="section-index">02 / Open Textbooks & Videos</span>
               <h2 id="course-resources-title">Course resources</h2>
             </div>
-            <p className="section-intro" style={{ color: "#555" }}>
+            <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
               Free educational resources, lecture videos, and open textbooks for this course.
             </p>
           </div>
@@ -454,7 +458,7 @@ export default function CoursePage({
               )}
             </div>
           ) : (
-            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
               No course-level resources are published. Check the individual learning units for specific sources.
             </div>
           )}
@@ -472,7 +476,7 @@ export default function CoursePage({
               <span className="section-index">03 / Assignments & Exams</span>
               <h2 id="assessments-title">Assessments and grading</h2>
             </div>
-            <p className="section-intro" style={{ color: "#555" }}>
+            <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
               Pass at {courseVersion.gradingPolicy.passingPercentage}%. Demonstrate understanding through projects and exercises.
             </p>
           </div>
@@ -491,10 +495,10 @@ export default function CoursePage({
                     className="assessment-card"
                     id={`assessment-${assessmentVersion.id}`}
                     key={assessmentVersion.id}
-                    style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}
+                    style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}
                   >
-                    <header style={{ borderBottom: "1px solid #eee", paddingBottom: "6px" }}>
-                      <span style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "#666" }}>
+                    <header style={{ borderBottom: "var(--stroke, 1px) solid var(--paper-soft, #eee)", paddingBottom: "6px" }}>
+                      <span style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "var(--ink-soft, #666)" }}>
                         {[assessmentVersion.stage, assessment?.kind ?? "assessment"]
                           .filter(Boolean)
                           .join(" · ")}
@@ -506,8 +510,8 @@ export default function CoursePage({
                       </strong>
                     </header>
                     <h3 style={{ margin: "6px 0 4px 0" }}>{assessmentVersion.title}</h3>
-                    <p style={{ fontSize: "0.85rem", color: "#444" }}>{assessmentVersion.instructions}</p>
-                    <div style={{ fontSize: "0.85rem", fontFamily: "monospace", margin: "8px 0" }}>
+                    <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #444)" }}>{assessmentVersion.instructions}</p>
+                    <div style={{ fontSize: "0.85rem", fontFamily: "var(--mono-font, monospace)", margin: "8px 0" }}>
                       Effort: {assessmentVersion.estimatedHours} hours | Max Score: {assessmentVersion.maximumScore}
                       {assessmentVersion.passingScore !== undefined
                         ? ` | Pass: ${assessmentVersion.passingScore}`
@@ -537,7 +541,7 @@ export default function CoursePage({
               })}
             </div>
           ) : (
-            <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+            <div className="paper-card empty-state" style={{ padding: "15px", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
               No scored assessments are published for this course version.
             </div>
           )}
@@ -555,11 +559,11 @@ export default function CoursePage({
               <span className="section-index">04 / Prerequisites & Setup</span>
               <h2 id="start-title">Start here</h2>
             </div>
-            <p className="section-intro" style={{ color: "#555" }}>{courseVersion.firstAction}</p>
+            <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>{courseVersion.firstAction}</p>
           </div>
 
           <div className="universal-course-start-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginTop: "15px" }}>
-            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+            <article className="paper-card" style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
               <h3>Setup Before Learning</h3>
               {courseVersion.setup.length > 0 ? (
                 <ul className="setup-list" style={{ paddingLeft: "18px" }}>
@@ -571,14 +575,14 @@ export default function CoursePage({
                 <p>No special setup is required.</p>
               )}
               {courseVersion.safetyNote && (
-                <div className="safety-note" role="note" style={{ marginTop: "10px", padding: "8px", background: "#fff8f8", border: "1px solid #e00" }}>
+                <div className="safety-note" role="note" style={{ marginTop: "10px", padding: "8px", background: "var(--bad-soft, #fff8f8)", border: "var(--stroke, 1px) solid var(--bad, #e00)" }}>
                   <strong>Safety note:</strong>
                   <p style={{ margin: "2px 0 0 0" }}>{courseVersion.safetyNote}</p>
                 </div>
               )}
             </article>
 
-            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+            <article className="paper-card" style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
               <h3>Prerequisites</h3>
               {prerequisites.length > 0 ? (
                 <ul className="universal-prerequisite-list" style={{ paddingLeft: "18px" }}>
@@ -603,7 +607,7 @@ export default function CoursePage({
         </CourseAccessProvider>
       </main>
 
-      <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+      <footer className="universal-program-footer" style={{ borderTop: "var(--stroke-strong, 2px) solid var(--ink, #222)", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
         <strong>{courseVersion.title}</strong> — <small>Part of <Link href={programHref}>{bundle.programVersion.title}</Link></small>
       </footer>
     </div>

@@ -341,7 +341,7 @@ export default function CourseProgress({
         {mastery.passed ? " · Course passed" : ""}
       </p>
 
-      <div style={{ border: "1px solid #aaa", background: "#fff", padding: "0.65rem", margin: "0.75rem 0" }}>
+      <div style={{ border: "var(--stroke, 1px) solid var(--ink-faint, #aaa)", background: "var(--paper, #fff)", padding: "0.65rem", margin: "0.75rem 0" }}>
         <strong>Passing requirements</strong>
         <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.2rem", fontSize: "0.85rem" }}>
           <li>{mastery.learningWorkComplete ? "✓" : "○"} Required learning work completed</li>
@@ -357,7 +357,7 @@ export default function CourseProgress({
       </div>
 
       {!prerequisites.isUnlocked && (
-        <p role="status" style={{ color: "#aa0000", fontWeight: "bold", fontSize: "0.85rem" }}>
+        <p role="status" style={{ color: "var(--bad, #aa0000)", fontWeight: "bold", fontSize: "0.85rem" }}>
           Learning and assessment controls are locked until the prerequisite is passed or a recorded waiver is granted.
         </p>
       )}

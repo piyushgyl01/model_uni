@@ -113,7 +113,7 @@ export function TodayPageClient() {
 
   if (!mounted) {
     return (
-      <div style={{ padding: "1rem", border: "1px solid #ccc" }}>
+      <div style={{ padding: "1rem", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
         Loading your active study plan...
       </div>
     );
@@ -124,8 +124,8 @@ export function TodayPageClient() {
       <div
         style={{
           padding: "1rem",
-          background: "#f0f4ff",
-          border: "1px solid #0000ee",
+          background: "var(--accent-soft, #f0f4ff)",
+          border: "var(--stroke, 1px) solid var(--link-ink, #0000ee)",
           marginBottom: "1.5rem",
         }}
       >

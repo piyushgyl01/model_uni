@@ -126,11 +126,11 @@ export function PrerequisiteLockBanner() {
   return (
     <div
       style={{
-        border: `2px solid ${missingPrerequisites.length > 0 ? "#cc0000" : "#8a5a00"}`,
-        background: missingPrerequisites.length > 0 ? "#fff5f5" : "#fff8e6",
+        border: `2px solid ${missingPrerequisites.length > 0 ? "var(--bad, #cc0000)" : "var(--warn, #8a5a00)"}`,
+        background: missingPrerequisites.length > 0 ? "var(--bad-soft, #fff5f5)" : "var(--warn-soft, #fff8e6)",
         padding: "1.25rem",
         marginBottom: "1.5rem",
-        boxShadow: `3px 3px 0px ${missingPrerequisites.length > 0 ? "#cc0000" : "#8a5a00"}`,
+        boxShadow: `3px 3px 0px ${missingPrerequisites.length > 0 ? "var(--bad, #cc0000)" : "var(--warn, #8a5a00)"}`,
       }}
     >
       <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.15rem" }}>
@@ -158,7 +158,7 @@ export function PrerequisiteLockBanner() {
             ))}
           </ul>
 
-          <div style={{ borderTop: "1px solid #cc0000", paddingTop: "0.75rem" }}>
+          <div style={{ borderTop: "var(--stroke, 1px) solid var(--bad, #cc0000)", paddingTop: "0.75rem" }}>
             <strong>Record a placement result or waiver</strong>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
               <label style={{ fontSize: "0.85rem" }}>
@@ -250,7 +250,7 @@ export function PrerequisiteLockBanner() {
         </div>
       )}
 
-      {error && <p role="alert" style={{ color: "#aa0000", margin: "0.6rem 0 0" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--bad, #aa0000)", margin: "0.6rem 0 0" }}>{error}</p>}
     </div>
   );
 }

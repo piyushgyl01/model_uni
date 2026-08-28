@@ -88,7 +88,7 @@ export function ProgressBackupControls() {
   return (
     <div className="panel" style={{ marginTop: "1rem" }}>
       <strong>Keep a copy of your progress</strong>
-      <p style={{ margin: "0.35rem 0 0.7rem", fontSize: "0.9rem", color: "#555" }}>
+      <p style={{ margin: "0.35rem 0 0.7rem", fontSize: "0.9rem", color: "var(--ink-soft, #555)" }}>
         Your ticks are saved in this browser only. Clearing site data erases
         them, and they do not follow you to another device. Save a file and you
         can restore it here whenever you need to.
@@ -121,7 +121,7 @@ export function ProgressBackupControls() {
           style={{
             margin: "0.6rem 0 0",
             fontSize: "0.85rem",
-            color: status.kind === "error" ? "#aa0000" : "#14622f",
+            color: status.kind === "error" ? "var(--bad, #aa0000)" : "var(--ok, #14622f)",
           }}
         >
           {status.message}

@@ -36,9 +36,9 @@ export function ActiveEnrollmentBanner() {
   return (
     <div
       style={{
-        border: "2px solid #000",
-        background: "#0000ee",
-        color: "#fff",
+        border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+        background: "var(--link-ink, #0000ee)",
+        color: "var(--paper, #fff)",
         padding: "0.85rem 1.25rem",
         marginBottom: "1.5rem",
         display: "flex",
@@ -46,7 +46,7 @@ export function ActiveEnrollmentBanner() {
         alignItems: "center",
         flexWrap: "wrap",
         gap: "0.75rem",
-        boxShadow: "3px 3px 0px #000",
+        boxShadow: "3px 3px 0px var(--ink, #000)",
       }}
     >
       <div>
@@ -60,11 +60,11 @@ export function ActiveEnrollmentBanner() {
       <Link
         href="/today"
         style={{
-          background: "#fff",
-          color: "#000",
+          background: "var(--paper, #fff)",
+          color: "var(--ink, #000)",
           padding: "0.4rem 1rem",
           fontWeight: "bold",
-          border: "1px solid #000",
+          border: "var(--stroke, 1px) solid var(--ink, #000)",
           textDecoration: "none",
         }}
       >

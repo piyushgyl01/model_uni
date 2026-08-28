@@ -345,8 +345,8 @@ export default function ProgramProgress({
           style={{
             marginTop: "1rem",
             padding: "0.85rem",
-            border: "1px solid #000",
-            background: requirementEvaluation.satisfied ? "#e6ffe6" : "#f9f9f9",
+            border: "var(--stroke, 1px) solid var(--ink, #000)",
+            background: requirementEvaluation.satisfied ? "var(--ok-soft, #e6ffe6)" : "var(--paper-soft, #f9f9f9)",
           }}
         >
           <div
@@ -366,8 +366,8 @@ export default function ProgramProgress({
               style={{
                 fontSize: "0.75rem",
                 padding: "0.15rem 0.4rem",
-                background: requirementEvaluation.satisfied ? "#008800" : "#555",
-                color: "#fff",
+                background: requirementEvaluation.satisfied ? "var(--ok, #008800)" : "var(--ink-soft, #555)",
+                color: "var(--paper, #fff)",
                 fontWeight: "bold",
               }}
             >
@@ -387,20 +387,20 @@ export default function ProgramProgress({
                 <div
                   key={group.id}
                   style={{
-                    border: "1px solid #ddd",
-                    background: "#fff",
+                    border: "var(--stroke, 1px) solid var(--rule, #ddd)",
+                    background: "var(--paper, #fff)",
                     padding: "0.5rem 0.65rem",
                     fontSize: "0.85rem",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <strong>{group.title}</strong>
-                    <span style={{ color: isSatisfied ? "#008800" : "#cc0000", fontWeight: "bold" }}>
+                    <span style={{ color: isSatisfied ? "var(--ok, #008800)" : "var(--bad, #cc0000)", fontWeight: "bold" }}>
                       {isSatisfied ? "✓ Satisfied" : `${selectedCount} / ${group.rule.minSelections} Courses`}
                     </span>
                   </div>
                   {groupEval && groupEval.reasons.length > 0 && (
-                    <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.2rem" }}>
+                    <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #666)", marginTop: "0.2rem" }}>
                       {groupEval.reasons.join(" ")}
                     </div>
                   )}
@@ -415,7 +415,7 @@ export default function ProgramProgress({
               style={{
                 fontSize: "0.85rem",
                 fontWeight: "bold",
-                color: "#0000ee",
+                color: "var(--link-ink, #0000ee)",
                 textDecoration: "underline",
               }}
             >
