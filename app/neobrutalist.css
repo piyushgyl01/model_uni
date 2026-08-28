@@ -1,0 +1,921 @@
+/**
+ * Neobrutalist design system.
+ *
+ * Written from scratch rather than as an override layer. Earlier attempts
+ * re-pointed the classic stylesheet's tokens, which left the classic layout,
+ * spacing and type scale in charge and produced the old site in new colours.
+ * This file owns its own scale, grid, type and component language, and is
+ * scoped to data-theme="neobrutalist" so the classic look is untouched.
+ *
+ * The language: concrete ground, white paper, black rules that are structural
+ * rather than decorative, one hard shadow, and three flat accents that always
+ * mean something — blue for the action, lime for emphasis, orange for
+ * attention. Type is the loudest element on every page.
+ */
+
+:root[data-theme="neobrutalist"] {
+  --nb-ground: #f2f0eb;
+  --nb-paper: #ffffff;
+  --nb-ink: #000000;
+  --nb-ink-2: #262626;
+  --nb-blue: #2323ff;
+  --nb-lime: #ccff00;
+  --nb-orange: #ff5c22;
+
+  --nb-rule: 3px;
+  --nb-rule-heavy: 5px;
+  --nb-shadow: 8px 8px 0 var(--nb-ink);
+  --nb-shadow-lift: 12px 12px 0 var(--nb-ink);
+  --nb-shadow-sm: 5px 5px 0 var(--nb-ink);
+
+  --nb-display: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --nb-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --nb-gap: clamp(1.25rem, 3vw, 2.25rem);
+  --nb-section: clamp(3.5rem, 8vw, 7rem);
+  --nb-pad: clamp(1.25rem, 3vw, 2.25rem);
+  --nb-max: 1240px;
+
+  background: var(--nb-ground);
+  color: var(--nb-ink);
+  font-family: var(--nb-display);
+}
+
+:root[data-theme="neobrutalist"] body {
+  background: var(--nb-ground);
+  color: var(--nb-ink);
+}
+
+/* ---- Shell --------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .catalog-home,
+:root[data-theme="neobrutalist"] .program-page,
+:root[data-theme="neobrutalist"] .course-page,
+:root[data-theme="neobrutalist"] .site-shell {
+  max-width: var(--nb-max);
+  margin: 0 auto;
+  padding: 0 var(--nb-pad) var(--nb-section);
+}
+
+/* A black bar edge to edge, so the page starts with a statement. */
+:root[data-theme="neobrutalist"] .topbar,
+:root[data-theme="neobrutalist"] .catalog-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nb-gap);
+  justify-content: space-between;
+  margin: 0 calc(-1 * var(--nb-pad)) var(--nb-section);
+  padding: 0.85rem var(--nb-pad);
+  background: var(--nb-ink);
+  border-bottom: none;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .brand,
+:root[data-theme="neobrutalist"] .brand:visited {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--nb-paper);
+  text-decoration: none;
+}
+
+:root[data-theme="neobrutalist"] .brand strong {
+  display: block;
+  font-family: var(--nb-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+:root[data-theme="neobrutalist"] .brand small {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--nb-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  background: var(--nb-lime);
+  border: none;
+  box-shadow: none;
+}
+
+:root[data-theme="neobrutalist"] .desktop-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+}
+
+:root[data-theme="neobrutalist"] .desktop-nav a,
+:root[data-theme="neobrutalist"] .desktop-nav a:visited {
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--nb-paper);
+  padding: 0.2rem 0;
+  border-bottom: 2px solid transparent;
+}
+
+:root[data-theme="neobrutalist"] .desktop-nav a:hover {
+  background: transparent;
+  color: var(--nb-lime);
+  border-bottom-color: var(--nb-lime);
+  box-shadow: none;
+}
+
+:root[data-theme="neobrutalist"] .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---- Type --------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] h1 {
+  font-family: var(--nb-display);
+  font-size: clamp(2.75rem, 8.5vw, 6rem);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  margin: 0 0 var(--nb-gap);
+  border: none;
+  padding: 0;
+}
+
+:root[data-theme="neobrutalist"] h2 {
+  font-family: var(--nb-display);
+  font-size: clamp(1.9rem, 4.5vw, 3rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  margin: 0 0 1rem;
+  border: none;
+  padding: 0;
+}
+
+:root[data-theme="neobrutalist"] h3 {
+  font-family: var(--nb-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  margin: 0 0 0.6rem;
+}
+
+:root[data-theme="neobrutalist"] h4,
+:root[data-theme="neobrutalist"] h5,
+:root[data-theme="neobrutalist"] h6 {
+  font-family: var(--nb-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+:root[data-theme="neobrutalist"] p,
+:root[data-theme="neobrutalist"] li {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+:root[data-theme="neobrutalist"] a,
+:root[data-theme="neobrutalist"] a:visited {
+  color: var(--nb-blue);
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+:root[data-theme="neobrutalist"] a:hover {
+  background: var(--nb-lime);
+  color: var(--nb-ink);
+  box-shadow: 0 0 0 4px var(--nb-lime);
+}
+
+/* ---- Section rhythm ----------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .catalog-section {
+  margin: 0 0 var(--nb-section);
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+:root[data-theme="neobrutalist"] .catalog-section-heading {
+  margin-bottom: var(--nb-gap);
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: 58ch;
+}
+
+/* The section number becomes a structural element rather than a small chip. */
+:root[data-theme="neobrutalist"] .section-index,
+:root[data-theme="neobrutalist"] .eyebrow {
+  display: block;
+  margin: 0 0 0.9rem;
+  padding: 0 0 0.5rem;
+  border: none;
+  border-bottom: var(--nb-rule) solid var(--nb-ink);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--nb-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nb-ink);
+}
+
+/* ---- Hero --------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .catalog-hero {
+  display: block;
+  margin: 0 0 var(--nb-section);
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-theme="neobrutalist"] .catalog-hero-copy {
+  max-width: none;
+}
+
+/* The measure belongs on the headline, not on the block: constraining the
+   block squeezed the lede and the buttons into the same narrow column. */
+:root[data-theme="neobrutalist"] .catalog-hero-copy h1 {
+  max-width: 20ch;
+}
+
+:root[data-theme="neobrutalist"] .nb-lede {
+  max-width: 54ch;
+  font-size: clamp(1.0625rem, 1.6vw, 1.3rem);
+  line-height: 1.5;
+}
+
+:root[data-theme="neobrutalist"] .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: var(--nb-gap);
+}
+
+/* A black stat bar with lime figures: the one place numbers shout. */
+:root[data-theme="neobrutalist"] .catalog-manifesto {
+  margin: var(--nb-gap) 0 0;
+  padding: var(--nb-pad);
+  background: var(--nb-ink);
+  border: none;
+  box-shadow: none;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .nb-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--nb-gap);
+}
+
+:root[data-theme="neobrutalist"] .nb-stat strong {
+  display: block;
+  font-family: var(--nb-display);
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .nb-stat span {
+  display: block;
+  margin-top: 0.4rem;
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .catalog-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 var(--nb-section);
+  padding: 0.9rem var(--nb-pad);
+  background: var(--nb-lime);
+  border: var(--nb-rule) solid var(--nb-ink);
+  box-shadow: none;
+  font-family: var(--nb-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+
+:root[data-theme="neobrutalist"] .button,
+:root[data-theme="neobrutalist"] button.button,
+:root[data-theme="neobrutalist"] .btn,
+:root[data-theme="neobrutalist"] button:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem;
+  background: var(--nb-paper);
+  color: var(--nb-ink);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  box-shadow: var(--nb-shadow-sm);
+  font-family: var(--nb-display);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 90ms steps(2), box-shadow 90ms steps(2);
+}
+
+:root[data-theme="neobrutalist"] .button:hover,
+:root[data-theme="neobrutalist"] button.button:hover,
+:root[data-theme="neobrutalist"] .btn:hover,
+:root[data-theme="neobrutalist"] button:not([class]):hover {
+  background: var(--nb-lime);
+  color: var(--nb-ink);
+  transform: translate(-3px, -3px);
+  box-shadow: var(--nb-shadow);
+}
+
+:root[data-theme="neobrutalist"] .button:active,
+:root[data-theme="neobrutalist"] button.button:active,
+:root[data-theme="neobrutalist"] .btn:active,
+:root[data-theme="neobrutalist"] button:not([class]):active {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 var(--nb-ink);
+}
+
+/* button.button-primary is spelled out because the base rule above matches
+   button.button, which outranks a bare .button-primary and would otherwise
+   leave a submit button with the base fill and the primary ink. */
+:root[data-theme="neobrutalist"] .button-primary,
+:root[data-theme="neobrutalist"] button.button-primary {
+  background: var(--nb-blue);
+  --button-primary-ink: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .button-primary:hover,
+:root[data-theme="neobrutalist"] button.button-primary:hover {
+  background: var(--nb-lime);
+  --button-primary-ink: var(--nb-ink);
+}
+
+:root[data-theme="neobrutalist"] .header-cta,
+:root[data-theme="neobrutalist"] .header-cta:visited {
+  padding: 0.5rem 0.9rem;
+  background: var(--nb-lime);
+  color: var(--nb-ink);
+  border: none;
+  box-shadow: none;
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+:root[data-theme="neobrutalist"] .header-cta:hover {
+  background: var(--nb-paper);
+  box-shadow: none;
+  transform: none;
+}
+
+/* ---- Cards -------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .degree-card-grid,
+:root[data-theme="neobrutalist"] .degree-stack,
+:root[data-theme="neobrutalist"] .school-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: var(--nb-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-theme="neobrutalist"] .degree-directory-card,
+:root[data-theme="neobrutalist"] .degree-stack article,
+:root[data-theme="neobrutalist"] .school-home-grid article,
+:root[data-theme="neobrutalist"] .catalog-roadmap article {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0;
+  padding: var(--nb-pad);
+  background: var(--nb-paper);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  box-shadow: var(--nb-shadow);
+  transition: transform 90ms steps(2), box-shadow 90ms steps(2);
+}
+
+:root[data-theme="neobrutalist"] .degree-directory-card:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: var(--nb-shadow-lift);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0 0.7rem;
+  margin: 0;
+  border-bottom: 2px solid var(--nb-ink);
+  background: transparent;
+  font-family: var(--nb-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="neobrutalist"] .degree-card-title {
+  display: block;
+}
+
+:root[data-theme="neobrutalist"] .nb-kicker {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--nb-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nb-ink-2);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-title h3 {
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  margin: 0 0 0.6rem;
+}
+
+:root[data-theme="neobrutalist"] .nb-summary {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--nb-ink-2);
+}
+
+/* Facts read as a spec sheet: mono, ruled, no fill. */
+:root[data-theme="neobrutalist"] .degree-card-facts {
+  display: grid;
+  gap: 0;
+  margin: auto 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-top: 2px solid var(--nb-ink);
+  font-family: var(--nb-mono);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+:root[data-theme="neobrutalist"] .degree-card-facts > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--nb-ink);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-facts > span:last-child {
+  border-bottom: none;
+}
+
+:root[data-theme="neobrutalist"] .degree-card-facts strong {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nb-ink-2);
+}
+
+:root[data-theme="neobrutalist"] .nb-card-action .button {
+  width: 100%;
+}
+
+/* The learning-model stack: oversized numerals, no boxes. */
+:root[data-theme="neobrutalist"] .degree-stack article {
+  gap: 0.4rem;
+}
+
+:root[data-theme="neobrutalist"] .nb-step-number {
+  font-family: var(--nb-display);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--nb-blue);
+}
+
+:root[data-theme="neobrutalist"] .catalog-roadmap {
+  margin: var(--nb-section) 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+:root[data-theme="neobrutalist"] .catalog-roadmap article {
+  box-shadow: none;
+  border-width: 2px;
+}
+
+/* ---- Search ------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .nb-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: var(--nb-gap);
+  align-items: stretch;
+}
+
+:root[data-theme="neobrutalist"] .nb-search label {
+  align-self: center;
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="neobrutalist"] input,
+:root[data-theme="neobrutalist"] textarea,
+:root[data-theme="neobrutalist"] select {
+  padding: 0.8rem 0.9rem;
+  background: var(--nb-paper);
+  color: var(--nb-ink);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  font-family: var(--nb-display);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+:root[data-theme="neobrutalist"] input::placeholder,
+:root[data-theme="neobrutalist"] textarea::placeholder {
+  color: #6b6b6b;
+}
+
+:root[data-theme="neobrutalist"] input:focus-visible,
+:root[data-theme="neobrutalist"] textarea:focus-visible,
+:root[data-theme="neobrutalist"] select:focus-visible,
+:root[data-theme="neobrutalist"] a:focus-visible,
+:root[data-theme="neobrutalist"] button:focus-visible {
+  outline: var(--nb-rule) solid var(--nb-blue);
+  outline-offset: 3px;
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] footer,
+:root[data-theme="neobrutalist"] #catalog-footer {
+  margin: var(--nb-section) calc(-1 * var(--nb-pad)) 0;
+  padding: var(--nb-section) var(--nb-pad) var(--nb-pad);
+  background: var(--nb-ink);
+  border: none;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] footer a,
+:root[data-theme="neobrutalist"] #catalog-footer a {
+  color: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .footer-brand {
+  font-family: var(--nb-display);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .provenance,
+:root[data-theme="neobrutalist"] .footer-meta {
+  background: transparent;
+  border: none;
+  border-top: 2px solid var(--nb-paper);
+  padding-top: var(--nb-gap);
+  margin-top: var(--nb-gap);
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .provenance div {
+  border: none;
+  background: transparent;
+  color: var(--nb-paper);
+}
+
+/* ---- The switch --------------------------------------------------------- */
+
+:root[data-theme="neobrutalist"] .theme-switch {
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+  color: var(--nb-paper);
+  border: 2px solid var(--nb-paper);
+  box-shadow: none;
+  font-family: var(--nb-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+:root[data-theme="neobrutalist"] .theme-switch:hover {
+  background: var(--nb-lime);
+  color: var(--nb-ink);
+  border-color: var(--nb-lime);
+  transform: none;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="neobrutalist"] * {
+    transition: none !important;
+  }
+  :root[data-theme="neobrutalist"] .degree-directory-card:hover,
+  :root[data-theme="neobrutalist"] .button:hover,
+  :root[data-theme="neobrutalist"] .button:active {
+    transform: none;
+  }
+}
+
+/* ---- Home page blocks the markup now names directly -------------------- */
+
+:root[data-theme="neobrutalist"] .catalog-about {
+  margin: 0 0 var(--nb-section);
+  padding: var(--nb-pad);
+  background: var(--nb-orange);
+  border: var(--nb-rule-heavy) solid var(--nb-ink);
+  box-shadow: var(--nb-shadow);
+}
+
+:root[data-theme="neobrutalist"] .catalog-about .section-index {
+  border-bottom-color: var(--nb-ink);
+}
+
+:root[data-theme="neobrutalist"] .catalog-about p {
+  max-width: 62ch;
+}
+
+:root[data-theme="neobrutalist"] .nb-empty {
+  padding: var(--nb-pad);
+  background: var(--nb-paper);
+  border: var(--nb-rule) solid var(--nb-ink);
+  font-family: var(--nb-mono);
+}
+
+:root[data-theme="neobrutalist"] .nb-pager {
+  margin-top: var(--nb-gap);
+}
+
+:root[data-theme="neobrutalist"] .nb-footer-note {
+  max-width: 60ch;
+  margin: var(--nb-gap) 0 0;
+  font-size: 1rem;
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .footer-brand .brand small {
+  color: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .nb-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  margin-top: 0.8rem;
+}
+
+:root[data-theme="neobrutalist"] .footer-meta {
+  background: transparent;
+  border: none;
+  border-top: 2px solid var(--nb-paper);
+  padding-top: var(--nb-gap);
+  font-family: var(--nb-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--nb-paper);
+}
+
+/* ==========================================================================
+   Claiming the component tree
+   --------------------------------------------------------------------------
+   The pages below the home page set their panel borders, fills and state
+   colours through inline styles, and those inline styles read tokens with the
+   classic values as fallbacks. Defining the tokens here in this palette pulls
+   every one of those panels into the system — three-pixel black rules on white
+   instead of hairlines on grey — without rewriting markup that a browser gate
+   depends on. Shadow and weight cannot come from a token, so the classes below
+   add those where a panel should read as elevated.
+   ========================================================================== */
+
+:root[data-theme="neobrutalist"] {
+  /* Read by inline styles throughout the component tree. */
+  --ink: #000000;
+  --ink-soft: #262626;
+  --ink-faint: #4a4a4a;
+  --paper: #ffffff;
+  --paper-soft: #f2f0eb;
+  --rule: #000000;
+  --link-ink: #2323ff;
+  --ok: #14622f;
+  --ok-soft: #e4ff8f;
+  --bad: #b3001b;
+  --bad-soft: #ffd9dc;
+  --warn: #7a4300;
+  --warn-soft: #ffe27a;
+  --accent-soft: #dcdcff;
+  --stroke: 3px;
+  --stroke-strong: 4px;
+  --mono-font: var(--nb-mono);
+  --button-primary-ink: var(--nb-paper);
+
+  /* Read by the classic stylesheet's own class rules, which still lay out the
+     course page's checklists, tables and progress rails. */
+  --bg: var(--nb-ground);
+  --text: #000000;
+  --text-muted: #262626;
+  --border: #000000;
+  --border-light: #000000;
+  --link: #2323ff;
+  --link-visited: #6b21c8;
+  --highlight-bg: var(--nb-lime);
+  --accent: #2323ff;
+  --tag-bg: var(--nb-lime);
+  --card-bg: #ffffff;
+  --radius: 0px;
+  --state-done: #14622f;
+  --state-done-bg: #e4ff8f;
+  --state-active: #7a4300;
+  --state-active-bg: #ffe27a;
+  --state-locked: #262626;
+  --state-locked-bg: #e6e3dc;
+}
+
+/* Panels that carry the page's structure get the frame and the shadow. */
+:root[data-theme="neobrutalist"] .universal-requirement-group,
+:root[data-theme="neobrutalist"] .universal-learning-unit,
+:root[data-theme="neobrutalist"] .universal-recognition-notice,
+:root[data-theme="neobrutalist"] .unit-card,
+:root[data-theme="neobrutalist"] .assessment-card,
+:root[data-theme="neobrutalist"] .catalog-row,
+:root[data-theme="neobrutalist"] .requirements-table,
+:root[data-theme="neobrutalist"] table.data-table {
+  background: var(--nb-paper);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  box-shadow: var(--nb-shadow);
+}
+
+:root[data-theme="neobrutalist"] .catalog-row:hover,
+:root[data-theme="neobrutalist"] .unit-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: var(--nb-shadow-lift);
+  transition: transform 90ms steps(2), box-shadow 90ms steps(2);
+}
+
+:root[data-theme="neobrutalist"] .universal-recognition-notice {
+  border-left: 12px solid var(--nb-orange);
+}
+
+/* Read, not clicked: framed, unshadowed. */
+:root[data-theme="neobrutalist"] .program-meta-strip,
+:root[data-theme="neobrutalist"] .course-meta-strip {
+  background: var(--nb-paper);
+  border: 2px solid var(--nb-ink);
+  box-shadow: none;
+  font-family: var(--nb-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+:root[data-theme="neobrutalist"] .requirements-table th,
+:root[data-theme="neobrutalist"] table.data-table th {
+  background: var(--nb-ink);
+  color: var(--nb-paper);
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The controls a learner touches: square, framed, and lime once ticked. */
+:root[data-theme="neobrutalist"] .universal-unit-checklist {
+  display: grid;
+  gap: var(--nb-gap);
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+:root[data-theme="neobrutalist"] .universal-unit-check,
+:root[data-theme="neobrutalist"] .universal-week-check {
+  background: var(--nb-paper);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  padding: var(--nb-pad);
+  box-shadow: none;
+}
+
+:root[data-theme="neobrutalist"] .universal-week-check {
+  padding: 0.9rem 1rem;
+  border-width: 2px;
+}
+
+:root[data-theme="neobrutalist"] .universal-unit-check:has(input:checked),
+:root[data-theme="neobrutalist"] .universal-week-check:has(input:checked) {
+  background: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .universal-unit-check > input[type="checkbox"],
+:root[data-theme="neobrutalist"] .universal-week-check > input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--nb-ink);
+}
+
+:root[data-theme="neobrutalist"] .progress-rail,
+:root[data-theme="neobrutalist"] .progress-bar-container {
+  height: 14px;
+  background: var(--nb-paper);
+  border: var(--nb-rule) solid var(--nb-ink);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+:root[data-theme="neobrutalist"] .progress-rail > span,
+:root[data-theme="neobrutalist"] .progress-bar-fill {
+  background: var(--nb-blue);
+  border-radius: 0;
+}
+
+:root[data-theme="neobrutalist"] .universal-progress-detail,
+:root[data-theme="neobrutalist"] .progress-label {
+  font-family: var(--nb-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+:root[data-theme="neobrutalist"] .resource-link {
+  background: var(--nb-paper);
+  border: 2px solid var(--nb-ink);
+  border-radius: 0;
+}
+
+:root[data-theme="neobrutalist"] .resource-link:hover {
+  background: var(--nb-lime);
+}
+
+:root[data-theme="neobrutalist"] .universal-week-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+:root[data-theme="neobrutalist"] .units-list,
+:root[data-theme="neobrutalist"] .unit-grid,
+:root[data-theme="neobrutalist"] .universal-course-list,
+:root[data-theme="neobrutalist"] .universal-period-grid,
+:root[data-theme="neobrutalist"] .assessment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--nb-gap);
+}
+
+:root[data-theme="neobrutalist"] .universal-course-list {
+  grid-template-columns: 1fr;
+}

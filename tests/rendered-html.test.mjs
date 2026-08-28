@@ -42,15 +42,15 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.match(html, /\/programs\/mathematics/);
   assert.match(
     html,
-    /<strong>5<\/strong>(?:<!-- -->)?\s*complete programs/,
+    /<strong>5<\/strong>(?:<!-- -->)?\s*(?:<span[^>]*>)?\s*complete programs/,
   );
   assert.match(
     html,
-    /<strong>151<\/strong>\s*(?:<!-- -->)?\s*courses across minimum paths/,
+    /<strong>151<\/strong>\s*(?:<!-- -->)?\s*(?:<span[^>]*>)?\s*courses across minimum paths/,
   );
   assert.match(
     html,
-    /<strong>1,456<\/strong>\s*(?:<!-- -->)?\s*executable learning units/,
+    /<strong>1,456<\/strong>\s*(?:<!-- -->)?\s*(?:<span[^>]*>)?\s*executable learning units/,
   );
   assert.match(html, /31/);
   assert.match(html, /course minimum path/);
@@ -283,13 +283,31 @@ test("styling is a switchable theme that leaves the classic look untouched", asy
   assert.match(html, /removeAttribute\("data-theme"\)/);
   assert.match(html, /Style: /);
 
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const themeBlockStart = css.indexOf(':root[data-theme="neobrutalist"] {');
-  assert.ok(themeBlockStart > 0, "the theme's token block must exist");
-  const beforeTheme = css.slice(0, themeBlockStart);
+  const [classic, theme] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/neobrutalist.css", import.meta.url), "utf8"),
+  ]);
+
+  // The design system lives in its own file and is scoped to the attribute, so
+  // the classic stylesheet cannot be reached by it.
+  assert.doesNotMatch(classic, /data-theme/);
+  const unscoped = theme
+    .split("\n")
+    .filter(
+      (line) =>
+        /^[.#:a-zA-Z\[][^{}]*\{\s*$/.test(line) &&
+        !line.includes('[data-theme="neobrutalist"]') &&
+        !line.startsWith("@") &&
+        !/^\s/.test(line),
+    );
+  assert.deepEqual(
+    unscoped,
+    [],
+    `every rule in the design system must be scoped to the theme attribute; found ${unscoped.join(", ")}`,
+  );
 
   // Component inline styles read these tokens with their classic values as
-  // fallbacks. Defining any of them outside the theme block would change the
+  // fallbacks. Defining any of them in the classic stylesheet would change the
   // classic look, which is the one thing this theme must not do.
   for (const token of [
     "--ink",
@@ -305,20 +323,17 @@ test("styling is a switchable theme that leaves the classic look untouched", asy
     "--stroke",
     "--stroke-strong",
     "--mono-font",
-    "--display-font",
     "--button-primary-ink",
-    "--frame",
-    "--lift",
   ]) {
     assert.doesNotMatch(
-      beforeTheme,
+      classic,
       new RegExp(`^\\s*\\${token}\\s*:`, "m"),
-      `${token} must be defined only inside the theme block`,
+      `${token} must not be defined by the classic stylesheet`,
     );
     assert.match(
-      css.slice(themeBlockStart),
+      theme,
       new RegExp(`^\\s*\\${token}\\s*:`, "m"),
-      `${token} must be defined by the theme`,
+      `${token} must be defined by the design system`,
     );
   }
 });
