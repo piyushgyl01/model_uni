@@ -154,7 +154,7 @@ export default function ProgramStudyPlan({
             {schedule?.title ?? "Recommended Study Sequence"}
           </h2>
         </div>
-        <p className="section-intro" style={{ color: "#555" }}>
+        <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
           {calendar?.structure === "terms" ? "Six-term recommended sequence" : "Self-directed study schedule"}. Follow terms in order to satisfy course prerequisites.
         </p>
       </div>
@@ -169,8 +169,8 @@ export default function ProgramStudyPlan({
                 (milestone) => milestone.periodId === period.id,
               );
               return (
-                <article className="semester-card universal-period-card" key={period.id} style={{ border: "1px solid #222", padding: "14px", background: "#fff" }}>
-                  <header className="semester-top" style={{ borderBottom: "1px solid #ddd", paddingBottom: "6px", marginBottom: "10px" }}>
+                <article className="semester-card universal-period-card" key={period.id} style={{ border: "var(--stroke, 1px) solid var(--ink, #222)", padding: "14px", background: "var(--paper, #fff)" }}>
+                  <header className="semester-top" style={{ borderBottom: "var(--stroke, 1px) solid var(--rule, #ddd)", paddingBottom: "6px", marginBottom: "10px" }}>
                     <strong>
                       {calendar.structure === "terms" ? "Term" : "Period"} {period.order}: {period.label}
                     </strong>
@@ -189,7 +189,7 @@ export default function ProgramStudyPlan({
                             ) : (
                               <strong>{subject.title}</strong>
                             )}
-                            {subject.note && <p style={{ margin: "2px 0", fontSize: "0.8rem", color: "#555" }}>{subject.note}</p>}
+                            {subject.note && <p style={{ margin: "2px 0", fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>{subject.note}</p>}
                           </li>
                         );
                       })}
@@ -220,11 +220,11 @@ export default function ProgramStudyPlan({
                       })}
                     </ol>
                   ) : (
-                    <p style={{ fontSize: "0.85rem", color: "#666" }}>No scheduled activities in this period.</p>
+                    <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #666)" }}>No scheduled activities in this period.</p>
                   )}
 
                   {milestones.length > 0 && (
-                    <div className="universal-milestones" style={{ marginTop: "10px", fontSize: "0.8rem", color: "#666" }}>
+                    <div className="universal-milestones" style={{ marginTop: "10px", fontSize: "0.8rem", color: "var(--ink-soft, #666)" }}>
                       <strong>Milestones:</strong> {milestones.map((m) => m.label).join(", ")}
                     </div>
                   )}
@@ -234,7 +234,7 @@ export default function ProgramStudyPlan({
           </div>
 
           {unassignedPlacements.length > 0 && (
-            <article className="paper-card universal-flexible-placements" style={{ marginTop: "20px", padding: "14px", border: "1px solid #ccc" }}>
+            <article className="paper-card universal-flexible-placements" style={{ marginTop: "20px", padding: "14px", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
               <h3>Flexible Placements & Electives</h3>
               <ol>
                 {unassignedPlacements.map((placement) => {
@@ -254,7 +254,7 @@ export default function ProgramStudyPlan({
           )}
         </>
       ) : (
-        <div className="paper-card empty-state" style={{ padding: "15px", border: "1px solid #ccc" }}>
+        <div className="paper-card empty-state" style={{ padding: "15px", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
           <h3>Eight-week self-directed schedule</h3>
           <p>Self-paced intensive schedule. Progress tracking does not assume semesters or a fixed number of weeks.</p>
         </div>

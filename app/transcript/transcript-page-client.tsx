@@ -68,7 +68,7 @@ function EvidenceValue({ evidence }: { readonly evidence: LearningRecordEvidence
       href={evidence.textOrUrl}
       target="_blank"
       rel="noreferrer"
-      style={{ color: "#0000ee", fontWeight: "bold" }}
+      style={{ color: "var(--link-ink, #0000ee)", fontWeight: "bold" }}
     >
       {evidence.textOrUrl} ↗
     </a>
@@ -191,7 +191,7 @@ export function TranscriptPageClient() {
 
   if (!mounted) {
     return (
-      <div style={{ padding: "1.5rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+      <div style={{ padding: "1.5rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
         Loading Independent Learning Record...
       </div>
     );
@@ -213,7 +213,7 @@ export function TranscriptPageClient() {
     !selectedCloudRecord
   ) {
     return (
-      <div style={{ padding: "1.5rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+      <div style={{ padding: "1.5rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
         Loading Independent Learning Record...
       </div>
     );
@@ -221,7 +221,7 @@ export function TranscriptPageClient() {
   if (!activeBundle && !selectedCloudRecord) {
     return (
       <>
-        <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc" }}>
+        <div style={{ padding: "1rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)" }}>
           No learner pathways have progress yet. Start from a program page, enroll,
           and your Independent Learning Record will appear here.
         </div>
@@ -307,9 +307,9 @@ export function TranscriptPageClient() {
               }
               style={{
                 padding: "0.5rem 0.85rem",
-                border: "2px solid #000",
-                background: isSelected ? "#000" : "#fff",
-                color: isSelected ? "#fff" : "#000",
+                border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+                background: isSelected ? "var(--ink, #000)" : "var(--paper, #fff)",
+                color: isSelected ? "var(--paper, #fff)" : "var(--ink, #000)",
                 fontWeight: "bold",
                 cursor: "pointer",
                 fontSize: "0.85rem",
@@ -326,9 +326,9 @@ export function TranscriptPageClient() {
           style={{
             marginLeft: "auto",
             padding: "0.5rem 1rem",
-            border: "2px solid #000",
-            background: "#0000ee",
-            color: "#fff",
+            border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+            background: "var(--link-ink, #0000ee)",
+            color: "var(--paper, #fff)",
             fontWeight: "bold",
             cursor: "pointer",
             fontSize: "0.85rem",
@@ -342,22 +342,22 @@ export function TranscriptPageClient() {
 
       <div
         style={{
-          border: "2px solid #000",
-          background: "#fff",
+          border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
+          background: "var(--paper, #fff)",
           padding: "2rem",
-          boxShadow: "4px 4px 0px #000",
+          boxShadow: "4px 4px 0px var(--ink, #000)",
         }}
       >
-        <div style={{ borderBottom: "2px solid #000", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
+        <div style={{ borderBottom: "var(--stroke-strong, 2px) solid var(--ink, #000)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
             <div>
-              <div style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px", color: "#555" }}>
+              <div style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px", color: "var(--ink-soft, #555)" }}>
                 Course Atlas · Independent Learning Record
               </div>
               <h2 style={{ margin: "0.3rem 0", fontSize: "1.6rem" }}>
                 {programTitle}
               </h2>
-              <div style={{ fontSize: "0.95rem", color: "#333" }}>
+              <div style={{ fontSize: "0.95rem", color: "var(--ink, #333)" }}>
                 {programSchool}
                 {concentrationTitle ? ` · ${concentrationTitle}` : ""}
               </div>
@@ -369,10 +369,10 @@ export function TranscriptPageClient() {
                   display: "inline-block",
                   padding: "0.4rem 0.85rem",
                   background: record.pathwayRequirementsCompleted
-                    ? "#008800"
-                    : "#fff9e6",
-                  color: record.pathwayRequirementsCompleted ? "#fff" : "#000",
-                  border: "2px solid #000",
+                    ? "var(--ok, #008800)"
+                    : "var(--warn-soft, #fff9e6)",
+                  color: record.pathwayRequirementsCompleted ? "var(--paper, #fff)" : "var(--ink, #000)",
+                  border: "var(--stroke-strong, 2px) solid var(--ink, #000)",
                   fontWeight: "bold",
                   fontSize: "0.85rem",
                 }}
@@ -381,7 +381,7 @@ export function TranscriptPageClient() {
                   ? "PATHWAY REQUIREMENTS COMPLETED ✓"
                   : "PATHWAY IN PROGRESS"}
               </div>
-              <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.4rem" }}>
+              <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #666)", marginTop: "0.4rem" }}>
                 Catalog version {programVersion}
               </div>
             </div>
@@ -391,8 +391,8 @@ export function TranscriptPageClient() {
         <div
           style={{
             padding: "0.85rem",
-            border: "1px solid #000",
-            background: "#fff9e6",
+            border: "var(--stroke, 1px) solid var(--ink, #000)",
+            background: "var(--warn-soft, #fff9e6)",
             marginBottom: "1.5rem",
             fontSize: "0.9rem",
           }}
@@ -410,14 +410,14 @@ export function TranscriptPageClient() {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             gap: "1rem",
-            background: "#f9f9f9",
-            border: "1px solid #ccc",
+            background: "var(--paper-soft, #f9f9f9)",
+            border: "var(--stroke, 1px) solid var(--rule, #ccc)",
             padding: "1rem",
             marginBottom: "1.5rem",
           }}
         >
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Learning status</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Learning status</div>
             <strong>
               {enrollment?.status === "enrolled"
                 ? "Actively enrolled"
@@ -427,7 +427,7 @@ export function TranscriptPageClient() {
             </strong>
           </div>
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Study pace</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Study pace</div>
             <strong>
               {enrollment
                 ? `${enrollment.paceHoursPerWeek} hrs / week`
@@ -435,23 +435,23 @@ export function TranscriptPageClient() {
             </strong>
           </div>
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Courses passed</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Courses passed</div>
             <strong>
               {record.totals.passedCourses} of {record.totals.courses}
             </strong>
           </div>
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Learning work</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Learning work</div>
             <strong>
               {record.totals.completedLearningUnits} of {record.totals.learningUnits} units ({completionPercentage}%)
             </strong>
           </div>
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Published pathway workload</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Published pathway workload</div>
             <strong>{record.totals.nominalPathHours.toLocaleString()} nominal hrs</strong>
           </div>
           <div>
-            <div style={{ fontSize: "0.8rem", color: "#555" }}>Recorded learning work</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>Recorded learning work</div>
             <strong>
               {record.totals.completedLearningHours.toLocaleString()} nominal hrs checked
             </strong>
@@ -471,21 +471,21 @@ export function TranscriptPageClient() {
               <div
                 key={group.id}
                 style={{
-                  border: "1px solid #ccc",
+                  border: "var(--stroke, 1px) solid var(--rule, #ccc)",
                   padding: "0.75rem",
-                  background: isSatisfied ? "#f0fff0" : "#fff",
+                  background: isSatisfied ? "var(--ok-soft, #f0fff0)" : "var(--paper, #fff)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
                   <strong>{group.title}</strong>
-                  <span style={{ color: isSatisfied ? "#008800" : "#cc0000", fontWeight: "bold", textAlign: "right" }}>
+                  <span style={{ color: isSatisfied ? "var(--ok, #008800)" : "var(--bad, #cc0000)", fontWeight: "bold", textAlign: "right" }}>
                     {isSatisfied
                       ? "✓ Requirement completed"
                       : `${selectedCount} / ${group.minSelections} passed`}
                   </span>
                 </div>
                 {groupEvaluation && groupEvaluation.reasons.length > 0 && (
-                  <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.2rem" }}>
+                  <div style={{ fontSize: "0.85rem", color: "var(--ink-soft, #666)", marginTop: "0.2rem" }}>
                     {groupEvaluation.reasons.join(" ")}
                   </div>
                 )}
@@ -507,7 +507,7 @@ export function TranscriptPageClient() {
             }}
           >
             <thead>
-              <tr style={{ background: "#f0f0f0", borderBottom: "2px solid #000", textAlign: "left" }}>
+              <tr style={{ background: "var(--paper-soft, #f0f0f0)", borderBottom: "var(--stroke-strong, 2px) solid var(--ink, #000)", textAlign: "left" }}>
                 <th style={{ padding: "0.5rem" }}>Code</th>
                 <th style={{ padding: "0.5rem" }}>Course</th>
                 <th style={{ padding: "0.5rem" }}>Published hours</th>
@@ -518,8 +518,8 @@ export function TranscriptPageClient() {
             </thead>
             <tbody>
               {record.courses.map((course) => (
-                <tr key={course.courseVersionId} style={{ borderBottom: "1px solid #ddd" }}>
-                  <td style={{ padding: "0.5rem", fontFamily: "monospace" }}>
+                <tr key={course.courseVersionId} style={{ borderBottom: "var(--stroke, 1px) solid var(--rule, #ddd)" }}>
+                  <td style={{ padding: "0.5rem", fontFamily: "var(--mono-font, monospace)" }}>
                     {course.code}
                   </td>
                   <td style={{ padding: "0.5rem" }}>
@@ -529,7 +529,7 @@ export function TranscriptPageClient() {
                           ? course.canonicalPath
                           : `/programs/${programSlug}/courses/${course.canonicalSlug}`
                       }
-                      style={{ fontWeight: "bold", color: "#000" }}
+                      style={{ fontWeight: "bold", color: "var(--ink, #000)" }}
                     >
                       {course.title}
                     </a>
@@ -544,7 +544,7 @@ export function TranscriptPageClient() {
                     {formatPercentage(course.weightedScorePercentage)}
                   </td>
                   <td style={{ padding: "0.5rem" }}>
-                    <span style={{ fontWeight: "bold", color: course.passed ? "#008800" : "#555" }}>
+                    <span style={{ fontWeight: "bold", color: course.passed ? "var(--ok, #008800)" : "var(--ink-soft, #555)" }}>
                       {course.passed ? "✓ " : ""}{course.masteryLabel}
                     </span>
                   </td>
@@ -557,17 +557,17 @@ export function TranscriptPageClient() {
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem" }}>
           Assessment Record ({record.totals.assessmentAttempts} attempts · {record.totals.assessments} published assessments)
         </h3>
-        <p style={{ margin: "0 0 0.75rem", color: "#555", fontSize: "0.85rem" }}>
+        <p style={{ margin: "0 0 0.75rem", color: "var(--ink-soft, #555)", fontSize: "0.85rem" }}>
           Published assessment workload: {record.totals.assessmentHours} nominal hours. Results report the evaluation method stored with each attempt; they are not silently treated as institutionally reviewed.
         </p>
         {attemptedAssessments.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2rem" }}>
             {attemptedAssessments.map(({ course, assessment }) => (
-              <div key={assessment.assessmentVersionId} style={{ border: "1px solid #ccc", padding: "0.75rem", background: "#fafafa" }}>
+              <div key={assessment.assessmentVersionId} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "0.75rem", background: "var(--paper-soft, #fafafa)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
                   <div>
                     <strong>{course.title} · {assessment.title}</strong>
-                    <div style={{ fontSize: "0.8rem", color: "#555" }}>
+                    <div style={{ fontSize: "0.8rem", color: "var(--ink-soft, #555)" }}>
                       {assessment.kind} · {assessment.weight}% of course grade · {assessment.estimatedHours} nominal hrs
                       {assessment.requiredToPass ? " · required to pass" : ""}
                     </div>
@@ -578,7 +578,7 @@ export function TranscriptPageClient() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.6rem" }}>
                   {assessment.attempts.map((attempt) => (
-                    <div key={attempt.id} style={{ borderTop: "1px solid #ddd", paddingTop: "0.45rem", fontSize: "0.85rem" }}>
+                    <div key={attempt.id} style={{ borderTop: "var(--stroke, 1px) solid var(--rule, #ddd)", paddingTop: "0.45rem", fontSize: "0.85rem" }}>
                       <strong>
                         Attempt {attempt.attemptNumber} · {attempt.status}
                       </strong>
@@ -587,7 +587,7 @@ export function TranscriptPageClient() {
                           {" "}· {attempt.score} / {attempt.maximumScore} ({formatPercentage(attempt.scorePercentage)}) · {attempt.passed ? "passed" : "did not pass"}
                         </span>
                       )}
-                      <div style={{ color: "#555", marginTop: "0.15rem" }}>
+                      <div style={{ color: "var(--ink-soft, #555)", marginTop: "0.15rem" }}>
                         Review provenance: {EVIDENCE_REVIEW_LABELS[attempt.reviewStatus]} · Started {formatDate(attempt.startedAt)} · Submitted {formatDate(attempt.submittedAt)} · Evaluated {formatDate(attempt.evaluatedAt)}
                       </div>
                       {attempt.feedback && (
@@ -600,7 +600,7 @@ export function TranscriptPageClient() {
             ))}
           </div>
         ) : (
-          <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc", fontSize: "0.9rem", color: "#666", marginBottom: "2rem" }}>
+          <div style={{ padding: "1rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)", fontSize: "0.9rem", color: "var(--ink-soft, #666)", marginBottom: "2rem" }}>
             No assessment attempts recorded. Published assessment requirements remain available on the course pages.
           </div>
         )}
@@ -611,16 +611,16 @@ export function TranscriptPageClient() {
         {recordedProjects.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
             {recordedProjects.map((project) => (
-              <div key={project.learningUnitId} style={{ border: "1px solid #ccc", padding: "0.65rem", fontSize: "0.85rem" }}>
+              <div key={project.learningUnitId} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "0.65rem", fontSize: "0.85rem" }}>
                 <strong>{project.courseTitle} · {project.title}</strong>
-                <div style={{ color: "#555", marginTop: "0.15rem" }}>
+                <div style={{ color: "var(--ink-soft, #555)", marginTop: "0.15rem" }}>
                   {project.nominalHours} nominal hrs · {project.completed ? "Learning work completed" : "Learning work not completed"} · {project.evidence ? "Self-attested evidence attached" : "No evidence attached"}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc", fontSize: "0.9rem", color: "#666", marginBottom: "2rem" }}>
+          <div style={{ padding: "1rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)", fontSize: "0.9rem", color: "var(--ink-soft, #666)", marginBottom: "2rem" }}>
             No completed or evidenced project work recorded yet. The selected pathway contains {record.totals.projects} required project or practical units.
           </div>
         )}
@@ -631,24 +631,24 @@ export function TranscriptPageClient() {
         {record.evidence.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
             {record.evidence.map((item) => (
-              <div key={item.id} style={{ border: "1px solid #ccc", padding: "0.75rem", background: "#fafafa", fontSize: "0.85rem" }}>
+              <div key={item.id} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "0.75rem", background: "var(--paper-soft, #fafafa)", fontSize: "0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-                  <div style={{ color: "#555", fontSize: "0.8rem", textTransform: "uppercase" }}>
+                  <div style={{ color: "var(--ink-soft, #555)", fontSize: "0.8rem", textTransform: "uppercase" }}>
                     {item.courseTitle} · {item.subjectTitle}
                   </div>
                   <strong>{EVIDENCE_REVIEW_LABELS[item.reviewStatus]}</strong>
                 </div>
-                <div style={{ margin: "0.2rem 0", fontFamily: "monospace", wordBreak: "break-all" }}>
+                <div style={{ margin: "0.2rem 0", fontFamily: "var(--mono-font, monospace)", wordBreak: "break-all" }}>
                   <EvidenceValue evidence={item} />
                 </div>
-                <div style={{ color: "#555", fontSize: "0.8rem" }}>
+                <div style={{ color: "var(--ink-soft, #555)", fontSize: "0.8rem" }}>
                   Provenance: {item.provenance} Recorded {formatDate(item.recordedAt)}.
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ padding: "1rem", background: "#f9f9f9", border: "1px solid #ccc", fontSize: "0.9rem", color: "#666" }}>
+          <div style={{ padding: "1rem", background: "var(--paper-soft, #f9f9f9)", border: "var(--stroke, 1px) solid var(--rule, #ccc)", fontSize: "0.9rem", color: "var(--ink-soft, #666)" }}>
             No evidence recorded yet. Add work links or notes to learning units and assessment attempts; each item will retain an explicit provenance label.
           </div>
         )}

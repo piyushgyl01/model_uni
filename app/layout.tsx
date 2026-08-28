@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { ServiceWorkerRegistration } from "./service-worker-registration";
+import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "./theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,7 +17,9 @@ const geistMono = Geist_Mono({
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fffff8" },
+    // Matches the default theme's page background, so the browser chrome does
+    // not band against it on a phone.
+    { media: "(prefers-color-scheme: light)", color: "#fdf0d5" },
     { media: "(prefers-color-scheme: dark)", color: "#000080" },
   ],
   width: "device-width",
@@ -98,10 +101,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    // The default styling is server-rendered so it never arrives late; the
+    // bootstrap script below clears it for a learner who chose otherwise, and
+    // suppressHydrationWarning covers that one attribute it may change.
+    <html
+      lang="en"
+      // The font custom properties are declared on the root rather than on the
+      // body so that tokens defined at :root can reference them; a token whose
+      // value resolves to an undefined property invalidates the declaration
+      // that uses it.
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      data-theme={DEFAULT_THEME}
+      suppressHydrationWarning
+    >
+      <body className="antialiased">
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
         <ServiceWorkerRegistration />
         {children}
       </body>

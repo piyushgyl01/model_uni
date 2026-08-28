@@ -9,6 +9,7 @@ import { resolveLearnerPath } from "./domain/learner-path";
 import ProgramProgress from "./program-progress";
 import ProgramStudyPlan from "./program-study-plan";
 import { TodayDashboardComponent } from "./today-dashboard-component";
+import { ThemeSwitch } from "./theme";
 
 export interface ProgramPageProps {
   readonly bundle: PublishedProgramBundle;
@@ -166,24 +167,27 @@ export default function ProgramPage({
           <a href="#requirements">Requirements</a>
           <a href="#outcomes">Outcomes</a>
         </nav>
-        <Link className="header-cta" href="/">
-          All Degrees ←
-        </Link>
+        <div className="topbar-actions">
+          <ThemeSwitch />
+          <Link className="header-cta" href="/">
+            All Degrees ←
+          </Link>
+        </div>
       </header>
 
       <main id="main-content">
         {/* Degree Header */}
         <section className="hero universal-program-hero" aria-labelledby="program-title">
-          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "#666", marginBottom: "8px" }}>
+          <div className="program-breadcrumb" style={{ fontSize: "0.85rem", color: "var(--ink-soft, #666)", marginBottom: "8px" }}>
             <Link href="/">Degrees</Link> / <span>{program.school}</span>
           </div>
 
-          <div style={{ borderBottom: "2px solid #222", paddingBottom: "15px", marginBottom: "20px" }}>
-            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#555" }}>
+          <div style={{ borderBottom: "var(--stroke-strong, 2px) solid var(--ink, #222)", paddingBottom: "15px", marginBottom: "20px" }}>
+            <p className="eyebrow" style={{ fontSize: "0.85rem", fontFamily: "var(--mono-font, monospace)", color: "var(--ink-soft, #555)" }}>
               {program.kind} · Published curriculum v{programVersion.version}
             </p>
             <h1 id="program-title" style={{ margin: "6px 0 10px 0" }}>{programVersion.title}</h1>
-            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "#333" }}>{programVersion.summary}</p>
+            <p className="hero-lede" style={{ fontSize: "1.05rem", color: "var(--ink, #333)" }}>{programVersion.summary}</p>
           </div>
 
           <div className="program-meta-strip">
@@ -245,7 +249,7 @@ export default function ProgramPage({
               <span className="section-index">02 / Complete Course Catalog</span>
               <h2 id="courses-title">All Degree Courses</h2>
             </div>
-            <p className="section-intro" style={{ color: "#555" }}>
+            <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
               Click any course to open its full syllabus, free textbooks, lecture links, and unit exercises.
             </p>
           </div>
@@ -256,9 +260,9 @@ export default function ProgramPage({
                 (unit) => unit.courseVersionId === version.id,
               ).length;
               return (
-                <article className={`catalog-row kind-${version.format}`} key={version.id} style={{ border: "1px solid #ccc", padding: "12px", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <article className={`catalog-row kind-${version.format}`} key={version.id} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "12px", background: "var(--paper, #fff)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ flex: "1 1 300px" }}>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#666" }}>
+                    <span style={{ fontFamily: "var(--mono-font, monospace)", fontSize: "0.8rem", color: "var(--ink-soft, #666)" }}>
                       {course.codes[0]?.value ?? version.format}
                     </span>
                     <h3 style={{ margin: "2px 0 4px 0" }}>
@@ -266,9 +270,9 @@ export default function ProgramPage({
                         {version.title}
                       </Link>
                     </h3>
-                    <p style={{ fontSize: "0.85rem", color: "#444", margin: 0 }}>{version.summary}</p>
+                    <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #444)", margin: 0 }}>{version.summary}</p>
                     {version.prerequisites && version.prerequisites.length > 0 && (
-                      <p style={{ fontSize: "0.8rem", color: "#666", marginTop: "4px", margin: 0 }}>
+                      <p style={{ fontSize: "0.8rem", color: "var(--ink-soft, #666)", marginTop: "4px", margin: 0 }}>
                         <strong>Prerequisites:</strong>{" "}
                         {version.prerequisites
                           .map((prereq) => {
@@ -283,7 +287,7 @@ export default function ProgramPage({
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                    <span style={{ fontSize: "0.85rem", fontFamily: "monospace" }}>{unitCount} units</span>
+                    <span style={{ fontSize: "0.85rem", fontFamily: "var(--mono-font, monospace)" }}>{unitCount} units</span>
                     <Link className="button button-primary" href={courseHref(routeBase, course.canonicalSlug)}>
                       Open Course →
                     </Link>
@@ -307,15 +311,15 @@ export default function ProgramPage({
                 <span className="section-index">03 / Specializations</span>
                 <h2 id="concentrations-title">Concentrations</h2>
               </div>
-              <p className="section-intro" style={{ color: "#555" }}>
+              <p className="section-intro" style={{ color: "var(--ink-soft, #555)" }}>
                 Coherent specialization options to focus your degree.
               </p>
             </div>
             <div className="universal-concentration-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px", marginTop: "15px" }}>
               {concentrations.map((concentration) => (
-                <article className="paper-card" key={concentration.id} style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+                <article className="paper-card" key={concentration.id} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
                   <h3 style={{ margin: "0 0 6px 0" }}>{concentration.title}</h3>
-                  <p style={{ fontSize: "0.85rem", color: "#444" }}>{concentration.description}</p>
+                  <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #444)" }}>{concentration.description}</p>
                   <strong style={{ fontSize: "0.85rem" }}>Required Concentration Courses:</strong>
                   <ul style={{ paddingLeft: "18px", margin: "6px 0", fontSize: "0.85rem" }}>
                     {concentration.courseVersionIds.map((id) => {
@@ -357,12 +361,12 @@ export default function ProgramPage({
             {[...programVersion.requirements]
               .sort((left, right) => left.order - right.order)
               .map((group) => (
-                <article className="paper-card universal-requirement-group" key={group.id} style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
-                  <header style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #eee", paddingBottom: "6px" }}>
+                <article className="paper-card universal-requirement-group" key={group.id} style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
+                  <header style={{ display: "flex", justifyContent: "space-between", borderBottom: "var(--stroke, 1px) solid var(--paper-soft, #eee)", paddingBottom: "6px" }}>
                     <h3 style={{ margin: 0 }}>{group.title}</h3>
                     <strong>{requirementRule(group)}</strong>
                   </header>
-                  {group.description && <p style={{ fontSize: "0.85rem", color: "#555", margin: "6px 0" }}>{group.description}</p>}
+                  {group.description && <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #555)", margin: "6px 0" }}>{group.description}</p>}
                 </article>
               ))}
           </div>
@@ -383,7 +387,7 @@ export default function ProgramPage({
           </div>
 
           <div className="universal-outcomes-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "15px" }}>
-            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+            <article className="paper-card" style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
               <h3>Outcomes</h3>
               <ol className="universal-outcome-list" style={{ paddingLeft: "20px", fontSize: "0.85rem" }}>
                 {programVersion.outcomes.map((outcome, index) => (
@@ -392,7 +396,7 @@ export default function ProgramPage({
               </ol>
             </article>
 
-            <article className="paper-card" style={{ border: "1px solid #ccc", padding: "14px", background: "#fff" }}>
+            <article className="paper-card" style={{ border: "var(--stroke, 1px) solid var(--rule, #ccc)", padding: "14px", background: "var(--paper, #fff)" }}>
               <h3>Competencies</h3>
               <div className="universal-competency-list" style={{ fontSize: "0.85rem" }}>
                 {competencies.map((comp) => (
@@ -408,7 +412,7 @@ export default function ProgramPage({
         <section className="section library-section universal-resource-library" id="resources" style={{ marginTop: "40px" }}>
           <span className="section-index">06 / Resource Library</span>
           <h2 id="resources-title">Resource library</h2>
-          <p style={{ fontSize: "0.85rem", color: "#555" }}>
+          <p style={{ fontSize: "0.85rem", color: "var(--ink-soft, #555)" }}>
             Access is not the same as permission. All listed courses and learning units link directly to free open educational resources.
           </p>
           <div className="universal-resource-list" style={{ marginTop: "10px", fontSize: "0.85rem" }}>
@@ -439,7 +443,7 @@ export default function ProgramPage({
         )}
       </main>
 
-      <footer className="universal-program-footer" style={{ borderTop: "2px solid #222", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+      <footer className="universal-program-footer" style={{ borderTop: "var(--stroke-strong, 2px) solid var(--ink, #222)", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
         <strong>Course Atlas</strong> — <small>Independent Study Pathway v{programVersion.version}</small>
       </footer>
     </div>

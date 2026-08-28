@@ -49,7 +49,7 @@ export function UnitEvidenceInput({
 
   if (!mounted) {
     return (
-      <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#666" }}>
+      <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "var(--ink-soft, #666)" }}>
         Loading evidence tracker...
       </div>
     );
@@ -74,7 +74,7 @@ export function UnitEvidenceInput({
   };
 
   return (
-    <div style={{ marginTop: "10px", borderTop: "1px dashed #ccc", paddingTop: "8px" }}>
+    <div style={{ marginTop: "10px", borderTop: "var(--stroke, 1px) dashed var(--rule, #ccc)", paddingTop: "8px" }}>
       <div
         style={{
           display: "flex",
@@ -85,12 +85,12 @@ export function UnitEvidenceInput({
       >
         <label
           htmlFor={`evidence-${unitId}`}
-          style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#333" }}
+          style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--ink, #333)" }}
         >
           Submit Work Evidence / Project Link:
         </label>
         {savedTime && (
-          <span style={{ fontSize: "0.75rem", color: "#006600", fontWeight: "bold" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--ok, #006600)", fontWeight: "bold" }}>
             ✓ Evidence saved
           </span>
         )}
@@ -107,9 +107,9 @@ export function UnitEvidenceInput({
           width: "100%",
           padding: "0.4rem 0.5rem",
           fontSize: "0.85rem",
-          border: "1px solid #777",
-          background: "#fff",
-          fontFamily: "monospace",
+          border: "var(--stroke, 1px) solid var(--ink-soft, #777)",
+          background: "var(--paper, #fff)",
+          fontFamily: "var(--mono-font, monospace)",
           marginBottom: "6px",
           boxSizing: "border-box",
         }}
@@ -121,8 +121,8 @@ export function UnitEvidenceInput({
           onClick={handleSave}
           disabled={!hydrated || !prerequisites.isUnlocked || !evidenceText.trim()}
           style={{
-            background: "#fff",
-            border: "1px solid #000",
+            background: "var(--paper, #fff)",
+            border: "var(--stroke, 1px) solid var(--ink, #000)",
             padding: "0.3rem 0.6rem",
             fontSize: "0.8rem",
             cursor: "pointer",

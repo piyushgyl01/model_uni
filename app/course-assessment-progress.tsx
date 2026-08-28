@@ -156,7 +156,7 @@ export function CourseAssessmentProgress({
   if (mastery.assessments.length === 0) return null;
 
   return (
-    <div style={{ marginTop: "1rem", borderTop: "1px solid #000", paddingTop: "1rem" }}>
+    <div style={{ marginTop: "1rem", borderTop: "var(--stroke, 1px) solid var(--ink, #000)", paddingTop: "1rem" }}>
       <strong>Required assessment record</strong>
       <p style={{ margin: "0.25rem 0 0.75rem", fontSize: "0.85rem" }}>
         Submit real work, then record the resulting evaluation. Peer and instructor
@@ -172,7 +172,7 @@ export function CourseAssessmentProgress({
           return (
             <section
               key={id}
-              style={{ border: "1px solid #aaa", padding: "0.75rem", background: "#fff" }}
+              style={{ border: "var(--stroke, 1px) solid var(--ink-faint, #aaa)", padding: "0.75rem", background: "var(--paper, #fff)" }}
               aria-labelledby={`mastery-${id}`}
             >
               <div
@@ -184,7 +184,7 @@ export function CourseAssessmentProgress({
                 }}
               >
                 <strong id={`mastery-${id}`}>{assessment.assessmentVersion.title}</strong>
-                <span style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
+                <span style={{ fontFamily: "var(--mono-font, monospace)", fontSize: "0.8rem" }}>
                   {assessment.weight}% · {status}
                 </span>
               </div>
@@ -294,7 +294,7 @@ export function CourseAssessmentProgress({
 
               {attempt?.status === "evaluated" && attempt.result && (
                 <div style={{ marginTop: "0.6rem", fontSize: "0.85rem" }}>
-                  <strong style={{ color: assessment.thresholdSatisfied ? "#006600" : "#aa0000" }}>
+                  <strong style={{ color: assessment.thresholdSatisfied ? "var(--ok, #006600)" : "var(--bad, #aa0000)" }}>
                     {attempt.result.score} / {assessment.assessmentVersion.maximumScore} ·{" "}
                     {assessment.thresholdSatisfied ? "Passed" : "Retry required"}
                   </strong>
@@ -316,7 +316,7 @@ export function CourseAssessmentProgress({
               )}
 
               {errors[id] && (
-                <p role="alert" style={{ color: "#aa0000", margin: "0.5rem 0 0", fontSize: "0.85rem" }}>
+                <p role="alert" style={{ color: "var(--bad, #aa0000)", margin: "0.5rem 0 0", fontSize: "0.85rem" }}>
                   {errors[id]}
                 </p>
               )}

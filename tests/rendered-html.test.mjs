@@ -271,6 +271,56 @@ test("legacy degree links redirect and unknown programs remain 404", async () =>
   assert.equal(missing.status, 404);
 });
 
+test("styling is a switchable theme that leaves the classic look untouched", async () => {
+  const response = await render();
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  // The default theme is server-rendered, so it never arrives after paint.
+  assert.match(html, /<html[^>]*data-theme="neobrutalist"/);
+  // The pre-paint script only has to clear it for a learner who chose classic.
+  assert.match(html, /localStorage\.getItem\("course-atlas-theme"\)/);
+  assert.match(html, /removeAttribute\("data-theme"\)/);
+  assert.match(html, /Style: /);
+
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const themeBlockStart = css.indexOf(':root[data-theme="neobrutalist"] {');
+  assert.ok(themeBlockStart > 0, "the theme's token block must exist");
+  const beforeTheme = css.slice(0, themeBlockStart);
+
+  // Component inline styles read these tokens with their classic values as
+  // fallbacks. Defining any of them outside the theme block would change the
+  // classic look, which is the one thing this theme must not do.
+  for (const token of [
+    "--ink",
+    "--ink-soft",
+    "--ink-faint",
+    "--paper",
+    "--paper-soft",
+    "--rule",
+    "--link-ink",
+    "--ok",
+    "--bad",
+    "--warn",
+    "--accent-ink",
+    "--stroke",
+    "--stroke-strong",
+    "--mono-font",
+    "--display-font",
+  ]) {
+    assert.doesNotMatch(
+      beforeTheme,
+      new RegExp(`^\\s*\\${token}\\s*:`, "m"),
+      `${token} must be defined only inside the theme block`,
+    );
+    assert.match(
+      css.slice(themeBlockStart),
+      new RegExp(`^\\s*\\${token}\\s*:`, "m"),
+      `${token} must be defined by the theme`,
+    );
+  }
+});
+
 test("source architecture has one renderer, stable progress, and D1 migrations", async () => {
   const [
     programRoute,
