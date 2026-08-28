@@ -307,6 +307,11 @@ test("styling is a switchable theme that leaves the classic look untouched", asy
     "--stroke-strong",
     "--mono-font",
     "--display-font",
+    "--button-primary-ink",
+    "--card-mint",
+    "--card-coral",
+    "--card-periwinkle",
+    "--card-peach",
   ]) {
     assert.doesNotMatch(
       beforeTheme,

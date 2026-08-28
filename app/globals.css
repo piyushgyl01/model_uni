@@ -197,7 +197,10 @@ code, kbd, pre, samp, .mono, small.direction-status {
 
 .button-primary {
   background: var(--accent);
-  color: #ffffff !important;
+  /* The !important predates the theme layer, so a theme cannot outrank this
+     with specificity. Reading a token here, with the classic value as its
+     fallback, lets the theme set it without another !important. */
+  color: var(--button-primary-ink, #ffffff) !important;
 }
 
 .button-primary:hover {
@@ -795,69 +798,77 @@ footer, #catalog-footer {
 }
 
 
+
 /* ==========================================================================
    Neobrutalist theme
    --------------------------------------------------------------------------
    Opt-out styling switched on by data-theme="neobrutalist" on the root
-   element. It is expressed almost entirely as token values, because the
-   component tree sets most of its colours and borders through inline styles
-   that reference these same tokens with their classic values as fallbacks.
-   Undefining a token therefore restores the classic look exactly; the rules
-   below the token block only add what no token can express — hard offset
-   shadows, weight, and case.
+   element. Most of it is expressed as token values, because the component
+   tree sets its colours and borders through inline styles that read these
+   same tokens with their classic values as fallbacks. The classic theme
+   defines none of them, so undefining a token restores the old look exactly.
+
+   The rules after the token block add what no token can express: colour
+   blocking per card, hard offset shadows, weight, case, and the slight
+   rotation that keeps a grid from reading as a spreadsheet.
    ========================================================================== */
 
 :root[data-theme="neobrutalist"] {
-  /* Existing token layer, re-pointed. */
-  --bg: #fdf0d5;
+  /* Existing token layer, re-pointed. Nothing stays white. */
+  --bg: #fdfd96;
   --text: #000000;
-  --text-muted: #171717;
+  --text-muted: #000000;
   --border: #000000;
   --border-light: #000000;
-  --link: #2b4eff;
-  --link-visited: #6d28d9;
-  --highlight-bg: #ffe9a8;
-  --accent: #6d28d9;
-  --tag-bg: #ffe9a8;
-  --card-bg: #ffffff;
+  --link: #0018cc;
+  --link-visited: #7c1fd0;
+  --highlight-bg: #ffd3b6;
+  --accent: #ff2e63;
+  --tag-bg: #b5b9ff;
+  --card-bg: #a8e6cf;
   --radius: 0px;
-  --state-done: #047857;
-  --state-done-bg: #a7f3d0;
-  --state-active: #92400e;
-  --state-active-bg: #fde68a;
-  --state-locked: #3a3a3a;
-  --state-locked-bg: #e5e5e5;
+  --state-done: #006b3c;
+  --state-done-bg: #7cf0a8;
+  --state-active: #8a3d00;
+  --state-active-bg: #ffd3b6;
+  --state-locked: #000000;
+  --state-locked-bg: #e4e4e4;
 
-  /* Token layer the inline styles read. Undefined in the classic theme, so
-     every one of those declarations falls back to the value it always had. */
+  /* The token layer the inline styles read. Undefined in the classic theme,
+     so each of those declarations falls back to the value it always had. */
   --ink: #000000;
-  --ink-soft: #171717;
-  --ink-faint: #3a3a3a;
-  --paper: #ffffff;
-  --paper-soft: #ffe9a8;
+  --ink-soft: #000000;
+  --ink-faint: #1a1a1a;
+  --paper: #a8e6cf;
+  --paper-soft: #ffd3b6;
   --rule: #000000;
-  --link-ink: #2b4eff;
-  --ok: #047857;
-  --ok-soft: #a7f3d0;
-  --bad: #c81e1e;
-  --bad-soft: #fecaca;
-  --warn: #92400e;
-  --warn-soft: #fde68a;
-  --accent-ink: #6d28d9;
-  --accent-soft: #ddd6fe;
-  --stroke: 2px;
-  --stroke-strong: 3px;
+  --link-ink: #0018cc;
+  --ok: #006b3c;
+  --ok-soft: #7cf0a8;
+  --bad: #a30026;
+  --bad-soft: #ffaaa5;
+  --warn: #8a3d00;
+  --warn-soft: #ffe066;
+  --accent-ink: #7c1fd0;
+  --accent-soft: #b5b9ff;
+  /* Kept moderate: this width also lands on ten-pixel progress rails, where
+     a four-pixel border would leave no room for the fill. Cards below set
+     their own heavier weight. */
+  --stroke: 3px;
+  --stroke-strong: 4px;
   --mono-font: var(--font-geist-mono), ui-monospace, "Courier New", monospace;
 
   /* Theme-only values with no classic counterpart. */
   --display-font: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  --shadow-hard: 6px 6px 0 var(--ink);
-  --shadow-hard-sm: 4px 4px 0 var(--ink);
-}
+  --shadow-hard: 8px 8px 0 var(--ink);
+  --shadow-hard-sm: 5px 5px 0 var(--ink);
+  --card-mint: #a8e6cf;
+  --card-coral: #ffaaa5;
+  --card-periwinkle: #b5b9ff;
+  --card-peach: #ffd3b6;
 
-/* :root is the html element, so setting the family here reaches every
-   descendant that inherits it, including body. */
-:root[data-theme="neobrutalist"] {
+  /* :root is the html element, so the family here reaches everything that
+     inherits it, body included. */
   font-family: var(--display-font);
 }
 
@@ -869,37 +880,51 @@ footer, #catalog-footer {
 :root[data-theme="neobrutalist"] h6 {
   font-family: var(--display-font);
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
-:root[data-theme="neobrutalist"] h1,
-:root[data-theme="neobrutalist"] h2 {
-  text-transform: uppercase;
-}
-
 :root[data-theme="neobrutalist"] h1 {
-  border-bottom: 5px solid var(--ink);
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  border-bottom: 6px solid var(--ink);
   padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 :root[data-theme="neobrutalist"] h2 {
-  border-bottom: 3px solid var(--ink);
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  border-bottom: 4px solid var(--ink);
   padding-bottom: var(--space-2);
 }
 
+:root[data-theme="neobrutalist"] h3 {
+  font-size: 1.35rem;
+}
+
+:root[data-theme="neobrutalist"] h4,
+:root[data-theme="neobrutalist"] h5,
+:root[data-theme="neobrutalist"] h6 {
+  text-transform: none;
+}
+
 :root[data-theme="neobrutalist"] a {
-  font-weight: 700;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 2px;
+  font-weight: 800;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
 }
 
 :root[data-theme="neobrutalist"] a:hover {
-  background-color: #ffe14d;
-  box-shadow: 0 0 0 2px #ffe14d;
+  background-color: var(--accent);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
-/* Anything that reads as a card gets the border and the hard shadow. */
+/* ---- Colour-blocked cards ------------------------------------------------
+   Anything that reads as a card gets the frame, the shadow and a fill. The
+   grids cycle four fills so no two neighbours match. */
+
 :root[data-theme="neobrutalist"] .degree-directory-card,
 :root[data-theme="neobrutalist"] .catalog-manifesto,
 :root[data-theme="neobrutalist"] .catalog-trust-strip,
@@ -912,33 +937,93 @@ footer, #catalog-footer {
 :root[data-theme="neobrutalist"] .universal-learning-unit,
 :root[data-theme="neobrutalist"] .universal-recognition-notice,
 :root[data-theme="neobrutalist"] .catalog-row {
-  background: var(--card-bg);
-  border: 3px solid var(--ink);
+  background: var(--card-mint);
+  border: 4px solid var(--ink);
   border-radius: 0;
   box-shadow: var(--shadow-hard);
+  transition: transform 90ms steps(2), box-shadow 90ms steps(2);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-grid > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .degree-stack > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .school-home-grid > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .unit-grid > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .units-list > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] .assessment-grid > *:nth-child(4n + 2),
+:root[data-theme="neobrutalist"] #courses > *:nth-child(4n + 2) {
+  background: var(--card-coral);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-grid > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .degree-stack > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .school-home-grid > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .unit-grid > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .units-list > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] .assessment-grid > *:nth-child(4n + 3),
+:root[data-theme="neobrutalist"] #courses > *:nth-child(4n + 3) {
+  background: var(--card-periwinkle);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-grid > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .degree-stack > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .school-home-grid > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .unit-grid > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .units-list > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] .assessment-grid > *:nth-child(4n + 4),
+:root[data-theme="neobrutalist"] #courses > *:nth-child(4n + 4) {
+  background: var(--card-peach);
+}
+
+:root[data-theme="neobrutalist"] .catalog-manifesto {
+  background: var(--card-periwinkle);
+}
+
+:root[data-theme="neobrutalist"] .catalog-trust-strip {
+  background: var(--card-peach);
+}
+
+/* A grid of perfectly square cards reads as a spreadsheet. One degree of
+   rotation is enough to break that, and hover straightens the card so the
+   pointer target stops moving under the cursor. Confined to the card grids:
+   on a long list of course rows it would read as damage rather than design. */
+:root[data-theme="neobrutalist"] .degree-card-grid > *:nth-child(odd),
+:root[data-theme="neobrutalist"] .school-home-grid > *:nth-child(odd),
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:nth-child(odd) {
+  transform: rotate(-1deg);
+}
+
+:root[data-theme="neobrutalist"] .degree-card-grid > *:nth-child(even),
+:root[data-theme="neobrutalist"] .school-home-grid > *:nth-child(even),
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:nth-child(even) {
+  transform: rotate(1deg);
 }
 
 :root[data-theme="neobrutalist"] .degree-directory-card:hover,
-:root[data-theme="neobrutalist"] .catalog-row:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 8px 8px 0 var(--ink);
+:root[data-theme="neobrutalist"] .catalog-row:hover,
+:root[data-theme="neobrutalist"] .unit-card:hover,
+:root[data-theme="neobrutalist"] .degree-card-grid > *:hover,
+:root[data-theme="neobrutalist"] .school-home-grid > *:hover,
+:root[data-theme="neobrutalist"] .catalog-roadmap > *:hover {
+  transform: translate(-3px, -3px) rotate(0deg);
+  box-shadow: 11px 11px 0 var(--ink);
 }
 
-:root[data-theme="neobrutalist"] .catalog-manifesto blockquote,
-:root[data-theme="neobrutalist"] .catalog-manifesto div {
-  font-family: var(--display-font);
-}
+/* ---- Buttons ------------------------------------------------------------ */
 
-/* Buttons carry the shadow and physically depress when pressed. */
 :root[data-theme="neobrutalist"] .button,
 :root[data-theme="neobrutalist"] button.button,
 :root[data-theme="neobrutalist"] .btn,
 :root[data-theme="neobrutalist"] .header-cta {
   font-family: var(--display-font);
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border: 3px solid var(--ink);
+  letter-spacing: 0.01em;
+  background: var(--card-peach);
+  color: var(--ink);
+  border: 4px solid var(--ink);
   border-radius: 0;
   box-shadow: var(--shadow-hard-sm);
   transition: transform 80ms steps(2), box-shadow 80ms steps(2);
@@ -946,68 +1031,93 @@ footer, #catalog-footer {
 
 :root[data-theme="neobrutalist"] .button:hover,
 :root[data-theme="neobrutalist"] button.button:hover,
-:root[data-theme="neobrutalist"] .btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ink);
-  background-color: #ffe14d;
+:root[data-theme="neobrutalist"] .btn:hover,
+:root[data-theme="neobrutalist"] .header-cta:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ink);
+  background: var(--accent);
+  color: var(--ink);
 }
 
 :root[data-theme="neobrutalist"] .button:active,
 :root[data-theme="neobrutalist"] button.button:active,
-:root[data-theme="neobrutalist"] .btn:active {
-  transform: translate(4px, 4px);
+:root[data-theme="neobrutalist"] .btn:active,
+:root[data-theme="neobrutalist"] .header-cta:active {
+  transform: translate(5px, 5px);
   box-shadow: 0 0 0 var(--ink);
+}
+
+/* The call to action is the loudest thing on the page, in black on pink. */
+:root[data-theme="neobrutalist"] {
+  --button-primary-ink: #000000;
 }
 
 :root[data-theme="neobrutalist"] .button-primary {
   background: var(--accent);
-  color: #ffffff;
 }
 
-/* Labels become printed stickers rather than quiet grey text. The sticker is
-   yellow rather than black because several of these carry an inline text
-   colour from the component, and dark ink on yellow stays legible where dark
-   ink on black would not. */
+:root[data-theme="neobrutalist"] .button-primary:hover {
+  background: var(--card-periwinkle);
+}
+
+:root[data-theme="neobrutalist"] .button-quiet {
+  background: var(--card-mint);
+}
+
+/* ---- Chips, bars and frames -------------------------------------------- */
+
+/* Labels become printed stickers. Periwinkle rather than black, because
+   several of these carry an inline text colour from their component and dark
+   ink on a dark chip would not survive it. */
 :root[data-theme="neobrutalist"] .eyebrow,
 :root[data-theme="neobrutalist"] .section-index {
   display: inline-block;
-  background: #ffe14d;
+  background: var(--card-periwinkle);
   color: var(--ink);
   font-family: var(--mono-font);
-  font-weight: 700;
-  padding: var(--space-1) var(--space-2);
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: var(--space-2) var(--space-3);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
 :root[data-theme="neobrutalist"] .topbar,
 :root[data-theme="neobrutalist"] .catalog-topbar {
-  border-bottom: 4px solid var(--ink);
+  background: var(--card-periwinkle);
+  border-bottom: 5px solid var(--ink);
+  padding: var(--space-3) var(--space-4);
+  margin-left: calc(-1 * var(--space-4));
+  margin-right: calc(-1 * var(--space-4));
 }
 
 :root[data-theme="neobrutalist"] .brand-mark {
   border: 3px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
+  background: var(--accent);
 }
 
 :root[data-theme="neobrutalist"] .brand strong {
   font-family: var(--display-font);
   font-weight: 900;
   text-transform: uppercase;
+  letter-spacing: -0.02em;
 }
 
 :root[data-theme="neobrutalist"] .requirements-table,
 :root[data-theme="neobrutalist"] table.data-table {
-  border: 3px solid var(--ink);
+  border: 4px solid var(--ink);
   box-shadow: var(--shadow-hard);
+  background: var(--card-mint);
 }
 
 :root[data-theme="neobrutalist"] .requirements-table th,
 :root[data-theme="neobrutalist"] table.data-table th {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--card-mint);
   font-family: var(--mono-font);
   text-transform: uppercase;
+  border-color: var(--ink);
 }
 
 :root[data-theme="neobrutalist"] .requirements-table td,
@@ -1015,44 +1125,54 @@ footer, #catalog-footer {
   border-color: var(--ink);
 }
 
+:root[data-theme="neobrutalist"] .requirements-table tr:nth-child(even),
+:root[data-theme="neobrutalist"] table.data-table tr:nth-child(even) {
+  background: var(--card-peach);
+}
+
 /* The controls a learner actually touches. */
 :root[data-theme="neobrutalist"] .universal-unit-check,
 :root[data-theme="neobrutalist"] .universal-week-check {
-  border: 2px solid var(--ink);
+  border: 3px solid var(--ink);
   border-radius: 0;
-  background: var(--card-bg);
+  background: var(--card-mint);
   padding: var(--space-3);
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
 :root[data-theme="neobrutalist"] .universal-unit-check:has(input:checked),
 :root[data-theme="neobrutalist"] .universal-week-check:has(input:checked) {
   background: var(--state-done-bg);
-  box-shadow: 3px 3px 0 var(--ink);
 }
 
 :root[data-theme="neobrutalist"] .universal-unit-check > input[type="checkbox"],
 :root[data-theme="neobrutalist"] .universal-week-check > input[type="checkbox"] {
   accent-color: var(--accent);
+  width: 22px;
+  height: 22px;
 }
 
 :root[data-theme="neobrutalist"] .progress-rail,
 :root[data-theme="neobrutalist"] .progress-bar-container {
-  border: 2px solid var(--ink);
+  border: 3px solid var(--ink);
   border-radius: 0;
-  background: #ffffff;
+  background: var(--card-peach);
 }
 
 :root[data-theme="neobrutalist"] .progress-rail > span,
 :root[data-theme="neobrutalist"] .progress-bar-fill {
   border-radius: 0;
+  background: var(--accent);
 }
 
 :root[data-theme="neobrutalist"] input,
 :root[data-theme="neobrutalist"] textarea,
 :root[data-theme="neobrutalist"] select {
+  background: #e8faf0;
   border: 3px solid var(--ink);
   border-radius: 0;
   font-family: var(--display-font);
+  font-weight: 600;
 }
 
 :root[data-theme="neobrutalist"] input:focus-visible,
@@ -1060,13 +1180,74 @@ footer, #catalog-footer {
 :root[data-theme="neobrutalist"] select:focus-visible,
 :root[data-theme="neobrutalist"] a:focus-visible,
 :root[data-theme="neobrutalist"] button:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Strips and generic sections that carry their own pale background in the
+   classic stylesheet, so nothing is left reading as grey. */
+:root[data-theme="neobrutalist"] .program-meta-strip,
+:root[data-theme="neobrutalist"] .course-meta-strip {
+  background: var(--card-periwinkle);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+:root[data-theme="neobrutalist"] .section {
+  background: var(--card-peach);
+  border: 4px solid var(--ink);
+  box-shadow: var(--shadow-hard);
+}
+
+/* Class-less buttons are common in this tree; they set their own colours
+   inline, so the theme only adds the frame and the shadow. Case is left alone
+   so the accessible name a test matches on is never transformed. */
+:root[data-theme="neobrutalist"] button:not([class]) {
+  border: 4px solid var(--ink);
+  border-radius: 0;
+  box-shadow: var(--shadow-hard-sm);
+  font-family: var(--display-font);
+  font-weight: 900;
+  transition: transform 80ms steps(2), box-shadow 80ms steps(2);
+}
+
+:root[data-theme="neobrutalist"] button:not([class]):hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+:root[data-theme="neobrutalist"] button:not([class]):active {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+:root[data-theme="neobrutalist"] .catalog-hero {
+  background: var(--card-mint);
+  border: 4px solid var(--ink);
+  box-shadow: var(--shadow-hard);
 }
 
 :root[data-theme="neobrutalist"] footer,
 :root[data-theme="neobrutalist"] #catalog-footer {
-  border-top: 4px solid var(--ink);
+  border-top: 5px solid var(--ink);
+  background: var(--card-periwinkle);
+}
+
+/* Reduced motion keeps the shadows and the fills, drops the movement. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="neobrutalist"] .degree-card-grid > *,
+  :root[data-theme="neobrutalist"] .school-home-grid > *,
+  :root[data-theme="neobrutalist"] .catalog-roadmap > *,
+  :root[data-theme="neobrutalist"] .degree-directory-card:hover,
+  :root[data-theme="neobrutalist"] .catalog-row:hover,
+  :root[data-theme="neobrutalist"] .unit-card:hover,
+  :root[data-theme="neobrutalist"] .button:hover,
+  :root[data-theme="neobrutalist"] .button:active,
+  :root[data-theme="neobrutalist"] .btn:hover,
+  :root[data-theme="neobrutalist"] .btn:active {
+    transform: none;
+    transition: none;
+  }
 }
 
 /* The switch itself, so it reads as part of whichever theme is showing. */
@@ -1089,19 +1270,20 @@ footer, #catalog-footer {
 
 :root[data-theme="neobrutalist"] .theme-switch {
   font-family: var(--mono-font);
-  font-weight: 700;
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-
-:root[data-theme="neobrutalist"] .theme-switch:hover {
-  background: #ffe14d;
-  transform: translate(-1px, -1px);
+  font-weight: 900;
+  background: var(--card-peach);
+  border: 3px solid var(--ink);
   box-shadow: 4px 4px 0 var(--ink);
 }
 
+:root[data-theme="neobrutalist"] .theme-switch:hover {
+  background: var(--accent);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
 :root[data-theme="neobrutalist"] .theme-switch:active {
-  transform: translate(3px, 3px);
+  transform: translate(4px, 4px);
   box-shadow: 0 0 0 var(--ink);
 }
 
