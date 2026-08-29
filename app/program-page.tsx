@@ -167,12 +167,9 @@ export default function ProgramPage({
           <a href="#requirements">Requirements</a>
           <a href="#outcomes">Outcomes</a>
         </nav>
-        <div className="topbar-actions">
-          <ThemeSwitch />
-          <Link className="header-cta" href="/">
-            All Degrees ←
-          </Link>
-        </div>
+        <Link className="header-cta" href="/">
+          All Degrees ←
+        </Link>
       </header>
 
       <main id="main-content">
@@ -443,8 +440,9 @@ export default function ProgramPage({
         )}
       </main>
 
-      <footer className="universal-program-footer" style={{ borderTop: "var(--stroke-strong, 2px) solid var(--ink, #222)", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+      <footer className="universal-program-footer">
         <strong>Course Atlas</strong> — <small>Independent Study Pathway v{programVersion.version}</small>
+        <ThemeSwitch />
       </footer>
     </div>
   );

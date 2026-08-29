@@ -139,12 +139,6 @@
   box-shadow: none;
 }
 
-:root[data-theme="neobrutalist"] .topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
 /* ---- Type --------------------------------------------------------------- */
 
 :root[data-theme="neobrutalist"] h1 {
@@ -613,10 +607,18 @@
   color: var(--nb-lime);
 }
 
+/* The display treatment belongs to the wordmark, not to the block: the note
+   that follows it sits inside the same container and was inheriting 900
+   weight, uppercase and negative tracking. */
 :root[data-theme="neobrutalist"] .footer-brand {
+  color: var(--nb-paper);
+}
+
+:root[data-theme="neobrutalist"] .footer-brand .brand strong {
   font-family: var(--nb-display);
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   font-weight: 900;
+  line-height: 1;
   letter-spacing: -0.035em;
   text-transform: uppercase;
   color: var(--nb-paper);
@@ -641,24 +643,37 @@
   color: var(--nb-paper);
 }
 
-/* ---- The switch --------------------------------------------------------- */
+/* ---- The appearance control ---------------------------------------------
+   It sits in the footer meta and is styled to read as another line of it: no
+   frame, no fill, no shadow. Appearance is a preference, not a call to
+   action, and it should not compete with anything on the page. Hover and
+   keyboard focus still identify it plainly as a control. */
 
 :root[data-theme="neobrutalist"] .theme-switch {
-  padding: 0.45rem 0.7rem;
+  padding: 0;
   background: transparent;
-  color: var(--nb-paper);
-  border: 2px solid var(--nb-paper);
+  color: inherit;
+  border: none;
   box-shadow: none;
   font-family: var(--nb-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  opacity: 0.65;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: opacity 90ms steps(2);
 }
 
-:root[data-theme="neobrutalist"] .theme-switch:hover {
-  background: var(--nb-lime);
-  color: var(--nb-ink);
-  border-color: var(--nb-lime);
+:root[data-theme="neobrutalist"] .theme-switch:hover,
+:root[data-theme="neobrutalist"] .theme-switch:focus-visible {
+  opacity: 1;
+  color: var(--nb-lime);
+  background: transparent;
+  text-decoration-color: var(--nb-lime);
   transform: none;
   box-shadow: none;
 }
@@ -706,7 +721,12 @@
 :root[data-theme="neobrutalist"] .nb-footer-note {
   max-width: 60ch;
   margin: var(--nb-gap) 0 0;
+  font-family: var(--nb-display);
   font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--nb-paper);
 }
 
@@ -918,4 +938,36 @@
 
 :root[data-theme="neobrutalist"] .universal-course-list {
   grid-template-columns: 1fr;
+}
+
+/* The program and course footers are a single meta line; give them the same
+   spacing rhythm as the catalog footer so the appearance control sits with
+   the rest of the small print rather than under it. */
+:root[data-theme="neobrutalist"] .universal-program-footer {
+  margin: var(--nb-section) calc(-1 * var(--nb-pad)) 0;
+  padding: var(--nb-pad);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  font-family: var(--nb-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+:root[data-theme="neobrutalist"] .universal-program-footer strong {
+  font-family: var(--nb-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="neobrutalist"] .footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
 }
