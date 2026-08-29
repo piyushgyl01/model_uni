@@ -356,12 +356,9 @@ export default function CoursePage({
           <a href="#assessments">Assessments</a>
           <a href="#start">Prerequisites & Setup</a>
         </nav>
-        <div className="topbar-actions">
-          <ThemeSwitch />
-          <Link className="header-cta" href={programHref}>
-            Degree ←
-          </Link>
-        </div>
+        <Link className="header-cta" href={programHref}>
+          Degree ←
+        </Link>
       </header>
 
       <main id="course-main">
@@ -607,8 +604,9 @@ export default function CoursePage({
         </CourseAccessProvider>
       </main>
 
-      <footer className="universal-program-footer" style={{ borderTop: "var(--stroke-strong, 2px) solid var(--ink, #222)", padding: "20px 0", marginTop: "50px", fontSize: "0.85rem" }}>
+      <footer className="universal-program-footer">
         <strong>{courseVersion.title}</strong> — <small>Part of <Link href={programHref}>{bundle.programVersion.title}</Link></small>
+        <ThemeSwitch />
       </footer>
     </div>
   );

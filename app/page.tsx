@@ -82,12 +82,9 @@ export default async function Home({
           ))}
         </nav>
 
-        <div className="topbar-actions">
-          <ThemeSwitch />
-          <a className="header-cta" href="#programs">
-            Select a Degree ↓
-          </a>
-        </div>
+        <a className="header-cta" href="#programs">
+          Select a Degree ↓
+        </a>
       </header>
 
       <main id="top">
@@ -344,6 +341,7 @@ export default async function Home({
         <div className="footer-meta" style={{ marginTop: "20px" }}>
           <span>Course Atlas · Universal program catalog</span>
           <span>What to learn · Where · Work · Evidence</span>
+          <ThemeSwitch />
         </div>
       </footer>
     </div>
