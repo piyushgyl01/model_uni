@@ -8,9 +8,12 @@ import type {
   RequirementGroupId,
 } from "../domain/catalog";
 import { resolveLearnerPath } from "../domain/learner-path";
+import { MAX_LEVEL } from "../domain/practice/levels";
+import { practiceSkill } from "../domain/practice/registry";
 import type {
   AssessmentAttempt,
   LearnerEnrollment,
+  PracticeRound,
   PrerequisiteWaiver,
   ProgressMutationOperation,
   ScheduleEntry,
@@ -150,7 +153,8 @@ export type LearnerHistoryEntityType =
   | "evidence"
   | "assessment"
   | "schedule"
-  | "waiver";
+  | "waiver"
+  | "practice";
 
 export interface LearnerProgressHistoryEntry {
   readonly id: string;
@@ -187,6 +191,7 @@ export interface LearnerProgressSnapshot {
   readonly prerequisiteWaivers: Readonly<
     Record<string, LearnerPrerequisiteWaiverRecord>
   >;
+  readonly practiceRounds: Readonly<Record<string, PracticeRound>>;
   readonly history: readonly LearnerProgressHistoryEntry[];
   readonly startedAt?: string;
   readonly updatedAt?: string;
@@ -242,6 +247,7 @@ export interface LocalProgramProgressImport {
   readonly assessmentAttempts?: readonly AssessmentAttempt[];
   readonly scheduleEntries?: readonly ScheduleEntry[];
   readonly prerequisiteWaivers?: readonly PrerequisiteWaiver[];
+  readonly practiceRounds?: readonly PracticeRound[];
 }
 
 export type ProgressImportDisposition = "merged" | "cloud";
@@ -400,6 +406,20 @@ interface PrerequisiteWaiverRow {
   readonly updated_at: string;
 }
 
+interface PracticeRoundRow {
+  readonly id: string;
+  readonly course_version_id: string;
+  readonly learning_unit_id: string | null;
+  readonly skill_id: string;
+  readonly mode: string;
+  readonly level: number;
+  readonly question_count: number;
+  readonly correct_count: number;
+  readonly duration_seconds: number;
+  readonly study_date: string;
+  readonly completed_at: string;
+}
+
 interface ProgressEventRow {
   readonly id: string;
   readonly mutation_id: string | null;
@@ -437,6 +457,8 @@ interface NormalizedImportProgram {
   readonly assessmentAttempts: readonly AssessmentAttempt[];
   readonly scheduleEntries: readonly ScheduleEntry[];
   readonly prerequisiteWaivers: readonly PrerequisiteWaiver[];
+  /** Present only when non-empty, so earlier import receipts keep their hash. */
+  readonly practiceRounds?: readonly PracticeRound[];
 }
 
 export class LearnerProgressValidationError extends Error {
@@ -721,6 +743,60 @@ function requireConcentration(
   }
 }
 
+/**
+ * A practice round must sit in this publication, name a skill this app can
+ * mark, and have counts that add up. Returns every problem found.
+ */
+function practiceRoundProblems(
+  bundle: PublishedProgramBundle,
+  round: PracticeRound,
+  label: string,
+) {
+  const problems: string[] = [];
+  if (!bundle.courseVersions.some((course) => course.id === round.courseVersionId)) {
+    problems.push(`${label} names a course outside this publication.`);
+  }
+  if (
+    round.learningUnitId &&
+    !bundle.learningUnits.some(
+      (unit) =>
+        unit.id === round.learningUnitId &&
+        unit.courseVersionId === round.courseVersionId,
+    )
+  ) {
+    problems.push(`${label} names a unit outside its course.`);
+  }
+  if (!practiceSkill(round.skillId)) {
+    problems.push(`${label} names an unknown practice skill.`);
+  }
+  if (round.mode !== "check" && round.mode !== "practice") {
+    problems.push(`${label}.mode is unsupported.`);
+  }
+  const whole = (value: number, minimum: number, maximum: number) =>
+    Number.isInteger(value) && value >= minimum && value <= maximum;
+  if (!whole(round.level, 1, MAX_LEVEL)) problems.push(`${label}.level is out of range.`);
+  if (!whole(round.questionCount, 1, 20)) {
+    problems.push(`${label}.questionCount is out of range.`);
+  }
+  if (!whole(round.correctCount, 0, round.questionCount)) {
+    problems.push(`${label}.correctCount does not fit its question count.`);
+  }
+  if (!whole(round.durationSeconds, 0, 86_400)) {
+    problems.push(`${label}.durationSeconds is out of range.`);
+  }
+  try {
+    requireIsoDate(round.studyDate, `${label}.studyDate`);
+    requireIsoDateTime(round.completedAt, `${label}.completedAt`);
+  } catch (error) {
+    problems.push(
+      ...(error instanceof LearnerProgressValidationError
+        ? error.problems
+        : [String(error)]),
+    );
+  }
+  return problems;
+}
+
 function normalizeImportPrograms(
   programs: readonly LocalProgramProgressImport[],
 ): readonly NormalizedImportProgram[] {
@@ -815,6 +891,14 @@ function normalizeImportPrograms(
         program.prerequisiteWaivers ?? [],
         "prerequisiteWaivers",
       ),
+      ...((program.practiceRounds?.length ?? 0) > 0
+        ? {
+            practiceRounds: uniqueById(
+              program.practiceRounds ?? [],
+              "practiceRounds",
+            ),
+          }
+        : {}),
     };
   });
   normalized.sort((left, right) =>
@@ -1089,6 +1173,25 @@ export class D1LearnerProgressRepository {
                event.id`,
           )
           .bind(learnerId, programVersionId),
+        this.database
+          .prepare(
+            `SELECT
+               id,
+               course_version_id,
+               learning_unit_id,
+               skill_id,
+               mode,
+               level,
+               question_count,
+               correct_count,
+               duration_seconds,
+               study_date,
+               completed_at
+             FROM learner_practice_rounds
+             WHERE learner_id = ? AND program_version_id = ?
+             ORDER BY completed_at, id`,
+          )
+          .bind(learnerId, programVersionId),
       ],
       "load learner progress",
     );
@@ -1106,6 +1209,7 @@ export class D1LearnerProgressRepository {
     const waiverRows =
       rowsFromBatchResult<PrerequisiteWaiverRow>(results[8]);
     const eventRows = rowsFromBatchResult<ProgressEventRow>(results[9]);
+    const practiceRows = rowsFromBatchResult<PracticeRoundRow>(results[10]);
     if (progressRows.length > 1) {
       throw new LearnerProgressDataError([
         `Multiple progress rows exist for ${learnerId}/${programVersionId}.`,
@@ -1441,6 +1545,7 @@ export class D1LearnerProgressRepository {
           "assessment",
           "schedule",
           "waiver",
+          "practice",
         ].includes(row.entity_type)
       ) {
         dataProblems.push(`Progress event ${row.id} has invalid entity type.`);
@@ -1460,6 +1565,31 @@ export class D1LearnerProgressRepository {
           `Progress event ${row.id} payload`,
         ),
       });
+    }
+
+    const practiceRounds: Record<string, PracticeRound> = {};
+    for (const row of practiceRows) {
+      // A skill retired from the app leaves its rounds in place, unread.
+      if (!practiceSkill(row.skill_id)) continue;
+      const round: PracticeRound = {
+        id: row.id,
+        skillId: row.skill_id,
+        mode: row.mode as PracticeRound["mode"],
+        level: row.level,
+        questionCount: row.question_count,
+        correctCount: row.correct_count,
+        durationSeconds: row.duration_seconds,
+        studyDate: row.study_date,
+        completedAt: row.completed_at,
+        courseVersionId: row.course_version_id,
+        ...(row.learning_unit_id ? { learningUnitId: row.learning_unit_id } : {}),
+      };
+      const problems = practiceRoundProblems(bundle, round, `Practice round ${row.id}`);
+      if (problems.length > 0) {
+        dataProblems.push(...problems);
+        continue;
+      }
+      practiceRounds[row.id] = round;
     }
     if (dataProblems.length > 0) {
       throw new LearnerProgressDataError(dataProblems);
@@ -1513,6 +1643,7 @@ export class D1LearnerProgressRepository {
       assessmentAttempts,
       scheduleEntries,
       prerequisiteWaivers,
+      practiceRounds,
       history,
       ...(progress
         ? {
@@ -1658,6 +1789,7 @@ export class D1LearnerProgressRepository {
     const seenAssessmentLifecycleIds = new Set<string>();
     const seenScheduleLifecycleIds = new Set<string>();
     const seenWaiverLifecycleIds = new Set<string>();
+    const seenPracticeRoundIds = new Set<string>();
 
     const validationProblems: string[] = [];
     for (const [index, operation] of input.operations.entries()) {
@@ -2035,6 +2167,23 @@ export class D1LearnerProgressRepository {
           if (existing?.revokedAt) {
             validationProblems.push(
               `${label}.waiver cannot resurrect revoked waiver ${waiver.id}.`,
+            );
+          }
+          break;
+        }
+        case "record-practice-round": {
+          const round = operation.round;
+          if (seenPracticeRoundIds.has(round.id)) {
+            validationProblems.push(`${label}.round repeats ${round.id}.`);
+          }
+          seenPracticeRoundIds.add(round.id);
+          validationProblems.push(
+            ...practiceRoundProblems(bundle, round, `${label}.round`),
+          );
+          const existing = current.practiceRounds[round.id];
+          if (existing && canonicalJson(existing) !== canonicalJson(round)) {
+            validationProblems.push(
+              `${label}.round cannot rewrite recorded round ${round.id}.`,
             );
           }
           break;
@@ -2751,6 +2900,57 @@ export class D1LearnerProgressRepository {
           });
           break;
         }
+        case "record-practice-round": {
+          const round = operation.round;
+          statements.push(
+            this.database
+              .prepare(
+                `INSERT INTO learner_practice_rounds (
+                   id,
+                   learner_id,
+                   program_version_id,
+                   course_version_id,
+                   learning_unit_id,
+                   skill_id,
+                   mode,
+                   level,
+                   question_count,
+                   correct_count,
+                   duration_seconds,
+                   study_date,
+                   completed_at,
+                   last_mutation_id
+                 )
+                 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                 WHERE ${guardSql}
+                 ON CONFLICT(learner_id, program_version_id, id) DO NOTHING`,
+              )
+              .bind(
+                round.id,
+                learnerId,
+                input.programVersionId,
+                round.courseVersionId,
+                round.learningUnitId ?? null,
+                round.skillId,
+                round.mode,
+                round.level,
+                round.questionCount,
+                round.correctCount,
+                round.durationSeconds,
+                round.studyDate,
+                round.completedAt,
+                mutationId,
+                ...guardValues(),
+              ),
+          );
+          event("practice", round.id, "practice-round-recorded", {
+            skillId: round.skillId,
+            mode: round.mode,
+            correctCount: round.correctCount,
+            questionCount: round.questionCount,
+          });
+          break;
+        }
         case "revoke-prerequisite-waiver":
           statements.push(
             this.database
@@ -3269,6 +3469,16 @@ export class D1LearnerProgressRepository {
             );
           }
         }
+        for (const round of program.practiceRounds ?? []) {
+          const problems = practiceRoundProblems(
+            bundle,
+            round,
+            `Practice round ${round.id}`,
+          );
+          if (problems.length > 0) {
+            throw new LearnerProgressValidationError(problems);
+          }
+        }
         validated.push({ bundle, program });
       }
     }
@@ -3442,6 +3652,22 @@ export class D1LearnerProgressRepository {
           grantedAt: waiver.grantedAt,
           revokedAt: waiver.revokedAt ?? null,
           updatedAt: waiver.updatedAt ?? null,
+        })),
+      );
+      const practiceRounds = validated.flatMap(({ program }) =>
+        (program.practiceRounds ?? []).map((round) => ({
+          programVersionId: program.programVersionId,
+          id: round.id,
+          courseVersionId: round.courseVersionId,
+          learningUnitId: round.learningUnitId ?? null,
+          skillId: round.skillId,
+          mode: round.mode,
+          level: round.level,
+          questionCount: round.questionCount,
+          correctCount: round.correctCount,
+          durationSeconds: round.durationSeconds,
+          studyDate: round.studyDate,
+          completedAt: round.completedAt,
         })),
       );
       const importEvents = await Promise.all(
@@ -3938,6 +4164,56 @@ export class D1LearnerProgressRepository {
               learnerId,
               importMutationId,
               canonicalJson(prerequisiteWaivers),
+              learnerId,
+              clientImportId,
+              payloadHash,
+            ),
+        );
+      }
+
+      if (practiceRounds.length > 0) {
+        statements.push(
+          this.database
+            .prepare(
+              `INSERT INTO learner_practice_rounds (
+                 id,
+                 learner_id,
+                 program_version_id,
+                 course_version_id,
+                 learning_unit_id,
+                 skill_id,
+                 mode,
+                 level,
+                 question_count,
+                 correct_count,
+                 duration_seconds,
+                 study_date,
+                 completed_at,
+                 last_mutation_id
+               )
+               SELECT
+                 CAST(json_extract(value, '$.id') AS TEXT),
+                 ?,
+                 CAST(json_extract(value, '$.programVersionId') AS TEXT),
+                 CAST(json_extract(value, '$.courseVersionId') AS TEXT),
+                 CAST(json_extract(value, '$.learningUnitId') AS TEXT),
+                 CAST(json_extract(value, '$.skillId') AS TEXT),
+                 CAST(json_extract(value, '$.mode') AS TEXT),
+                 CAST(json_extract(value, '$.level') AS INTEGER),
+                 CAST(json_extract(value, '$.questionCount') AS INTEGER),
+                 CAST(json_extract(value, '$.correctCount') AS INTEGER),
+                 CAST(json_extract(value, '$.durationSeconds') AS INTEGER),
+                 CAST(json_extract(value, '$.studyDate') AS TEXT),
+                 CAST(json_extract(value, '$.completedAt') AS TEXT),
+                 ?
+               FROM json_each(?)
+               WHERE ${receiptExistsSql}
+               ON CONFLICT(learner_id, program_version_id, id) DO NOTHING`,
+            )
+            .bind(
+              learnerId,
+              importMutationId,
+              canonicalJson(practiceRounds),
               learnerId,
               clientImportId,
               payloadHash,

@@ -43,6 +43,13 @@
       "when": 1786500379481,
       "tag": "0005_sparkling_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791265630315,
+      "tag": "0006_practice_rounds",
+      "breakpoints": true
     }
   ]
 }

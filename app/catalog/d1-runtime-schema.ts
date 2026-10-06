@@ -24,6 +24,7 @@ const RUNTIME_SCHEMA_OBJECTS = [
   "learner_assessment_attempts",
   "learner_schedule_entries",
   "learner_prerequisite_waivers",
+  "learner_practice_rounds",
   "learner_progress_mutations",
   "learner_progress_events",
   "learner_pathway_snapshots",
@@ -69,6 +70,7 @@ const RUNTIME_SCHEMA_OBJECTS = [
   "learner_schedule_entries_status_day_idx",
   "learner_prerequisite_waivers_active_unique",
   "learner_prerequisite_waivers_course_idx",
+  "learner_practice_rounds_day_idx",
   "learner_progress_mutations_revision_unique",
   "learner_progress_events_program_time_idx",
   "learner_progress_events_entity_time_idx",
@@ -549,6 +551,39 @@ const RUNTIME_SCHEMA_STATEMENTS = [
       CHECK(length(trim(reason)) > 0),
     CONSTRAINT learner_prerequisite_waivers_basis_check
       CHECK(basis IN ('placement', 'prior_learning', 'review', 'manual'))
+  )`,
+  `CREATE TABLE IF NOT EXISTS learner_practice_rounds (
+    id text NOT NULL,
+    learner_id text NOT NULL,
+    program_version_id text NOT NULL,
+    course_version_id text NOT NULL,
+    learning_unit_id text,
+    skill_id text NOT NULL,
+    mode text NOT NULL,
+    level integer NOT NULL,
+    question_count integer NOT NULL,
+    correct_count integer NOT NULL,
+    duration_seconds integer NOT NULL,
+    study_date text NOT NULL,
+    completed_at text NOT NULL,
+    last_mutation_id text,
+    created_at text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY(learner_id, program_version_id, id),
+    FOREIGN KEY (learner_id, program_version_id)
+      REFERENCES learner_program_progress(learner_id, program_version_id)
+      ON UPDATE cascade
+      ON DELETE cascade,
+    CONSTRAINT learner_practice_rounds_mode_check
+      CHECK(mode IN ('check', 'practice')),
+    CONSTRAINT learner_practice_rounds_counts_check
+      CHECK(
+        level BETWEEN 1 AND 10
+        AND question_count BETWEEN 1 AND 20
+        AND correct_count BETWEEN 0 AND question_count
+        AND duration_seconds >= 0
+      ),
+    CONSTRAINT learner_practice_rounds_skill_check
+      CHECK(length(trim(skill_id)) > 0)
   )`,
   `CREATE TABLE IF NOT EXISTS learner_progress_mutations (
     learner_id text NOT NULL,
@@ -1046,6 +1081,13 @@ const RUNTIME_SCHEMA_STATEMENTS = [
       program_version_id,
       course_version_id,
       revoked_at
+    )`,
+  `CREATE INDEX IF NOT EXISTS
+    learner_practice_rounds_day_idx
+    ON learner_practice_rounds(
+      learner_id,
+      program_version_id,
+      study_date
     )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS
     learner_progress_mutations_revision_unique

@@ -6,6 +6,7 @@ import type {
   CloudProgramProgress,
   LearnerEnrollment,
   LocalImportProgram,
+  PracticeRound,
   PrerequisiteWaiver,
   ProgressImportReceipt,
   ProgressImportRequest,
@@ -75,6 +76,7 @@ export interface StoredProgramProgress {
   readonly assessmentAttempts?: Readonly<Record<string, AssessmentAttempt>>;
   readonly scheduleEntries?: Readonly<Record<string, ScheduleEntry>>;
   readonly prerequisiteWaivers?: Readonly<Record<string, PrerequisiteWaiver>>;
+  readonly practiceRounds?: Readonly<Record<string, PracticeRound>>;
   readonly history?: CloudProgramProgress["history"];
   readonly updatedAt?: string;
   readonly pendingMutations?: readonly QueuedProgressMutation[];
@@ -237,6 +239,7 @@ function normalizeStoredProgram(
     assessmentAttempts: { ...(program.assessmentAttempts ?? {}) },
     scheduleEntries: { ...(program.scheduleEntries ?? {}) },
     prerequisiteWaivers: { ...(program.prerequisiteWaivers ?? {}) },
+    practiceRounds: { ...(program.practiceRounds ?? {}) },
     history: [...(program.history ?? [])],
     pendingMutations: [...(program.pendingMutations ?? [])],
     ...(program.enrollment
@@ -913,6 +916,7 @@ function hasProgramRecords(program: StoredProgramProgress) {
       Object.keys(program.assessmentAttempts ?? {}).length > 0 ||
       Object.keys(program.scheduleEntries ?? {}).length > 0 ||
       Object.keys(program.prerequisiteWaivers ?? {}).length > 0 ||
+      Object.keys(program.practiceRounds ?? {}).length > 0 ||
       (program.history?.length ?? 0) > 0 ||
       (program.pendingMutations?.length ?? 0) > 0
   );
@@ -1124,6 +1128,19 @@ export function applyProgressOperations(
               ...operation.waiver,
               updatedAt: operation.waiver.updatedAt ?? optimisticAt,
             },
+          },
+          updatedAt: optimisticAt,
+        };
+        break;
+      }
+      case "record-practice-round": {
+        // A round is a fact: the first record of an id wins and is never rewritten.
+        if (program.practiceRounds?.[operation.round.id]) break;
+        program = {
+          ...program,
+          practiceRounds: {
+            ...(program.practiceRounds ?? {}),
+            [operation.round.id]: operation.round,
           },
           updatedAt: optimisticAt,
         };
@@ -1421,6 +1438,37 @@ export function writeLocalPrerequisiteWaiver(
   ]);
 }
 
+export function readLocalPracticeRounds(
+  programVersionId: ProgramVersionId,
+): PracticeRound[] {
+  return Object.values(getStoredProgram(programVersionId)?.practiceRounds ?? {});
+}
+
+/** Every practice round on this device, across programs — one character. */
+export function readAllLocalPracticeRounds(): PracticeRound[] {
+  return Object.values(readProgressStore().programs ?? {}).flatMap((program) =>
+    Object.values(program.practiceRounds ?? {}),
+  );
+}
+
+/** Rounds join the outbox like any other progress, twenty to a mutation. */
+export function writeLocalPracticeRounds(
+  programVersionId: ProgramVersionId,
+  rounds: readonly PracticeRound[],
+) {
+  let persisted = true;
+  for (let index = 0; index < rounds.length; index += 20) {
+    persisted =
+      enqueueProgressOperations(
+        programVersionId,
+        rounds
+          .slice(index, index + 20)
+          .map((round) => ({ type: "record-practice-round" as const, round })),
+      ) && persisted;
+  }
+  return persisted;
+}
+
 export function revokeLocalPrerequisiteWaiver(
   programVersionId: ProgramVersionId,
   prerequisiteWaiverId: string,
@@ -1467,6 +1515,8 @@ function storedProgramFromCloud(
     assessmentAttempts: progress.assessmentAttempts,
     scheduleEntries: progress.scheduleEntries,
     prerequisiteWaivers: progress.prerequisiteWaivers,
+    // A cached response from before practice existed has no rounds yet.
+    practiceRounds: progress.practiceRounds ?? {},
     history: progress.history,
     updatedAt: progress.updatedAt,
     pendingMutations: [],
@@ -1650,6 +1700,9 @@ function sanitizedImportPrograms(store: ProgressStore) {
         assessmentAttempts: program.assessmentAttempts ?? {},
         scheduleEntries: program.scheduleEntries ?? {},
         prerequisiteWaivers: program.prerequisiteWaivers ?? {},
+        ...(Object.keys(program.practiceRounds ?? {}).length > 0
+          ? { practiceRounds: program.practiceRounds }
+          : {}),
       };
       return [[programVersionId, value]];
     }),

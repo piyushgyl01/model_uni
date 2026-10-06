@@ -2,6 +2,7 @@ import type {
   AssessmentAttempt,
   AssessmentResult,
   LearnerEnrollment,
+  PracticeRound,
   PrerequisiteWaiver,
   ProgressMutationOperation,
   ProgressPatchRequest,
@@ -21,6 +22,8 @@ import type {
   ProgramVersionId,
   RequirementGroupId,
 } from "./domain/catalog";
+import { MAX_LEVEL } from "./domain/practice/levels";
+import { practiceSkill } from "./domain/practice/registry";
 import {
   badProgressRequest,
   rejectUnknownKeys,
@@ -503,6 +506,82 @@ function parseWaiver(value: unknown, label: string): PrerequisiteWaiver {
   };
 }
 
+/**
+ * A practice round must name a skill this app can mark, and its counts must
+ * add up. The questions themselves are never stored: the round is the record.
+ */
+function parsePracticeRound(value: unknown, label: string): PracticeRound {
+  const object = requireObject(value, label);
+  rejectUnknownKeys(
+    object,
+    [
+      "id",
+      "skillId",
+      "mode",
+      "level",
+      "questionCount",
+      "correctCount",
+      "durationSeconds",
+      "studyDate",
+      "completedAt",
+      "courseVersionId",
+      "learningUnitId",
+    ],
+    label,
+  );
+  const skillId = requireString(object.skillId, `${label}.skillId`, {
+    maxLength: 80,
+  });
+  if (!practiceSkill(skillId)) {
+    badProgressRequest(`${label}.skillId is not a practice skill.`);
+  }
+  if (object.mode !== "check" && object.mode !== "practice") {
+    badProgressRequest(`${label}.mode is invalid.`);
+  }
+  const questionCount = requireFiniteNumber(
+    object.questionCount,
+    `${label}.questionCount`,
+    { minimum: 1, maximum: 20, integer: true },
+  );
+  const learningUnitId =
+    object.learningUnitId === undefined
+      ? undefined
+      : (requireTypedId(
+          object.learningUnitId,
+          `${label}.learningUnitId`,
+          "unt",
+        ) as LearningUnitId);
+  return {
+    id: requireClientEntityId(object.id, `${label}.id`),
+    skillId,
+    mode: object.mode,
+    level: requireFiniteNumber(object.level, `${label}.level`, {
+      minimum: 1,
+      maximum: MAX_LEVEL,
+      integer: true,
+    }),
+    questionCount,
+    correctCount: requireFiniteNumber(
+      object.correctCount,
+      `${label}.correctCount`,
+      { minimum: 0, maximum: questionCount, integer: true },
+    ),
+    durationSeconds: requireFiniteNumber(
+      object.durationSeconds,
+      `${label}.durationSeconds`,
+      { minimum: 0, maximum: 86_400, integer: true },
+    ),
+    studyDate: requireIsoDate(object.studyDate, `${label}.studyDate`),
+    completedAt: requireIsoDateTime(object.completedAt, `${label}.completedAt`),
+    courseVersionId: requireTypedId(
+      object.courseVersionId,
+      `${label}.courseVersionId`,
+      "crv",
+    ) as CourseVersionId,
+    ...(learningUnitId ? { learningUnitId } : {}),
+  };
+}
+
 export function parseProgressMutationOperation(
   value: unknown,
   index: number,
@@ -677,6 +756,12 @@ export function parseProgressMutationOperation(
           object.revokedAt,
           `${label}.revokedAt`,
         ),
+      };
+    case "record-practice-round":
+      rejectUnknownKeys(object, ["type", "round"], label);
+      return {
+        type,
+        round: parsePracticeRound(object.round, `${label}.round`),
       };
     default:
       return badProgressRequest(`${label}.type is unsupported.`);
