@@ -826,3 +826,20 @@ footer, #catalog-footer {
   color: var(--text);
   text-decoration-color: currentColor;
 }
+
+/*
+ * The course start cards and each unit's workspace are laid out as two
+ * columns inline. On a phone the columns stack, and long source links wrap
+ * instead of widening the page.
+ */
+.universal-course-start-grid,
+.universal-learning-unit {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .universal-course-start-grid,
+  .universal-unit-workspace {
+    grid-template-columns: 1fr !important;
+  }
+}

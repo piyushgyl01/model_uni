@@ -33,7 +33,10 @@ assert.ok(firstUnit);
 const [firstSkill] = skillIdsForUnit(firstUnit.id);
 assert.ok(firstSkill);
 
-function practiceRound(id: string, overrides: Partial<PracticeRound> = {}): PracticeRound {
+function practiceRound(
+  id: string,
+  overrides: Partial<PracticeRound> = {},
+): PracticeRound {
   return {
     id,
     skillId: firstSkill as string,
@@ -56,13 +59,18 @@ async function createDatabase() {
     script: "export default { fetch() { return new Response('ok'); } }",
     d1Databases: ["DB"],
   });
-  const database = (await miniflare.getD1Database("DB")) as unknown as D1DatabaseLike;
+  const database = (await miniflare.getD1Database(
+    "DB",
+  )) as unknown as D1DatabaseLike;
   await database.prepare("PRAGMA foreign_keys = ON").run();
   const migrations = (await readdir(new URL("../drizzle/", import.meta.url)))
     .filter((file) => /^\d{4}_.+\.sql$/.test(file))
     .sort();
   for (const file of migrations) {
-    const migration = await readFile(new URL(`../drizzle/${file}`, import.meta.url), "utf8");
+    const migration = await readFile(
+      new URL(`../drizzle/${file}`, import.meta.url),
+      "utf8",
+    );
     for (const statement of migration
       .split("--> statement-breakpoint")
       .map((value) => value.trim())
@@ -101,12 +109,18 @@ test("the API accepts a well-formed practice round and refuses anything else", (
 
 test("a recorded round is append-only on the device and survives a cloud refresh", () => {
   const first = practiceRound("prc-local-0001");
-  const recorded = applyProgressOperations({}, [{ type: "record-practice-round", round: first }]);
+  const recorded = applyProgressOperations({}, [
+    { type: "record-practice-round", round: first },
+  ]);
   assert.deepEqual(recorded.practiceRounds, { [first.id]: first });
   const rewritten = applyProgressOperations(recorded, [
     { type: "record-practice-round", round: { ...first, correctCount: 0 } },
   ]);
-  assert.equal(rewritten.practiceRounds?.[first.id]?.correctCount, 2, "the first record of an id wins");
+  assert.equal(
+    rewritten.practiceRounds?.[first.id]?.correctCount,
+    2,
+    "the first record of an id wins",
+  );
 
   const cloud: CloudProgramProgress = {
     programVersionId: bundle.programVersion.id,
@@ -121,7 +135,9 @@ test("a recorded round is append-only on the device and survives a cloud refresh
     practiceRounds: { [first.id]: first },
     history: [],
   };
-  const pending = practiceRound("prc-local-0002", { completedAt: "2026-09-01T10:00:00.000Z" });
+  const pending = practiceRound("prc-local-0002", {
+    completedAt: "2026-09-01T10:00:00.000Z",
+  });
   const merged = mergeCloudSnapshotWithPending(
     {
       pendingMutations: [
@@ -139,12 +155,20 @@ test("a recorded round is append-only on the device and survives a cloud refresh
     },
     cloud,
   );
-  assert.deepEqual(Object.keys(merged.practiceRounds ?? {}).sort(), [first.id, pending.id]);
+  assert.deepEqual(Object.keys(merged.practiceRounds ?? {}).sort(), [
+    first.id,
+    pending.id,
+  ]);
   const legacy = mergeCloudSnapshotWithPending(undefined, {
     ...cloud,
-    practiceRounds: undefined as unknown as CloudProgramProgress["practiceRounds"],
+    practiceRounds:
+      undefined as unknown as CloudProgramProgress["practiceRounds"],
   });
-  assert.deepEqual(legacy.practiceRounds, {}, "a response from before practice existed has no rounds");
+  assert.deepEqual(
+    legacy.practiceRounds,
+    {},
+    "a response from before practice existed has no rounds",
+  );
 });
 
 test("practice rounds persist in D1, replay idempotently, and cannot be rewritten", async (t) => {
@@ -152,14 +176,25 @@ test("practice rounds persist in D1, replay idempotently, and cannot be rewritte
   t.after(() => miniflare.dispose());
   await seedPublishedProgramBundles(database, [bundle]);
   const repository = new D1LearnerProgressRepository(database);
-  const learner = await repository.resolveLearner({ provider: "test", subject: "practice-learner" });
+  const learner = await repository.resolveLearner({
+    provider: "test",
+    subject: "practice-learner",
+  });
   const programVersionId = bundle.programVersion.id;
   const rounds = [
     practiceRound("prc-d1-0001"),
-    practiceRound("prc-d1-0002", { mode: "practice", correctCount: 1, completedAt: "2026-09-01T09:40:00.000Z" }),
-    practiceRound("prc-d1-0003", { learningUnitId: undefined, completedAt: "2026-09-01T09:50:00.000Z" }),
+    practiceRound("prc-d1-0002", {
+      mode: "practice",
+      correctCount: 1,
+      completedAt: "2026-09-01T09:40:00.000Z",
+    }),
+    practiceRound("prc-d1-0003", {
+      learningUnitId: undefined,
+      completedAt: "2026-09-01T09:50:00.000Z",
+    }),
   ];
-  const { learningUnitId: _dropped, ...withoutUnit } = rounds[2] as PracticeRound;
+  const { learningUnitId: _dropped, ...withoutUnit } =
+    rounds[2] as PracticeRound;
   void _dropped;
   rounds[2] = withoutUnit;
 
@@ -169,13 +204,20 @@ test("practice rounds persist in D1, replay idempotently, and cannot be rewritte
     deviceId: "device-practice-d1",
     clientMutationId: "mutation-practice-d1-1",
     baseRevision: 0,
-    operations: rounds.map((round) => ({ type: "record-practice-round" as const, round })),
+    operations: rounds.map((round) => ({
+      type: "record-practice-round" as const,
+      round,
+    })),
   };
   const applied = await repository.applyMutation(request);
   assert.equal(applied.resultRevision, 1);
-  assert.deepEqual(applied.progress.practiceRounds, Object.fromEntries(rounds.map((round) => [round.id, round])));
+  assert.deepEqual(
+    applied.progress.practiceRounds,
+    Object.fromEntries(rounds.map((round) => [round.id, round])),
+  );
   assert.equal(
-    applied.progress.history.filter((entry) => entry.entityType === "practice").length,
+    applied.progress.history.filter((entry) => entry.entityType === "practice")
+      .length,
     3,
     "each round leaves a history event",
   );
@@ -189,7 +231,12 @@ test("practice rounds persist in D1, replay idempotently, and cannot be rewritte
       ...request,
       clientMutationId: "mutation-practice-d1-rewrite",
       baseRevision: 1,
-      operations: [{ type: "record-practice-round", round: { ...(rounds[0] as PracticeRound), correctCount: 0 } }],
+      operations: [
+        {
+          type: "record-practice-round",
+          round: { ...(rounds[0] as PracticeRound), correctCount: 0 },
+        },
+      ],
     }),
     LearnerProgressValidationError,
   );
@@ -201,13 +248,19 @@ test("practice rounds persist in D1, replay idempotently, and cannot be rewritte
       operations: [
         {
           type: "record-practice-round",
-          round: practiceRound("prc-d1-0004", { courseVersionId: "crv_not-in-this-program" as PracticeRound["courseVersionId"] }),
+          round: practiceRound("prc-d1-0004", {
+            courseVersionId:
+              "crv_not-in-this-program" as PracticeRound["courseVersionId"],
+          }),
         },
       ],
     }),
     LearnerProgressValidationError,
   );
-  const unchanged = await repository.loadProgress(learner.learnerId, programVersionId);
+  const unchanged = await repository.loadProgress(
+    learner.learnerId,
+    programVersionId,
+  );
   assert.equal(unchanged.revision, 1, "refused rounds change nothing");
 });
 
@@ -216,9 +269,18 @@ test("a signed-out device's practice merges into the account on import", async (
   t.after(() => miniflare.dispose());
   await seedPublishedProgramBundles(database, [bundle]);
   const repository = new D1LearnerProgressRepository(database);
-  const learner = await repository.resolveLearner({ provider: "test", subject: "practice-import" });
+  const learner = await repository.resolveLearner({
+    provider: "test",
+    subject: "practice-import",
+  });
   const programVersionId = bundle.programVersion.id;
-  const rounds = [practiceRound("prc-import-0001"), practiceRound("prc-import-0002", { completedAt: "2026-09-02T08:00:00.000Z", studyDate: "2026-09-02" })];
+  const rounds = [
+    practiceRound("prc-import-0001"),
+    practiceRound("prc-import-0002", {
+      completedAt: "2026-09-02T08:00:00.000Z",
+      studyDate: "2026-09-02",
+    }),
+  ];
   const input = {
     learnerId: learner.learnerId,
     clientImportId: "import-practice-0001",
@@ -227,17 +289,41 @@ test("a signed-out device's practice merges into the account on import", async (
     programs: [{ programVersionId, courses: [], practiceRounds: rounds }],
   };
   await repository.importLocalProgress(input);
-  const progress = await repository.loadProgress(learner.learnerId, programVersionId);
-  assert.deepEqual(Object.keys(progress.practiceRounds).sort(), ["prc-import-0001", "prc-import-0002"]);
+  const progress = await repository.loadProgress(
+    learner.learnerId,
+    programVersionId,
+  );
+  assert.deepEqual(Object.keys(progress.practiceRounds).sort(), [
+    "prc-import-0001",
+    "prc-import-0002",
+  ]);
   const again = await repository.importLocalProgress(input);
-  assert.equal(again.clientImportId, "import-practice-0001", "retrying the import is idempotent");
-  assert.equal(Object.keys((await repository.loadProgress(learner.learnerId, programVersionId)).practiceRounds).length, 2);
+  assert.equal(
+    again.clientImportId,
+    "import-practice-0001",
+    "retrying the import is idempotent",
+  );
+  assert.equal(
+    Object.keys(
+      (await repository.loadProgress(learner.learnerId, programVersionId))
+        .practiceRounds,
+    ).length,
+    2,
+  );
 
   await assert.rejects(
     repository.importLocalProgress({
       ...input,
       clientImportId: "import-practice-0002",
-      programs: [{ programVersionId, courses: [], practiceRounds: [practiceRound("prc-import-bad", { skillId: "py.unknown" })] }],
+      programs: [
+        {
+          programVersionId,
+          courses: [],
+          practiceRounds: [
+            practiceRound("prc-import-bad", { skillId: "py.unknown" }),
+          ],
+        },
+      ],
     }),
     LearnerProgressValidationError,
   );

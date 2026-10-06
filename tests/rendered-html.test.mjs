@@ -60,6 +60,21 @@ test("homepage is a universal catalog derived from published programs", async ()
   assert.doesNotMatch(html, /Your three-year electrical engineering university/);
 });
 
+test("Programming I offers self-marked practice on its units, and courses without it show none", async () => {
+  const practiced = await render(
+    "/programs/computer-science/courses/programming-1",
+  );
+  assert.equal(practiced.status, 200);
+  const html = await practiced.text();
+  assert.match(html, /Self-marked practice/);
+  assert.match(html, /Expressions and precedence/);
+  assert.match(html, /Mutability and aliasing/);
+  const other = await render(
+    "/programs/computer-science/courses/operating-systems",
+  );
+  assert.doesNotMatch(await other.text(), /Self-marked practice/);
+});
+
 test("Computer Science renders as a complete six-term program and course classroom", async () => {
   const programResponse = await render("/programs/computer-science");
   assert.equal(programResponse.status, 200);

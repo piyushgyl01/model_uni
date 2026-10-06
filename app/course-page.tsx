@@ -4,6 +4,8 @@ import CourseProgress from "./course-progress";
 import { CourseAccessProvider } from "./course-access-context";
 import { PrerequisiteLockBanner } from "./prerequisite-lock-banner";
 import { UnitEvidenceInput } from "./unit-evidence-input";
+import { UnitPractice } from "./practice/unit-practice";
+import { skillIdsForUnit } from "./domain/practice/registry";
 import { ThemeSwitch } from "./theme";
 import type {
   CourseResourceReference,
@@ -274,6 +276,14 @@ export default function CoursePage({
             />
           </section>
         </div>
+
+        {skillIdsForUnit(unit.id).length > 0 && (
+          <UnitPractice
+            programVersionId={bundle.programVersion.id}
+            courseVersionId={courseVersion.id}
+            unitId={unit.id}
+          />
+        )}
 
         {unit.weeklyAssignments && unit.weeklyAssignments.length > 0 && (
           <section

@@ -8,6 +8,7 @@ import type {
   PublishedProgramBundle,
 } from "../domain/catalog";
 import { syncStoredProgram } from "../progress-sync-client";
+import { CharacterCard } from "../practice/character-card";
 import { PROGRESS_EVENT, readProgressStore } from "../progress-storage";
 import { TodayDashboardComponent } from "../today-dashboard-component";
 
@@ -143,6 +144,7 @@ export function TodayPageClient() {
 
   return (
     <div>
+      <CharacterCard />
       {views.map((view) => (
         <TodayDashboardComponent
           key={view.program.programVersionId}

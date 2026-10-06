@@ -73,6 +73,38 @@ Course Atlas is community-curated and non-accredited. It does not award a
 degree, university credit, or a regulated qualification, and it is not
 affiliated with the providers whose free resources it links to.
 
+## Self-marked practice
+
+Ticking a unit records that you studied it; it cannot tell whether you
+learnt it. Practice checks can. A unit may carry **practice skills**: question
+generators that build a fresh question and work out its answer at the same
+moment, so nothing is taken on the learner's word or from a hand-typed key.
+Programming I is the first course with them — 18 skills across its eight
+units, each a short program to predict (its output, the exception it raises,
+the test input that catches a mutant). Every generated program is run through
+Python in the test suite to confirm the app's answer.
+
+- **Levels 1–10 per skill.** A clean round moves a skill up, one miss keeps it,
+  two move it down. Higher levels ask more questions with less time each, and
+  a skill rests longer before it comes back.
+- **One check a day per program**, on Today: the skills of today's units plus
+  reviews that are due, within a question budget. Further rounds — from a
+  unit's practice list on the course page — are recorded as practice and never
+  move a level.
+- **A character across programs**: experience, a level, a rank and a streak of
+  study days with a finished check. Days you did not plan to study never break
+  it. Only self-marked answers count; ticking boxes earns nothing.
+- **Rounds are the only thing stored.** Levels, experience, ranks and streaks
+  are derived from them, so two devices can never disagree. Rounds travel the
+  same outbox, revision checks and sign-in import as the rest of progress, into
+  the append-only `learner_practice_rounds` table.
+
+This is a study aid with a game's vocabulary, not assessment: practice results
+never pass a course, and a level or rank is not a grade, credit or credential.
+Practice skills are an overlay keyed by stable unit identities
+(`app/domain/practice/registry.ts`), so adding them never creates a new program
+version.
+
 ## Local development
 
 Requires Node.js 22.13 or newer.
@@ -199,11 +231,11 @@ redeploy.
   the D1 copy down to an actionable field path during release initialization or
   protected publication. Ordinary reads check a compact indexed release marker;
   a real D1 error never silently falls back to source data.
-- `db/schema.ts` and the Drizzle migrations provide 46 relational tables,
+- `db/schema.ts` and the Drizzle migrations provide 47 relational tables,
   including versioned catalog authoring, immutable publication snapshots,
   learner accounts, enrollment settings, version-pinned progress, evidence,
-  assessment attempts, personal schedules, prerequisite waivers, import
-  receipts, aliases, audit events, and an outbox.
+  assessment attempts, personal schedules, prerequisite waivers, practice
+  rounds, import receipts, aliases, audit events, and an outbox.
 
 On a fresh D1 database, the checked-in publications seed idempotently and build
 their read models. Full source shadow verification happens only when that compact

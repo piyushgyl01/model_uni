@@ -32,8 +32,13 @@ export interface DailyCheck {
   readonly doneToday: boolean;
 }
 
-export function checkDoneOn(rounds: readonly PracticeRound[], studyDate: string) {
-  return rounds.some((round) => round.mode === "check" && round.studyDate === studyDate);
+export function checkDoneOn(
+  rounds: readonly PracticeRound[],
+  studyDate: string,
+) {
+  return rounds.some(
+    (round) => round.mode === "check" && round.studyDate === studyDate,
+  );
 }
 
 export function planDailyCheck(
@@ -41,7 +46,8 @@ export function planDailyCheck(
   rounds: readonly PracticeRound[],
   today: string,
 ): DailyCheck {
-  if (checkDoneOn(rounds, today)) return { items: [], questionCount: 0, doneToday: true };
+  if (checkDoneOn(rounds, today))
+    return { items: [], questionCount: 0, doneToday: true };
   const states = skillStates(rounds);
   const items: CheckItem[] = [];
   const taken = new Set<string>();
@@ -72,11 +78,22 @@ export function planDailyCheck(
   const home = new Map<string, PracticeRound>();
   for (const round of rounds) {
     const prior = home.get(round.skillId);
-    if (!prior || prior.completedAt < round.completedAt) home.set(round.skillId, round);
+    if (!prior || prior.completedAt < round.completedAt)
+      home.set(round.skillId, round);
   }
   const reviews = [...states.values()]
-    .filter((state) => state.level > 0 && !taken.has(state.skillId) && practiceSkill(state.skillId) && isDue(state, today))
-    .sort((a, b) => a.level - b.level || (a.lastCheckDate ?? "").localeCompare(b.lastCheckDate ?? ""));
+    .filter(
+      (state) =>
+        state.level > 0 &&
+        !taken.has(state.skillId) &&
+        practiceSkill(state.skillId) &&
+        isDue(state, today),
+    )
+    .sort(
+      (a, b) =>
+        a.level - b.level ||
+        (a.lastCheckDate ?? "").localeCompare(b.lastCheckDate ?? ""),
+    );
   let budget = CHECK_BUDGET;
   for (const state of reviews) {
     const questions = levelRule(state.level).questions;
@@ -107,14 +124,22 @@ export interface CheckQuestion {
 }
 
 /** Fresh questions for a check — new numbers every time it is played. */
-export function buildQuestions(items: readonly CheckItem[], rng: Rng): CheckQuestion[] {
+export function buildQuestions(
+  items: readonly CheckItem[],
+  rng: Rng,
+): CheckQuestion[] {
   return items.flatMap((item) => {
     const skill = practiceSkill(item.skillId);
     if (!skill) return [];
     const rule = levelRule(item.level);
     return Array.from({ length: item.questions }, () => {
       const question = skill.generate(rng);
-      return { item, question, seconds: question.kind === "choice" ? rule.choiceSeconds : rule.numberSeconds };
+      return {
+        item,
+        question,
+        seconds:
+          question.kind === "choice" ? rule.choiceSeconds : rule.numberSeconds,
+      };
     });
   });
 }

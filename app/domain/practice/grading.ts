@@ -13,7 +13,8 @@ export function parseNumber(input: string): number | null {
     text = suffix[1] as string;
     scale = suffix[2] === "k" ? 1e3 : 1e6;
   }
-  if (/^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) text = text.replace(/,/g, "");
+  if (/^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text))
+    text = text.replace(/,/g, "");
   else if (/^[+-]?\d*,\d+$/.test(text)) text = text.replace(",", ".");
   if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(text)) return null;
   const value = Number(text) * scale;
@@ -23,8 +24,12 @@ export function parseNumber(input: string): number | null {
 /** An exact answer still forgives floating-point noise in the last digits. */
 const EXACT = 1e-9;
 
-export function isCorrect(question: PracticeQuestion, response: string | number) {
-  if (question.kind === "choice") return Number(response) === question.correctIndex;
+export function isCorrect(
+  question: PracticeQuestion,
+  response: string | number,
+) {
+  if (question.kind === "choice")
+    return Number(response) === question.correctIndex;
   const value = typeof response === "number" ? response : parseNumber(response);
   if (value === null || !Number.isFinite(value)) return false;
   const tolerance = question.tolerance ?? EXACT;
@@ -34,7 +39,8 @@ export function isCorrect(question: PracticeQuestion, response: string | number)
 
 /** The answer written out, for feedback. */
 export function answerText(question: PracticeQuestion) {
-  if (question.kind === "choice") return question.options[question.correctIndex] ?? "";
+  if (question.kind === "choice")
+    return question.options[question.correctIndex] ?? "";
   return Number.isInteger(question.answer)
     ? String(question.answer)
     : String(Number(question.answer.toPrecision(12)));
