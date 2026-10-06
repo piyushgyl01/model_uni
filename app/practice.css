@@ -122,6 +122,29 @@
   outline-offset: 2px;
 }
 
+/* The invite is one quiet line: with the game off, the page is the map. */
+.game-invite {
+  padding: 0.6rem 0.8rem;
+  border-width: var(--pp-rule);
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+.game-invite p {
+  margin: 0;
+}
+
+.game-invite .linkish {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pp-action);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .practice-done {
   margin-top: 0.6rem;
   padding: 0.6rem 0.75rem;
@@ -184,6 +207,11 @@
 }
 
 /* ---- Unit practice on the course page ------------------------------------ */
+
+/* Practice is part of the game; with the game off the course page is the map. */
+:root:not([data-game="on"]) .unit-practice {
+  display: none;
+}
 
 .unit-practice {
   margin-top: 15px;

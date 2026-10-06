@@ -10,6 +10,7 @@ import {
 import { skillStates } from "../domain/practice/levels";
 import { practiceSkill } from "../domain/practice/registry";
 import type { PracticeRound } from "../domain/practice/types";
+import { setGameMode, useGameMode } from "../game-mode";
 import { PROGRESS_EVENT, readLocalPracticeRounds } from "../progress-storage";
 import { PracticePlayer } from "./practice-player";
 
@@ -30,6 +31,7 @@ export function DailyCheckCard({
   today,
   units,
 }: DailyCheckCardProps) {
+  const game = useGameMode();
   const [rounds, setRounds] = useState<readonly PracticeRound[]>([]);
   // The items are fixed when the check starts: finishing it changes the plan.
   const [playing, setPlaying] = useState<readonly CheckItem[] | null>(null);
@@ -42,6 +44,28 @@ export function DailyCheckCard({
   }, [programVersionId]);
 
   const plan = planDailyCheck(units, rounds, today);
+  if (game !== "on") {
+    // With the game off, a course that could be played says so, once, quietly.
+    if (!plan.doneToday && plan.items.length === 0) return null;
+    return (
+      <section
+        className="practice-card game-invite"
+        aria-label="Play this course as a game"
+      >
+        <p>
+          🎮 Today&apos;s units can be played as a game: a daily check marked by
+          the app, levels, XP and a streak.{" "}
+          <button
+            type="button"
+            className="linkish"
+            onClick={() => setGameMode("on")}
+          >
+            Turn the game on
+          </button>
+        </p>
+      </section>
+    );
+  }
   let card: ReactNode = null;
   if (plan.doneToday) {
     const todays = rounds.filter(

@@ -5,6 +5,7 @@ import { futureDirections } from "../content/catalog-release";
 import { ActiveEnrollmentBanner } from "./active-enrollment-banner";
 import type { ProgramKind } from "./domain/catalog";
 import { ThemeSwitch } from "./theme";
+import { GameSwitch } from "./game-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -342,6 +343,7 @@ export default async function Home({
           <span>Course Atlas · Universal program catalog</span>
           <span>What to learn · Where · Work · Evidence</span>
           <ThemeSwitch />
+          <GameSwitch />
         </div>
       </footer>
     </div>

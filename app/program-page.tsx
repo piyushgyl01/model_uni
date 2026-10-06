@@ -10,6 +10,7 @@ import ProgramProgress from "./program-progress";
 import ProgramStudyPlan from "./program-study-plan";
 import { TodayDashboardComponent } from "./today-dashboard-component";
 import { ThemeSwitch } from "./theme";
+import { GameSwitch } from "./game-mode";
 
 export interface ProgramPageProps {
   readonly bundle: PublishedProgramBundle;
@@ -443,6 +444,7 @@ export default function ProgramPage({
       <footer className="universal-program-footer">
         <strong>Course Atlas</strong> — <small>Independent Study Pathway v{programVersion.version}</small>
         <ThemeSwitch />
+        <GameSwitch />
       </footer>
     </div>
   );

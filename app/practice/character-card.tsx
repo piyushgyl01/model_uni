@@ -9,6 +9,7 @@ import {
   studyStreak,
 } from "../domain/practice/character";
 import type { PracticeRound } from "../domain/practice/types";
+import { useGameMode } from "../game-mode";
 import {
   PROGRESS_EVENT,
   readAllLocalPracticeRounds,
@@ -43,6 +44,7 @@ function readCharacter(): CharacterState {
  * streak of study days with a finished check. Only self-marked answers count.
  */
 export function CharacterCard() {
+  const game = useGameMode();
   const [state, setState] = useState<CharacterState | null>(null);
 
   useEffect(() => {
@@ -52,9 +54,9 @@ export function CharacterCard() {
     return () => window.removeEventListener(PROGRESS_EVENT, refresh);
   }, []);
 
-  // Nothing to show until the first self-marked round: programs without
-  // practice yet should not show a level nobody can earn.
-  if (!state || state.rounds.length === 0) return null;
+  // Part of the game, and nothing to show until the first self-marked round:
+  // programs without practice yet should not show a level nobody can earn.
+  if (game !== "on" || !state || state.rounds.length === 0) return null;
   const experience = experienceFrom(state.rounds);
   const { level, into, needed } = characterLevel(experience);
   const rank = rankFor(level);

@@ -69,6 +69,10 @@ test("Programming I offers self-marked practice on its units, and courses withou
   assert.match(html, /Self-marked practice/);
   assert.match(html, /Expressions and precedence/);
   assert.match(html, /Mutability and aliasing/);
+  // Practice is part of the game: the page arrives with the switch off, and a
+  // script applies a learner's own choice before it paints.
+  assert.match(html, /Game: (?:<!-- -->)?Off/);
+  assert.match(html, /course-atlas-game/);
   const other = await render(
     "/programs/computer-science/courses/operating-systems",
   );

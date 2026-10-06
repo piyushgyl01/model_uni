@@ -73,7 +73,15 @@ Course Atlas is community-curated and non-accredited. It does not award a
 degree, university credit, or a regulated qualification, and it is not
 affiliated with the providers whose free resources it links to.
 
-## Self-marked practice
+## Self-marked practice: the game
+
+Course Atlas is a map; the game is a layer on top of it, behind a switch in
+the footer. **Off** — the default — the site is the map it always was: what to
+learn, where, and in what order. **On**, the same courses gain self-marked
+checks, levels, experience and a streak. The choice is a presentation
+preference like the visual style: it stays in the browser, is never sent to the
+server, and switching either way loses nothing. With the game off, Today
+mentions it in one line for courses that have practice; nothing else changes.
 
 Ticking a unit records that you studied it; it cannot tell whether you
 learnt it. Practice checks can. A unit may carry **practice skills**: question

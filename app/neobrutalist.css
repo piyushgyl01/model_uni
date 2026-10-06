@@ -678,6 +678,11 @@
   box-shadow: none;
 }
 
+/* The footer here is a flex row with its own gap; the game switch needs none. */
+:root[data-theme="neobrutalist"] .universal-program-footer .game-switch {
+  margin-left: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="neobrutalist"] * {
     transition: none !important;

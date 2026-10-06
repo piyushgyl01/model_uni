@@ -7,6 +7,7 @@ import { UnitEvidenceInput } from "./unit-evidence-input";
 import { UnitPractice } from "./practice/unit-practice";
 import { skillIdsForUnit } from "./domain/practice/registry";
 import { ThemeSwitch } from "./theme";
+import { GameSwitch } from "./game-mode";
 import type {
   CourseResourceReference,
   LearningUnit,
@@ -617,6 +618,7 @@ export default function CoursePage({
       <footer className="universal-program-footer">
         <strong>{courseVersion.title}</strong> — <small>Part of <Link href={programHref}>{bundle.programVersion.title}</Link></small>
         <ThemeSwitch />
+        <GameSwitch />
       </footer>
     </div>
   );
