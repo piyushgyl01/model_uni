@@ -1510,6 +1510,65 @@ export const learnerPrerequisiteWaivers = sqliteTable(
   ],
 );
 
+/**
+ * Self-marked practice rounds. Append-only: a round is a finished fact, so a
+ * repeated id is ignored rather than rewritten. Levels, experience and streaks
+ * are derived from these rows and never stored.
+ */
+export const learnerPracticeRounds = sqliteTable(
+  "learner_practice_rounds",
+  {
+    id: text("id").notNull(),
+    learnerId: text("learner_id").notNull(),
+    programVersionId: text("program_version_id").notNull(),
+    courseVersionId: text("course_version_id").notNull(),
+    learningUnitId: text("learning_unit_id"),
+    skillId: text("skill_id").notNull(),
+    mode: text("mode", { enum: ["check", "practice"] }).notNull(),
+    level: integer("level").notNull(),
+    questionCount: integer("question_count").notNull(),
+    correctCount: integer("correct_count").notNull(),
+    durationSeconds: integer("duration_seconds").notNull(),
+    studyDate: text("study_date").notNull(),
+    completedAt: text("completed_at").notNull(),
+    lastMutationId: text("last_mutation_id"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({
+      name: "learner_practice_rounds_pk",
+      columns: [table.learnerId, table.programVersionId, table.id],
+    }),
+    foreignKey({
+      name: "learner_practice_rounds_progress_fk",
+      columns: [table.learnerId, table.programVersionId],
+      foreignColumns: [
+        learnerProgramProgress.learnerId,
+        learnerProgramProgress.programVersionId,
+      ],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("learner_practice_rounds_day_idx").on(
+      table.learnerId,
+      table.programVersionId,
+      table.studyDate,
+    ),
+    check(
+      "learner_practice_rounds_mode_check",
+      sql`${table.mode} IN ('check', 'practice')`,
+    ),
+    check(
+      "learner_practice_rounds_counts_check",
+      sql`${table.level} BETWEEN 1 AND 10 AND ${table.questionCount} BETWEEN 1 AND 20 AND ${table.correctCount} BETWEEN 0 AND ${table.questionCount} AND ${table.durationSeconds} >= 0`,
+    ),
+    check(
+      "learner_practice_rounds_skill_check",
+      sql`length(trim(${table.skillId})) > 0`,
+    ),
+  ],
+);
+
 /** Idempotency record for each accepted client mutation. */
 export const learnerProgressMutations = sqliteTable(
   "learner_progress_mutations",

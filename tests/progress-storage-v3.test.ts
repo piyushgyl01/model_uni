@@ -113,6 +113,7 @@ function emptyCloud(revision: number): CloudProgramProgress {
     assessmentAttempts: {},
     scheduleEntries: {},
     prerequisiteWaivers: {},
+    practiceRounds: {},
     history: [],
   };
 }

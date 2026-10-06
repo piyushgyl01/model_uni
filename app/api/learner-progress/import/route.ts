@@ -1,6 +1,7 @@
 import type {
   AssessmentAttempt,
   LearnerEnrollment,
+  PracticeRound,
   PrerequisiteWaiver,
   ProgressMutationOperation,
   ScheduleEntry,
@@ -47,6 +48,7 @@ const MAX_EVIDENCES = 10_000;
 const MAX_ASSESSMENT_ATTEMPTS = 5_000;
 const MAX_SCHEDULE_ENTRIES = 10_000;
 const MAX_WAIVERS = 1_000;
+const MAX_PRACTICE_ROUNDS = 20_000;
 
 interface ParsedImportCourse {
   readonly completedUnitIds: readonly LearningUnitId[];
@@ -64,6 +66,7 @@ interface ParsedImportProgram {
   readonly assessmentAttempts: Readonly<Record<string, AssessmentAttempt>>;
   readonly scheduleEntries: Readonly<Record<string, ScheduleEntry>>;
   readonly prerequisiteWaivers: Readonly<Record<string, PrerequisiteWaiver>>;
+  readonly practiceRounds: Readonly<Record<string, PracticeRound>>;
 }
 
 interface ParsedImportRequest {
@@ -265,6 +268,7 @@ function parseV3Program(
     assessmentCount: number;
     scheduleCount: number;
     waiverCount: number;
+    practiceCount: number;
   },
 ): ParsedImportProgram {
   const object = requireObject(value, label);
@@ -279,6 +283,7 @@ function parseV3Program(
       "assessmentAttempts",
       "scheduleEntries",
       "prerequisiteWaivers",
+      "practiceRounds",
     ],
     label,
   );
@@ -408,6 +413,35 @@ function parseV3Program(
     },
   );
 
+  // Optional: devices from before practice existed send no rounds at all.
+  const practiceRoundsObject =
+    object.practiceRounds === undefined
+      ? {}
+      : requireObject(object.practiceRounds, `${label}.practiceRounds`);
+  counters.practiceCount += Object.keys(practiceRoundsObject).length;
+  if (counters.practiceCount > MAX_PRACTICE_ROUNDS) {
+    badProgressRequest("Progress import contains too many practice rounds.");
+  }
+  const practiceRounds = parseRecordWithOperation<PracticeRound>(
+    practiceRoundsObject,
+    `${label}.practiceRounds`,
+    {
+      maximum: MAX_PRACTICE_ROUNDS,
+      operation: (recordValue) =>
+        parseProgressMutationOperation(
+          { type: "record-practice-round", round: recordValue },
+          0,
+        ),
+      recordFromOperation: (operation) => {
+        if (operation.type !== "record-practice-round") {
+          return badProgressRequest("Imported practice operation is invalid.");
+        }
+        return operation.round;
+      },
+      recordId: (record) => record.id,
+    },
+  );
+
   return {
     enrollment,
     ...(selectedConcentrationId ? { selectedConcentrationId } : {}),
@@ -417,6 +451,7 @@ function parseV3Program(
     assessmentAttempts,
     scheduleEntries,
     prerequisiteWaivers,
+    practiceRounds,
   };
 }
 
@@ -442,6 +477,7 @@ function parseV2Program(
     assessmentAttempts: {},
     scheduleEntries: {},
     prerequisiteWaivers: {},
+    practiceRounds: {},
   };
 }
 
@@ -499,6 +535,7 @@ function parseImportRequest(value: unknown): ParsedImportRequest {
     assessmentCount: 0,
     scheduleCount: 0,
     waiverCount: 0,
+    practiceCount: 0,
   };
   const programs = Object.fromEntries(
     programEntries.map(([programVersionId, programValue]) => {
@@ -587,6 +624,9 @@ export async function POST(request: Request) {
         assessmentAttempts: Object.values(program.assessmentAttempts),
         scheduleEntries: Object.values(program.scheduleEntries),
         prerequisiteWaivers: Object.values(program.prerequisiteWaivers),
+        ...(Object.keys(program.practiceRounds).length > 0
+          ? { practiceRounds: Object.values(program.practiceRounds) }
+          : {}),
       }),
     );
     const receipt = await context.repository.importLocalProgress({

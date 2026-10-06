@@ -106,6 +106,7 @@ function cloud(
     assessmentAttempts: {},
     scheduleEntries: {},
     prerequisiteWaivers: {},
+    practiceRounds: {},
     history: [],
   };
 }

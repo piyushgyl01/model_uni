@@ -6,6 +6,9 @@ import type {
   ProgramVersionId,
   RequirementGroupId,
 } from "./domain/catalog";
+import type { PracticeRound } from "./domain/practice/types";
+
+export type { PracticeRound };
 
 export const PROGRESS_SCHEMA_VERSION = 3 as const;
 export const PROGRESS_STORAGE_NAMESPACE = "course-atlas-progress-v3";
@@ -144,6 +147,8 @@ export interface CloudProgramProgress {
   readonly assessmentAttempts: Readonly<Record<string, AssessmentAttempt>>;
   readonly scheduleEntries: Readonly<Record<string, ScheduleEntry>>;
   readonly prerequisiteWaivers: Readonly<Record<string, PrerequisiteWaiver>>;
+  /** Self-marked practice rounds; levels, experience and streaks derive from these. */
+  readonly practiceRounds: Readonly<Record<string, PracticeRound>>;
   readonly history: readonly ProgressHistoryEntry[];
   readonly updatedAt?: string;
 }
@@ -214,6 +219,12 @@ export interface RevokePrerequisiteWaiverOperation {
   readonly revokedAt: string;
 }
 
+/** Append-only: a finished round is a fact, so it is never edited or removed. */
+export interface RecordPracticeRoundOperation {
+  readonly type: "record-practice-round";
+  readonly round: PracticeRound;
+}
+
 export type ProgressMutationOperation =
   | SetEnrollmentOperation
   | SetConcentrationOperation
@@ -226,7 +237,8 @@ export type ProgressMutationOperation =
   | UpsertScheduleEntryOperation
   | DeleteScheduleEntryOperation
   | GrantPrerequisiteWaiverOperation
-  | RevokePrerequisiteWaiverOperation;
+  | RevokePrerequisiteWaiverOperation
+  | RecordPracticeRoundOperation;
 
 export interface ProgressPatchRequest {
   readonly schemaVersion: typeof PROGRESS_SCHEMA_VERSION;
@@ -297,6 +309,8 @@ export interface LocalImportProgram {
   readonly assessmentAttempts: Readonly<Record<string, AssessmentAttempt>>;
   readonly scheduleEntries: Readonly<Record<string, ScheduleEntry>>;
   readonly prerequisiteWaivers: Readonly<Record<string, PrerequisiteWaiver>>;
+  /** Absent from imports made before practice existed. */
+  readonly practiceRounds?: Readonly<Record<string, PracticeRound>>;
 }
 
 export interface ProgressImportRequest {

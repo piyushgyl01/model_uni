@@ -284,6 +284,7 @@ export async function authenticatedProgressPayload(
       assessmentAttempts: progress.assessmentAttempts,
       scheduleEntries: progress.scheduleEntries,
       prerequisiteWaivers: progress.prerequisiteWaivers,
+      practiceRounds: progress.practiceRounds,
       history: progress.history,
       updatedAt: progress.updatedAt,
     },
