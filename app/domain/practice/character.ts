@@ -28,11 +28,19 @@ export function experienceFrom(rounds: readonly PracticeRound[]) {
       const before = Math.max(1, levels.get(round.skillId) ?? 0);
       const after = scoreRound(before, round.correctCount, round.questionCount);
       levels.set(round.skillId, after);
-      total += round.correctCount * EXPERIENCE.checkRight + (after > before ? EXPERIENCE.levelUp : 0);
+      total +=
+        round.correctCount * EXPERIENCE.checkRight +
+        (after > before ? EXPERIENCE.levelUp : 0);
       continue;
     }
     const earned = practiceByDay.get(round.studyDate) ?? 0;
-    const pay = Math.max(0, Math.min(round.correctCount * EXPERIENCE.practiceRight, EXPERIENCE.practiceDailyCap - earned));
+    const pay = Math.max(
+      0,
+      Math.min(
+        round.correctCount * EXPERIENCE.practiceRight,
+        EXPERIENCE.practiceDailyCap - earned,
+      ),
+    );
     practiceByDay.set(round.studyDate, earned + pay);
     total += pay;
   }
@@ -40,7 +48,8 @@ export function experienceFrom(rounds: readonly PracticeRound[]) {
 }
 
 /** Experience needed to go from one character level to the next. */
-export const experienceToNext = (level: number) => Math.round(50 * level ** 1.2);
+export const experienceToNext = (level: number) =>
+  Math.round(50 * level ** 1.2);
 
 export function characterLevel(experience: number) {
   let level = 1;
@@ -70,17 +79,23 @@ export const RANKS: readonly Rank[] = [
 ];
 
 export function rankFor(level: number): Rank {
-  return [...RANKS].reverse().find((rank) => level >= rank.at) ?? (RANKS[0] as Rank);
+  return (
+    [...RANKS].reverse().find((rank) => level >= rank.at) ?? (RANKS[0] as Rank)
+  );
 }
 
 const weekday = (date: string) => {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1)).getUTCDay();
+  return new Date(
+    Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1),
+  ).getUTCDay();
 };
 
 function previousDay(date: string) {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) - 1)).toISOString().slice(0, 10);
+  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) - 1))
+    .toISOString()
+    .slice(0, 10);
 }
 
 /**
@@ -93,10 +108,20 @@ export function studyStreak(
   today: string,
   studyDays: readonly number[] = [0, 1, 2, 3, 4, 5, 6],
 ) {
-  const done = new Set(rounds.filter((round) => round.mode === "check").map((round) => round.studyDate));
-  const planned = new Set(studyDays.length > 0 ? studyDays : [0, 1, 2, 3, 4, 5, 6]);
+  const done = new Set(
+    rounds
+      .filter((round) => round.mode === "check")
+      .map((round) => round.studyDate),
+  );
+  const planned = new Set(
+    studyDays.length > 0 ? studyDays : [0, 1, 2, 3, 4, 5, 6],
+  );
   let current = done.has(today) ? 1 : 0;
-  for (let day = previousDay(today), guard = 0; guard < 3660; day = previousDay(day), guard += 1) {
+  for (
+    let day = previousDay(today), guard = 0;
+    guard < 3660;
+    day = previousDay(day), guard += 1
+  ) {
     if (done.has(day)) current += 1;
     else if (planned.has(weekday(day))) break;
   }
@@ -105,11 +130,17 @@ export function studyStreak(
   let run = 0;
   const first = [...done].sort()[0];
   if (first) {
-    for (let day = first, guard = 0; daysBetween(day, today) >= 0 && guard < 3660; guard += 1) {
+    for (
+      let day = first, guard = 0;
+      daysBetween(day, today) >= 0 && guard < 3660;
+      guard += 1
+    ) {
       if (done.has(day)) best = Math.max(best, (run += 1));
       else if (planned.has(weekday(day)) && day !== today) run = 0;
       const [year, month, date] = day.split("-").map(Number);
-      day = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (date ?? 1) + 1)).toISOString().slice(0, 10);
+      day = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (date ?? 1) + 1))
+        .toISOString()
+        .slice(0, 10);
     }
   }
   return { current, best: Math.max(best, current), todayDone: done.has(today) };

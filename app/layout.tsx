@@ -5,6 +5,7 @@ import { ServiceWorkerRegistration } from "./service-worker-registration";
 import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "./theme";
 import "./globals.css";
 import "./neobrutalist.css";
+import "./practice.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

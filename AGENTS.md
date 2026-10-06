@@ -41,7 +41,7 @@
 - **Stable IDs**: Type-prefixed UUIDv7 (`crs_`, `crv_`, `unt_`, `prg_`, `prv_`, `res_`, `rv_`, `bnd_`). Never derive IDs from slugs/titles.
 - **Version pinning**: Learner progress pinned to exact `programVersionId` + `courseVersionId` + `learningUnitId`. Survives catalog upgrades via explicit equivalency.
 - **Repository pattern**: UI/routes call `catalogRepository.loadBySlug()` — never import program data directly.
-- **Migrations**: Six additive Drizzle migrations (`drizzle/0000_*.sql` through `drizzle/0005_*.sql`). Run via Miniflare in tests; `npm run db:generate` for new schema changes.
+- **Migrations**: Seven additive Drizzle migrations (`drizzle/0000_*.sql` through `drizzle/0006_*.sql`). Run via Miniflare in tests; `npm run db:generate` for new schema changes. A new learner table also goes in `app/catalog/d1-runtime-schema.ts`, which creates missing runtime tables at startup.
 
 ## Test Suite Specifics
 
@@ -53,6 +53,8 @@
 | `tests/rendered-html.test.mjs` | Source-level architecture guards | Greps route/page files for forbidden patterns (EE-specific imports, hardcoded semesters, etc.) |
 | `tests/release-acceptance.test.ts` | **Release gate** — one named assertion per published verification criterion | Resolves the *latest* publication through `catalogRepository`, never a direct `content/programs/*` import, so a new version inherits the criteria automatically |
 | `tests/release-journey.test.mjs` | End-to-end enrollment → completion journey | Real built worker on Miniflare D1; covers refresh survival, a second device, and a persisted-D1 restart |
+| `tests/practice.test.ts` | Practice engine: generators, levels, daily check, experience, streaks | Runs every generated program through `python3` when it is installed |
+| `tests/practice-progress.test.ts` | Practice rounds in the parser, local store, D1 and sign-in import | Append-only rounds; imports without rounds keep their hash |
 
 **Run single test file**: `node --import tsx --test tests/catalog-contract.test.ts`
 
@@ -100,7 +102,8 @@ them every criterion is asserted by name — keep it that way when adding one.
 | `app/catalog/catalog-shadow.ts` | Field-level D1 vs static comparison |
 | `app/catalog/learner-progress-repository.ts` | Version-pinned progress CRUD + import receipts |
 | `content/catalog.ts` | Checked-in publication registry (StaticCatalogRepository) |
-| `db/schema.ts` | 46-table D1 schema (catalog + learner + projections + audit + outbox) |
+| `db/schema.ts` | 47-table D1 schema (catalog + learner + projections + audit + outbox) |
+| `app/domain/practice/` | Self-marked practice: question generators, levels, the daily check, experience and streaks |
 | `drizzle.config.ts` | Drizzle config (SQLite dialect, `./db/schema.ts`) |
 | `vite.config.ts` | vinext + Cloudflare plugin + local bindings |
 | `.openai/hosting.json` | Cloudflare Sites project binding config |

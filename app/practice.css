@@ -1,0 +1,497 @@
+/**
+ * Practice checks and the character card.
+ *
+ * Every colour falls back from the neobrutalist tokens to the classic ones, so
+ * the same markup reads correctly in both themes without a second stylesheet.
+ */
+
+.practice-card,
+.character-card,
+.unit-practice {
+  --pp-ink: var(--nb-ink, var(--text, #111));
+  --pp-paper: var(--nb-paper, var(--card-bg, #fff));
+  --pp-soft: var(--nb-ground, var(--highlight-bg, #f2f2f2));
+  --pp-action: var(--nb-blue, var(--link, #0000ee));
+  --pp-good: var(--state-done, #14622f);
+  --pp-good-bg: var(--state-done-bg, #eef6f0);
+  --pp-warn: var(--state-active, #8a4b00);
+  --pp-warn-bg: var(--state-active-bg, #fbf3e8);
+  --pp-rule: var(--nb-rule, 1px);
+  --pp-shadow: var(--nb-shadow-sm, none);
+}
+
+.practice-card,
+.character-card {
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--pp-shadow);
+}
+
+.practice-card h3,
+.character-card h3,
+.unit-practice h4 {
+  margin: 0;
+}
+
+.practice-eyebrow {
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.practice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.practice-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.practice-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.practice-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border: var(--pp-rule) solid var(--pp-ink);
+  background: var(--pp-paper);
+  font-size: 0.82rem;
+}
+
+.practice-level {
+  display: inline-block;
+  min-width: 2.6rem;
+  padding: 0.05rem 0.35rem;
+  background: var(--pp-ink);
+  color: var(--pp-paper);
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.practice-level.is-new {
+  background: var(--nb-lime, var(--pp-good-bg));
+  color: var(--pp-ink);
+}
+
+.practice-btn {
+  appearance: none;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+  padding: 0.55rem 1.1rem;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.practice-btn.is-primary {
+  background: var(--pp-action);
+  color: var(--nb-paper, #fff);
+}
+
+.practice-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.practice-btn:focus-visible,
+.pp-option:focus-visible,
+.pp-input:focus-visible {
+  outline: 3px solid var(--nb-orange, var(--accent, #000080));
+  outline-offset: 2px;
+}
+
+.practice-done {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: var(--pp-rule) solid var(--pp-good);
+  background: var(--pp-good-bg);
+  color: var(--pp-good);
+  font-weight: 700;
+}
+
+/* ---- Character card ------------------------------------------------------ */
+
+.character-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.character-badge {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--nb-lime, var(--pp-soft));
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.character-name {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.character-bar {
+  height: 0.6rem;
+  margin-top: 0.45rem;
+  border: var(--pp-rule) solid var(--pp-ink);
+  background: var(--pp-soft);
+}
+
+.character-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--pp-action);
+}
+
+.character-streak {
+  text-align: right;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.character-streak small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+/* ---- Unit practice on the course page ------------------------------------ */
+
+.unit-practice {
+  margin-top: 15px;
+  padding: 12px;
+  border: var(--pp-rule) dashed var(--pp-ink);
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+}
+
+.unit-practice ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unit-practice li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.unit-practice li > .practice-level {
+  margin-top: 0.2rem;
+}
+
+.unit-practice li small {
+  display: block;
+  opacity: 0.75;
+}
+
+.unit-practice .practice-btn {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 560px) {
+  .unit-practice li {
+    grid-template-columns: auto 1fr;
+  }
+
+  .unit-practice li .practice-btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* ---- The player ----------------------------------------------------------- */
+
+.pp-overlay {
+  --pp-ink: var(--nb-ink, var(--text, #111));
+  --pp-paper: var(--nb-paper, var(--card-bg, #fff));
+  --pp-soft: var(--nb-ground, var(--highlight-bg, #f2f2f2));
+  --pp-action: var(--nb-blue, var(--link, #0000ee));
+  --pp-good: var(--state-done, #14622f);
+  --pp-good-bg: var(--state-done-bg, #eef6f0);
+  --pp-bad: #a8071a;
+  --pp-bad-bg: #fff0f0;
+  --pp-rule: var(--nb-rule, 1px);
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow-wrap: normal;
+  overflow-y: auto;
+  background: var(--pp-soft);
+  color: var(--pp-ink);
+}
+
+.pp-panel {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem 1rem 3rem;
+}
+
+.pp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+}
+
+.pp-head strong {
+  font-size: 1.05rem;
+}
+
+.pp-head > :last-child {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+}
+
+.pp-strip {
+  display: flex;
+  gap: 4px;
+  margin: 0.9rem 0 0.5rem;
+}
+
+.pp-strip > i {
+  flex: 1;
+  height: 0.5rem;
+  border: var(--pp-rule) solid var(--pp-ink);
+  background: var(--pp-paper);
+}
+
+.pp-strip > i.is-right {
+  background: var(--pp-good);
+}
+
+.pp-strip > i.is-wrong {
+  background: var(--pp-bad);
+}
+
+.pp-strip > i.is-current {
+  background: var(--nb-lime, var(--pp-soft));
+}
+
+.pp-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  font-size: 0.8rem;
+}
+
+.pp-timer > div {
+  flex: 1;
+  height: 0.35rem;
+  background: var(--pp-paper);
+  border: var(--pp-rule) solid var(--pp-ink);
+}
+
+.pp-timer > div > i {
+  display: block;
+  height: 100%;
+  background: var(--pp-ink);
+}
+
+.pp-timer.is-low > div > i {
+  background: var(--pp-bad);
+}
+
+.pp-skill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.pp-prompt {
+  margin: 0.6rem 0 0.75rem;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.pp-code {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--pp-paper);
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.pp-options {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pp-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+  font: inherit;
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  text-align: left;
+  cursor: pointer;
+}
+
+.pp-option > b {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 1.7rem;
+  border: var(--pp-rule) solid var(--pp-ink);
+  font-family: var(--nb-display, inherit);
+}
+
+.pp-option.is-right {
+  border-color: var(--pp-good);
+  background: var(--pp-good-bg);
+}
+
+.pp-option.is-wrong {
+  border-color: var(--pp-bad);
+  background: var(--pp-bad-bg);
+}
+
+.pp-option:disabled {
+  cursor: default;
+}
+
+.pp-input-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.pp-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-ink);
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+  font: inherit;
+  font-family: var(--nb-mono, var(--mono-font, monospace));
+  font-size: 1.1rem;
+}
+
+.pp-feedback {
+  margin-top: 1rem;
+  padding: 0.8rem 0.95rem;
+  border: calc(var(--pp-rule) + 1px) solid var(--pp-good);
+  background: var(--pp-good-bg);
+}
+
+.pp-feedback.is-wrong {
+  border-color: var(--pp-bad);
+  background: var(--pp-bad-bg);
+}
+
+.pp-feedback p {
+  margin: 0.35rem 0 0;
+}
+
+.pp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.pp-results {
+  margin-top: 1.25rem;
+}
+
+.pp-score {
+  font-size: 2.6rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pp-results ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pp-results li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: var(--pp-rule) solid var(--pp-ink);
+  background: var(--pp-paper);
+}
+
+.pp-move.is-up {
+  color: var(--pp-good);
+  font-weight: 800;
+}
+
+.pp-move.is-down {
+  color: var(--pp-bad);
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .character-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .character-streak {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .pp-prompt {
+    font-size: 1.15rem;
+  }
+}

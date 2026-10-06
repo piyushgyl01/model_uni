@@ -5,6 +5,7 @@ import type { CourseVersionId, PublishedProgramBundle } from "./domain/catalog";
 import { resolveLearnerPath } from "./domain/learner-path";
 import { calculateTodayQueue, type TodayQueueResult } from "./domain/today-queue";
 import { EnrollmentModal } from "./enrollment-modal";
+import { DailyCheckCard } from "./practice/daily-check-card";
 import { syncStoredProgram } from "./progress-sync-client";
 import { TermProgressWidget } from "./term-progress-widget";
 import {
@@ -384,6 +385,17 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
         </div>
       )}
 
+      <DailyCheckCard
+        programVersionId={programVersionId}
+        today={queue.today}
+        units={queue.blocks
+          .filter((block) => !block.lockedReason)
+          .map((block) => ({
+            learningUnitId: block.unitId,
+            courseVersionId: block.courseVersionId,
+          }))}
+      />
+
       {/* Study Blocks List */}
       <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.05rem" }}>
         Today&apos;s Study Tasks ({queue.blocks.length} Sessions)
@@ -422,7 +434,7 @@ export function TodayDashboardComponent(props: TodayDashboardProps) {
                   flexWrap: "wrap",
                 }}
               >
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: "1 1 16rem", minWidth: 0, overflowWrap: "anywhere" }}>
                   <div style={{ fontSize: "0.8rem", textTransform: "uppercase", color: "var(--ink-soft, #555)" }}>
                     Session {index + 1} of {queue.blocks.length} · {block.scheduleEntry.startTime ?? "Flexible"} · {block.courseTitle} ({block.periodLabel})
                   </div>
