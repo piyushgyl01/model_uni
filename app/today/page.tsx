@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { GameSwitch } from "../game-mode";
+import { ThemeSwitch } from "../theme";
 import { TodayPageClient } from "./today-page-client";
 
 export const metadata = {
@@ -22,6 +24,12 @@ export default async function TodayPage() {
       </div>
 
       <TodayPageClient />
+
+      <footer className="universal-program-footer">
+        <strong>Course Atlas</strong> — <small>Today</small>
+        <ThemeSwitch />
+        <GameSwitch />
+      </footer>
     </div>
   );
 }

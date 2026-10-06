@@ -821,6 +821,11 @@ footer, #catalog-footer {
   text-underline-offset: 3px;
 }
 
+/* Footers that are not flex rows need a gap between the two switches. */
+.universal-program-footer .game-switch {
+  margin-left: 1.25rem;
+}
+
 .theme-switch:hover,
 .theme-switch:focus-visible {
   color: var(--text);

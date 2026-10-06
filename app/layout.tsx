@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { ServiceWorkerRegistration } from "./service-worker-registration";
 import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "./theme";
+import { GAME_BOOTSTRAP_SCRIPT } from "./game-mode";
 import "./globals.css";
 import "./neobrutalist.css";
 import "./practice.css";
@@ -120,6 +121,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
         />
+        <script dangerouslySetInnerHTML={{ __html: GAME_BOOTSTRAP_SCRIPT }} />
         <ServiceWorkerRegistration />
         {children}
       </body>
